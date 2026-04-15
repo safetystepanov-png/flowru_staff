@@ -70,5 +70,7 @@
 		<true/>
 		<key>UIViewControllerBasedStatusBarAppearance</key>
 		<false/>
+		<key>NSCameraUsageDescription</key>
+		<string>Приложение использует камеру для сканирования QR-кодов и работы с функциями авторизации.</string>
 	</dict>
 </plist>
