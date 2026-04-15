@@ -1,12 +1,34 @@
 import 'dart:convert';
+import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../auth/data/auth_storage.dart';
 import '../../../../core/config/app_config.dart';
-import '../widgets/staff_glass_ui.dart';
+
+const Color kSpendMintTop = Color(0xFF0CB7B3);
+const Color kSpendMintMid = Color(0xFF08A9AB);
+const Color kSpendMintBottom = Color(0xFF067D87);
+const Color kSpendMintDeep = Color(0xFF055E66);
+
+const Color kSpendAccent = Color(0xFFFFA11D);
+const Color kSpendAccentSoft = Color(0xFFFFC45E);
+
+const Color kSpendCard = Color(0xCCFFFFFF);
+const Color kSpendCardStrong = Color(0xE8FFFFFF);
+const Color kSpendStroke = Color(0xA6FFFFFF);
+
+const Color kSpendInk = Color(0xFF103238);
+const Color kSpendInkSoft = Color(0xFF58767D);
+const Color kSpendShadow = Color(0x22062E36);
+
+const Color kSpendBlue = Color(0xFF4E7CFF);
+const Color kSpendPink = Color(0xFFFF5F8F);
+const Color kSpendViolet = Color(0xFF7A63FF);
 
 class StaffClientSpendScreen extends StatefulWidget {
   final int establishmentId;
@@ -26,7 +48,8 @@ class StaffClientSpendScreen extends StatefulWidget {
   State<StaffClientSpendScreen> createState() => _StaffClientSpendScreenState();
 }
 
-class _StaffClientSpendScreenState extends State<StaffClientSpendScreen> {
+class _StaffClientSpendScreenState extends State<StaffClientSpendScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _amountController = TextEditingController();
 
   bool _loading = true;
@@ -35,9 +58,23 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen> {
   _SpendConfig? _config;
   _SpendPreview? _preview;
 
+  late final AnimationController _bgController;
+  late final AnimationController _introController;
+
   @override
   void initState() {
     super.initState();
+
+    _bgController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 6800),
+    )..repeat();
+
+    _introController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 950),
+    );
+
     _loadConfig();
     _amountController.addListener(_recalculate);
   }
@@ -45,6 +82,8 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen> {
   @override
   void dispose() {
     _amountController.dispose();
+    _bgController.dispose();
+    _introController.dispose();
     super.dispose();
   }
 
@@ -94,12 +133,14 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen> {
       });
 
       _recalculate();
+      _introController.forward(from: 0);
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _loading = false;
         _error = 'Не удалось загрузить настройки списания';
       });
+      _introController.forward(from: 0);
     }
   }
 
@@ -181,18 +222,83 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen> {
 
       showDialog<void>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Готово'),
-          content: Text(decoded['message']?.toString() ?? 'Списание выполнено'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(this.context).pop(true);
-              },
-              child: const Text('OK'),
+        builder: (context) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.94),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: Colors.white.withOpacity(0.96)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const _EmptyOrb(
+                      icon: CupertinoIcons.check_mark_circled_solid,
+                    ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'Готово',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: kSpendInk,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      decoded['message']?.toString() ?? 'Списание выполнено',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        height: 1.4,
+                        fontWeight: FontWeight.w700,
+                        color: kSpendInkSoft,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        gradient: const LinearGradient(
+                          colors: [kSpendPink, kSpendViolet],
+                        ),
+                      ),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          Navigator.of(this.context).pop(true);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 28,
+                            vertical: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        child: const Text(
+                          'OK',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ],
+          ),
         ),
       );
     } catch (_) {
@@ -209,32 +315,259 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen> {
     }
   }
 
+  Widget _stagger({
+    required int index,
+    required Widget child,
+  }) {
+    final start = (index * 0.08).clamp(0.0, 0.82);
+    final end = (start + 0.24).clamp(0.0, 1.0);
+
+    final animation = CurvedAnimation(
+      parent: _introController,
+      curve: Interval(start, end, curve: Curves.easeOutCubic),
+    );
+
+    return AnimatedBuilder(
+      animation: animation,
+      child: child,
+      builder: (context, child) {
+        final t = animation.value;
+        return Opacity(
+          opacity: t,
+          child: Transform.translate(
+            offset: Offset(0, 22 * (1 - t)),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _softBlob({
+    required double width,
+    required double height,
+    required List<Color> colors,
+  }) {
+    return IgnorePointer(
+      child: ImageFiltered(
+        imageFilter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(width),
+            gradient: LinearGradient(
+              colors: colors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _background() {
+    return AnimatedBuilder(
+      animation: _bgController,
+      builder: (context, child) {
+        final t = _bgController.value;
+        final shiftA = math.sin(t * math.pi * 2) * 18;
+        final shiftB = math.cos(t * math.pi * 2) * 12;
+        final rotate = math.sin(t * math.pi * 2) * 0.03;
+
+        return Stack(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    kSpendMintTop,
+                    kSpendMintMid,
+                    kSpendMintBottom,
+                    kSpendMintDeep,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  stops: [0.0, 0.40, 0.78, 1.0],
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.07),
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.10),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: -84 + shiftA,
+              right: -36,
+              child: Transform.rotate(
+                angle: rotate,
+                child: _softBlob(
+                  width: 280,
+                  height: 280,
+                  colors: [
+                    Colors.white.withOpacity(0.16),
+                    kSpendAccent.withOpacity(0.12),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: -64,
+              top: 210 + shiftB,
+              child: Transform.rotate(
+                angle: -rotate,
+                child: _softBlob(
+                  width: 220,
+                  height: 220,
+                  colors: [
+                    Colors.white.withOpacity(0.10),
+                    kSpendBlue.withOpacity(0.07),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 48 - shiftA,
+              right: -18,
+              child: Transform.rotate(
+                angle: rotate,
+                child: _softBlob(
+                  width: 210,
+                  height: 210,
+                  colors: [
+                    kSpendAccentSoft.withOpacity(0.10),
+                    Colors.white.withOpacity(0.05),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _headerCard() {
+    return _GlassCard(
+      radius: 30,
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        children: [
+          const _FloatingGlyph(
+            icon: CupertinoIcons.minus_circle_fill,
+            mainColor: kSpendPink,
+            secondaryColor: kSpendViolet,
+            size: 82,
+            iconSize: 34,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.clientName,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: kSpendInk,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  widget.establishmentName,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: kSpendInkSoft,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _amountCard() {
-    return StaffGlassPanel(
-      radius: 26,
-      glowColor: kStaffPink.withOpacity(0.10),
+    return _GlassCard(
+      radius: 28,
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const StaffSectionTitle(
-            title: 'Сумма чека',
-            subtitle: 'Введи сумму покупки перед списанием',
+          const Text(
+            'Сумма чека',
+            style: TextStyle(
+              fontSize: 21,
+              fontWeight: FontWeight.w900,
+              color: kSpendInk,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Введи сумму покупки перед списанием',
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              fontWeight: FontWeight.w700,
+              color: kSpendInkSoft,
+            ),
           ),
           const SizedBox(height: 14),
           Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              color: Colors.white.withOpacity(0.88),
-              border: Border.all(color: kStaffBorder),
+              borderRadius: BorderRadius.circular(22),
+              color: Colors.white.withOpacity(0.92),
+              border: Border.all(color: const Color(0xFFE7EEF0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
             child: TextField(
               controller: _amountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: kSpendInk,
+              ),
               decoration: const InputDecoration(
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 18,
+                ),
                 hintText: 'Например 1250',
+                hintStyle: TextStyle(
+                  color: kSpendInkSoft,
+                  fontWeight: FontWeight.w700,
+                ),
                 suffixText: '₽',
+                suffixStyle: TextStyle(
+                  color: kSpendInkSoft,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ),
@@ -247,23 +580,43 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen> {
     final preview = _preview;
     final config = _config;
 
-    return StaffGlassPanel(
-      radius: 26,
-      glowColor: kStaffViolet.withOpacity(0.10),
+    return _GlassCard(
+      radius: 28,
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const StaffSectionTitle(
-            title: 'Предпросмотр',
-            subtitle: 'Что произойдёт после списания',
+          const Text(
+            'Предпросмотр',
+            style: TextStyle(
+              fontSize: 21,
+              fontWeight: FontWeight.w900,
+              color: kSpendInk,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Что произойдёт после списания',
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              fontWeight: FontWeight.w700,
+              color: kSpendInkSoft,
+            ),
           ),
           const SizedBox(height: 14),
           _line('Клиент', widget.clientName),
           _line('Режим', config?.modeLabel ?? '—'),
           _line('Баланс клиента', config != null ? config.balanceLabel : '—'),
-          _line('Чек', preview != null ? '${preview.checkAmount.toStringAsFixed(0)} ₽' : '—'),
+          _line(
+            'Чек',
+            preview != null ? '${preview.checkAmount.toStringAsFixed(0)} ₽' : '—',
+          ),
           _line('Списание', preview != null ? preview.redeemedLabel : '—'),
-          _line('К оплате', preview != null ? '${preview.payable.toStringAsFixed(2)} ₽' : '—'),
+          _line(
+            'К оплате',
+            preview != null ? '${preview.payable.toStringAsFixed(2)} ₽' : '—',
+          ),
         ],
       ),
     );
@@ -278,7 +631,7 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen> {
             child: Text(
               title,
               style: const TextStyle(
-                color: kStaffInkSecondary,
+                color: kSpendInkSoft,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -289,8 +642,35 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen> {
               value,
               textAlign: TextAlign.right,
               style: const TextStyle(
-                color: kStaffInkPrimary,
+                color: kSpendInk,
                 fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _errorCard() {
+    if (_error == null) return const SizedBox.shrink();
+
+    return _GlassCard(
+      radius: 24,
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          const Icon(
+            CupertinoIcons.exclamationmark_circle_fill,
+            color: Color(0xFFE85B63),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _error!,
+              style: const TextStyle(
+                color: Color(0xFFB84C4C),
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),
@@ -302,13 +682,13 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen> {
   Widget _submitButton() {
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         gradient: const LinearGradient(
-          colors: [kStaffPink, kStaffViolet],
+          colors: [kSpendPink, kSpendViolet],
         ),
         boxShadow: [
           BoxShadow(
-            color: kStaffPink.withOpacity(0.18),
+            color: kSpendPink.withOpacity(0.18),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -321,7 +701,7 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen> {
           shadowColor: Colors.transparent,
           padding: const EdgeInsets.symmetric(vertical: 18),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(24),
           ),
         ),
         child: _saving
@@ -348,48 +728,239 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kStaffBgTop,
+      backgroundColor: kSpendMintTop,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
           'Списание',
           style: TextStyle(
-            color: kStaffInkPrimary,
+            color: Colors.white,
             fontWeight: FontWeight.w900,
           ),
         ),
-        iconTheme: const IconThemeData(color: kStaffInkPrimary),
+        iconTheme: const IconThemeData(color: Colors.white),
+        systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
-      body: StaffScreenBackground(
-        child: SafeArea(
-          child: _loading
-              ? const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation(kStaffViolet),
-                  ),
-                )
-              : ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  children: [
-                    _amountCard(),
-                    const SizedBox(height: 14),
-                    _previewCard(),
-                    if (_error != null) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        _error!,
-                        style: const TextStyle(
-                          color: Colors.redAccent,
-                          fontWeight: FontWeight.w800,
+      body: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.light,
+        child: Stack(
+          children: [
+            _background(),
+            SafeArea(
+              top: false,
+              child: _loading
+                  ? const Center(
+                      child: SizedBox(
+                        width: 42,
+                        height: 42,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          valueColor: AlwaysStoppedAnimation(kSpendViolet),
                         ),
                       ),
-                    ],
-                    const SizedBox(height: 18),
-                    _submitButton(),
-                  ],
-                ),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                      children: [
+                        _stagger(index: 0, child: _headerCard()),
+                        const SizedBox(height: 14),
+                        _stagger(index: 1, child: _amountCard()),
+                        const SizedBox(height: 14),
+                        _stagger(index: 2, child: _previewCard()),
+                        if (_error != null) ...[
+                          const SizedBox(height: 10),
+                          _stagger(index: 3, child: _errorCard()),
+                        ],
+                        const SizedBox(height: 18),
+                        _stagger(index: 4, child: _submitButton()),
+                      ],
+                    ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+class _GlassCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final double radius;
+
+  const _GlassCard({
+    required this.child,
+    required this.padding,
+    required this.radius,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(radius),
+            gradient: LinearGradient(
+              colors: [
+                kSpendCardStrong,
+                kSpendCard,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(color: kSpendStroke),
+            boxShadow: [
+              BoxShadow(
+                color: kSpendShadow.withOpacity(0.10),
+                blurRadius: 24,
+                offset: const Offset(0, 14),
+              ),
+            ],
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingGlyph extends StatelessWidget {
+  final IconData icon;
+  final Color mainColor;
+  final Color secondaryColor;
+  final double size;
+  final double iconSize;
+
+  const _FloatingGlyph({
+    required this.icon,
+    required this.mainColor,
+    required this.secondaryColor,
+    this.size = 76,
+    this.iconSize = 34,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  mainColor.withOpacity(0.22),
+                  secondaryColor.withOpacity(0.16),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          Container(
+            width: size * 0.74,
+            height: size * 0.74,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.86),
+              boxShadow: [
+                BoxShadow(
+                  color: mainColor.withOpacity(0.20),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: size * 0.54,
+            height: size * 0.54,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [mainColor, secondaryColor],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: iconSize,
+            ),
+          ),
+          Positioned(
+            top: size * 0.11,
+            right: size * 0.14,
+            child: Container(
+              width: size * 0.14,
+              height: size * 0.14,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.90),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyOrb extends StatelessWidget {
+  final IconData icon;
+
+  const _EmptyOrb({
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 82,
+      height: 82,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 82,
+            height: 82,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  kSpendBlue.withOpacity(0.18),
+                  kSpendViolet.withOpacity(0.10),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.92),
+            ),
+            child: Icon(
+              icon,
+              color: kSpendInkSoft,
+              size: 28,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,6 +1,9 @@
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/staff_rewards_api.dart';
+import 'staff_design_system.dart';
 
 class StaffRewardRedemptionsHistoryScreen extends StatefulWidget {
   final String clientId;
@@ -15,12 +18,10 @@ class StaffRewardRedemptionsHistoryScreen extends StatefulWidget {
   });
 
   @override
-  State<StaffRewardRedemptionsHistoryScreen> createState() =>
-      _StaffRewardRedemptionsHistoryScreenState();
+  State<StaffRewardRedemptionsHistoryScreen> createState() => _StaffRewardRedemptionsHistoryScreenState();
 }
 
-class _StaffRewardRedemptionsHistoryScreenState
-    extends State<StaffRewardRedemptionsHistoryScreen> {
+class _StaffRewardRedemptionsHistoryScreenState extends State<StaffRewardRedemptionsHistoryScreen> {
   final StaffRewardsApi _api = StaffRewardsApi();
 
   bool _loading = true;
@@ -44,14 +45,12 @@ class _StaffRewardRedemptionsHistoryScreenState
         clientId: widget.clientId,
         establishmentId: widget.establishmentId,
       );
-
       if (!mounted) return;
-
       setState(() {
         _items = items;
         _loading = false;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _error = 'Ошибка загрузки истории погашений';
@@ -60,72 +59,50 @@ class _StaffRewardRedemptionsHistoryScreenState
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('История погашений'),
-        actions: [
-          IconButton(
-            onPressed: _load,
-            icon: const Icon(Icons.refresh),
+  Widget _itemCard(StaffRewardRedemptionHistoryItem item) {
+    return StaffGlassCard(
+      glow: kHomePink,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(item.rewardTitle, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: kHomeInk)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(child: StaffInfoChip(label: 'Баллы', value: '${item.pointsSpent}', color: kHomeBlue)),
+              const SizedBox(width: 10),
+              Expanded(child: StaffInfoChip(label: 'Статус', value: item.status ?? '-', color: kHomePink)),
+            ],
           ),
+          const SizedBox(height: 10),
+          Text('Дата: ${item.createdAt ?? '-'}', style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: kHomeInkSoft)),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-                ? Center(child: Text(_error!))
-                : _items.isEmpty
-                    ? const Center(child: Text('История погашений пока пустая'))
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.clientName,
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Expanded(
-                            child: ListView.separated(
-                              itemCount: _items.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 12),
-                              itemBuilder: (context, index) {
-                                final item = _items[index];
+    );
+  }
 
-                                return Card(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.rewardTitle,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text('Списано баллов: ${item.pointsSpent}'),
-                                        const SizedBox(height: 4),
-                                        Text('Статус: ${item.status ?? "-"}'),
-                                        const SizedBox(height: 4),
-                                        Text('Дата: ${item.createdAt ?? "-"}'),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
+  @override
+  Widget build(BuildContext context) {
+    return StaffUnifiedScaffold(
+      title: 'История погашений',
+      onRefresh: _load,
+      useList: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          StaffGlassCard(
+            child: Text(widget.clientName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: kHomeInk)),
+          ),
+          const SizedBox(height: 14),
+          if (_loading)
+            const StaffStateCard(icon: CupertinoIcons.clock_fill, title: 'Загрузка', subtitle: 'Получаем историю погашений')
+          else if (_error != null)
+            StaffStateCard(icon: CupertinoIcons.exclamationmark_circle_fill, title: 'Ошибка', subtitle: _error!, glow: kHomeAccentRed)
+          else if (_items.isEmpty)
+            const StaffStateCard(icon: CupertinoIcons.clock, title: 'Пока пусто', subtitle: 'История погашений пока пустая', glow: kHomePink)
+          else
+            ..._items.map((e) => Padding(padding: const EdgeInsets.only(bottom: 12), child: _itemCard(e))),
+        ],
       ),
     );
   }

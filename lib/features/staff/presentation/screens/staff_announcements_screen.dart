@@ -1,13 +1,34 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../auth/data/auth_storage.dart';
 import '../../../../core/config/app_config.dart';
-import '../widgets/staff_glass_ui.dart';
+
+const Color kAnnMintTop = Color(0xFF0CB7B3);
+const Color kAnnMintMid = Color(0xFF08A9AB);
+const Color kAnnMintBottom = Color(0xFF067D87);
+const Color kAnnMintDeep = Color(0xFF055E66);
+
+const Color kAnnAccent = Color(0xFFFFA11D);
+const Color kAnnAccentSoft = Color(0xFFFFC45E);
+
+const Color kAnnCard = Color(0xCCFFFFFF);
+const Color kAnnCardStrong = Color(0xE8FFFFFF);
+const Color kAnnStroke = Color(0xA6FFFFFF);
+
+const Color kAnnInk = Color(0xFF103238);
+const Color kAnnInkSoft = Color(0xFF58767D);
+const Color kAnnShadow = Color(0x22062E36);
+
+const Color kAnnBlue = Color(0xFF4E7CFF);
+const Color kAnnPink = Color(0xFFFF5F8F);
+const Color kAnnViolet = Color(0xFF7A63FF);
 
 class StaffAnnouncementsScreen extends StatefulWidget {
   final int establishmentId;
@@ -22,19 +43,41 @@ class StaffAnnouncementsScreen extends StatefulWidget {
   });
 
   @override
-  State<StaffAnnouncementsScreen> createState() => _StaffAnnouncementsScreenState();
+  State<StaffAnnouncementsScreen> createState() =>
+      _StaffAnnouncementsScreenState();
 }
 
-class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen> {
+class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
+    with TickerProviderStateMixin {
   bool _loading = true;
   bool _saving = false;
   String? _error;
   List<_AnnouncementItem> _items = [];
 
+  late final AnimationController _bgController;
+  late final AnimationController _introController;
+
   @override
   void initState() {
     super.initState();
+    _bgController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 6800),
+    )..repeat();
+
+    _introController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 950),
+    );
+
     _load();
+  }
+
+  @override
+  void dispose() {
+    _bgController.dispose();
+    _introController.dispose();
+    super.dispose();
   }
 
   Future<String> _token() async {
@@ -90,12 +133,15 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen> {
             .toList();
         _loading = false;
       });
+
+      _introController.forward(from: 0);
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _loading = false;
         _error = 'Не удалось загрузить объявления';
       });
+      _introController.forward(from: 0);
     }
   }
 
@@ -109,71 +155,200 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen> {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setLocalState) {
-            return AlertDialog(
-              title: const Text('Новое объявление'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: titleController,
-                      decoration: const InputDecoration(
-                        labelText: 'Заголовок',
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(30),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(30),
+                      color: Colors.white.withOpacity(0.94),
+                      border: Border.all(color: Colors.white.withOpacity(0.96)),
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Новое объявление',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: kAnnInk,
+                              letterSpacing: -0.6,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Создай объявление для сотрудников заведения',
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.4,
+                              fontWeight: FontWeight.w700,
+                              color: kAnnInkSoft,
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          TextField(
+                            controller: titleController,
+                            decoration: _dialogInputDecoration('Заголовок'),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: bodyController,
+                            maxLines: 5,
+                            decoration: _dialogInputDecoration(
+                              'Текст объявления',
+                              alignLabelWithHint: true,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              color: kAnnPink.withOpacity(0.08),
+                            ),
+                            child: SwitchListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                              ),
+                              value: pinned,
+                              onChanged: (v) {
+                                setLocalState(() {
+                                  pinned = v;
+                                });
+                              },
+                              activeColor: kAnnViolet,
+                              title: const Text(
+                                'Закрепить',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  color: kAnnInk,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(dialogContext).pop(),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Отмена',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: kAnnInkSoft,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(18),
+                                    gradient: const LinearGradient(
+                                      colors: [kAnnBlue, kAnnPink],
+                                    ),
+                                  ),
+                                  child: ElevatedButton(
+                                    onPressed: _saving
+                                        ? null
+                                        : () async {
+                                            final title =
+                                                titleController.text.trim();
+                                            final body =
+                                                bodyController.text.trim();
+
+                                            if (title.isEmpty || body.isEmpty) {
+                                              return;
+                                            }
+
+                                            Navigator.of(dialogContext).pop();
+                                            await _createAnnouncement(
+                                              title: title,
+                                              body: body,
+                                              pinned: pinned,
+                                            );
+                                          },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      shadowColor: Colors.transparent,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(18),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Создать',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: bodyController,
-                      maxLines: 5,
-                      decoration: const InputDecoration(
-                        labelText: 'Текст объявления',
-                        alignLabelWithHint: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: pinned,
-                      onChanged: (v) {
-                        setLocalState(() {
-                          pinned = v;
-                        });
-                      },
-                      title: const Text('Закрепить'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Отмена'),
-                ),
-                TextButton(
-                  onPressed: _saving
-                      ? null
-                      : () async {
-                          final title = titleController.text.trim();
-                          final body = bodyController.text.trim();
-
-                          if (title.isEmpty || body.isEmpty) {
-                            return;
-                          }
-
-                          Navigator.of(dialogContext).pop();
-                          await _createAnnouncement(
-                            title: title,
-                            body: body,
-                            pinned: pinned,
-                          );
-                        },
-                  child: const Text('Создать'),
-                ),
-              ],
             );
           },
         );
       },
+    );
+  }
+
+  InputDecoration _dialogInputDecoration(
+    String label, {
+    bool alignLabelWithHint = false,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      alignLabelWithHint: alignLabelWithHint,
+      labelStyle: const TextStyle(
+        color: kAnnInkSoft,
+        fontWeight: FontWeight.w700,
+      ),
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.92),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 18,
+        vertical: 18,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: const BorderSide(color: Color(0xFFE7EEF0)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: const BorderSide(color: Color(0xFFE7EEF0)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: const BorderSide(
+          color: kAnnViolet,
+          width: 1.4,
+        ),
+      ),
     );
   }
 
@@ -253,15 +428,15 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen> {
             return Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(30),
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                   child: Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(28),
-                      color: Colors.white.withOpacity(0.88),
-                      border: Border.all(color: Colors.white.withOpacity(0.94)),
+                      borderRadius: BorderRadius.circular(30),
+                      color: Colors.white.withOpacity(0.92),
+                      border: Border.all(color: Colors.white.withOpacity(0.96)),
                     ),
                     child: SafeArea(
                       top: false,
@@ -279,20 +454,23 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen> {
                                   ),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(999),
-                                    color: kStaffPink.withOpacity(0.14),
+                                    color: kAnnPink.withOpacity(0.14),
                                   ),
                                   child: const Text(
                                     'Закреплено',
                                     style: TextStyle(
                                       fontWeight: FontWeight.w900,
-                                      color: kStaffInkPrimary,
+                                      color: kAnnInk,
                                     ),
                                   ),
                                 ),
                               const Spacer(),
                               IconButton(
                                 onPressed: () => Navigator.of(context).pop(),
-                                icon: const Icon(CupertinoIcons.xmark),
+                                icon: const Icon(
+                                  CupertinoIcons.xmark,
+                                  color: kAnnInk,
+                                ),
                               ),
                             ],
                           ),
@@ -303,7 +481,8 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen> {
                               fontSize: 24,
                               height: 1.12,
                               fontWeight: FontWeight.w900,
-                              color: kStaffInkPrimary,
+                              color: kAnnInk,
+                              letterSpacing: -0.6,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -312,7 +491,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen> {
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: kStaffInkSecondary,
+                              color: kAnnInkSoft,
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -321,7 +500,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen> {
                             style: const TextStyle(
                               fontSize: 15,
                               height: 1.5,
-                              color: kStaffInkPrimary,
+                              color: kAnnInk,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -332,8 +511,11 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen> {
                                 borderRadius: BorderRadius.circular(18),
                                 gradient: LinearGradient(
                                   colors: acknowledged
-                                      ? const [Color(0xFF7B8BA3), Color(0xFF8C9AB1)]
-                                      : const [kStaffBlue, kStaffViolet],
+                                      ? const [
+                                          Color(0xFF7B8BA3),
+                                          Color(0xFF8C9AB1),
+                                        ]
+                                      : const [kAnnBlue, kAnnViolet],
                                 ),
                               ),
                               child: ElevatedButton(
@@ -362,7 +544,9 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen> {
                                   ),
                                 ),
                                 child: Text(
-                                  acknowledged ? 'Ознакомлен' : 'Отметить как ознакомлен',
+                                  acknowledged
+                                      ? 'Ознакомлен'
+                                      : 'Отметить как ознакомлен',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w900,
@@ -383,31 +567,230 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen> {
     );
   }
 
-  Widget _headerCard() {
-    return StaffGlassPanel(
-      radius: 28,
-      glowColor: kStaffViolet.withOpacity(0.10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            widget.establishmentName,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              color: kStaffInkPrimary,
+  Widget _stagger({
+    required int index,
+    required Widget child,
+  }) {
+    final start = (index * 0.08).clamp(0.0, 0.82);
+    final end = (start + 0.24).clamp(0.0, 1.0);
+
+    final animation = CurvedAnimation(
+      parent: _introController,
+      curve: Interval(start, end, curve: Curves.easeOutCubic),
+    );
+
+    return AnimatedBuilder(
+      animation: animation,
+      child: child,
+      builder: (context, child) {
+        final t = animation.value;
+        return Opacity(
+          opacity: t,
+          child: Transform.translate(
+            offset: Offset(0, 22 * (1 - t)),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _softBlob({
+    required double width,
+    required double height,
+    required List<Color> colors,
+  }) {
+    return IgnorePointer(
+      child: ImageFiltered(
+        imageFilter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(width),
+            gradient: LinearGradient(
+              colors: colors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            widget.isOwner
-                ? 'Ты можешь создавать объявления для сотрудников'
-                : 'Здесь важные объявления от владельца',
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.4,
-              fontWeight: FontWeight.w700,
-              color: kStaffInkSecondary,
+        ),
+      ),
+    );
+  }
+
+  Widget _background() {
+    return AnimatedBuilder(
+      animation: _bgController,
+      builder: (context, child) {
+        final t = _bgController.value;
+        final shiftA = math.sin(t * math.pi * 2) * 18;
+        final shiftB = math.cos(t * math.pi * 2) * 12;
+        final rotate = math.sin(t * math.pi * 2) * 0.03;
+
+        return Stack(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    kAnnMintTop,
+                    kAnnMintMid,
+                    kAnnMintBottom,
+                    kAnnMintDeep,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  stops: [0.0, 0.40, 0.78, 1.0],
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.07),
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.10),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: -84 + shiftA,
+              right: -36,
+              child: Transform.rotate(
+                angle: rotate,
+                child: _softBlob(
+                  width: 280,
+                  height: 280,
+                  colors: [
+                    Colors.white.withOpacity(0.16),
+                    kAnnAccent.withOpacity(0.12),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: -64,
+              top: 210 + shiftB,
+              child: Transform.rotate(
+                angle: -rotate,
+                child: _softBlob(
+                  width: 220,
+                  height: 220,
+                  colors: [
+                    Colors.white.withOpacity(0.10),
+                    kAnnBlue.withOpacity(0.07),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 48 - shiftA,
+              right: -18,
+              child: Transform.rotate(
+                angle: rotate,
+                child: _softBlob(
+                  width: 210,
+                  height: 210,
+                  colors: [
+                    kAnnAccentSoft.withOpacity(0.10),
+                    Colors.white.withOpacity(0.05),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _fabButton() {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: const LinearGradient(
+          colors: [kAnnBlue, kAnnPink],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: kAnnBlue.withOpacity(0.22),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: FloatingActionButton.extended(
+        onPressed: _saving ? null : _showCreateDialog,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        icon: _saving
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.2,
+                  color: Colors.white,
+                ),
+              )
+            : const Icon(CupertinoIcons.add),
+        label: const Text(
+          'Создать',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
+    );
+  }
+
+  Widget _headerCard() {
+    return _GlassCard(
+      radius: 30,
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        children: [
+          const _FloatingGlyph(
+            icon: CupertinoIcons.bell,
+            mainColor: kAnnPink,
+            secondaryColor: kAnnViolet,
+            size: 82,
+            iconSize: 34,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.establishmentName,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: kAnnInk,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  widget.isOwner
+                      ? 'Ты можешь создавать объявления для сотрудников'
+                      : 'Здесь важные объявления от владельца',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
+                    fontWeight: FontWeight.w700,
+                    color: kAnnInkSoft,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -420,19 +803,20 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen> {
     required String title,
     required String subtitle,
   }) {
-    return StaffGlassPanel(
-      radius: 26,
+    return _GlassCard(
+      radius: 28,
+      padding: const EdgeInsets.all(22),
       child: Column(
         children: [
-          StaffGradientIcon(icon: icon, size: 24),
-          const SizedBox(height: 12),
+          _EmptyOrb(icon: icon),
+          const SizedBox(height: 14),
           Text(
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 19,
               fontWeight: FontWeight.w900,
-              color: kStaffInkPrimary,
+              color: kAnnInk,
             ),
           ),
           const SizedBox(height: 8),
@@ -442,7 +826,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen> {
             style: const TextStyle(
               fontSize: 14,
               height: 1.4,
-              color: kStaffInkSecondary,
+              color: kAnnInkSoft,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -452,116 +836,128 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen> {
   }
 
   Widget _announcementCard(_AnnouncementItem item) {
-    return StaffGlassPanel(
-      radius: 24,
-      glowColor: item.isPinned
-          ? kStaffPink.withOpacity(0.10)
-          : kStaffBlue.withOpacity(0.08),
+    return _Pressable(
       onTap: () => _openDetails(item),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              if (item.isPinned)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    color: kStaffPink.withOpacity(0.14),
-                  ),
-                  child: const Text(
-                    'Закреплено',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: kStaffInkPrimary,
+      borderRadius: 28,
+      child: _GlassCard(
+        radius: 28,
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (item.isPinned)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
                     ),
-                  ),
-                ),
-              if (item.isPinned) const SizedBox(width: 8),
-              if (!item.acknowledged && !widget.isOwner)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    color: kStaffViolet,
-                    boxShadow: [
-                      BoxShadow(
-                        color: kStaffViolet.withOpacity(0.22),
-                        blurRadius: 10,
-                        offset: const Offset(0, 6),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      color: kAnnPink.withOpacity(0.14),
+                    ),
+                    child: const Text(
+                      'Закреплено',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: kAnnInk,
                       ),
-                    ],
-                  ),
-                  child: const Text(
-                    'Новое',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
                     ),
                   ),
-                ),
-              const Spacer(),
-              const Icon(
-                CupertinoIcons.chevron_right,
-                color: kStaffInkPrimary,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            item.title,
-            style: const TextStyle(
-              fontSize: 18,
-              height: 1.18,
-              fontWeight: FontWeight.w900,
-              color: kStaffInkPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            item.previewBody,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.42,
-              fontWeight: FontWeight.w700,
-              color: kStaffInkSecondary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Text(
-                _formatDate(item.createdAt),
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: kStaffInkSecondary,
-                ),
-              ),
-              const Spacer(),
-              if (!widget.isOwner)
-                Text(
-                  item.acknowledged ? 'Ознакомлен' : 'Не ознакомлен',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
-                    color: item.acknowledged ? kStaffBlue : kStaffViolet,
+                if (item.isPinned) const SizedBox(width: 8),
+                if (!item.acknowledged && !widget.isOwner)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      color: kAnnViolet,
+                      boxShadow: [
+                        BoxShadow(
+                          color: kAnnViolet.withOpacity(0.22),
+                          blurRadius: 10,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: const Text(
+                      'Новое',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                const Spacer(),
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.white.withOpacity(0.72),
+                    border: Border.all(color: Colors.white.withOpacity(0.72)),
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.chevron_right,
+                    color: kAnnInk,
+                    size: 18,
                   ),
                 ),
-            ],
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              item.title,
+              style: const TextStyle(
+                fontSize: 18,
+                height: 1.18,
+                fontWeight: FontWeight.w900,
+                color: kAnnInk,
+                letterSpacing: -0.4,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              item.previewBody,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.42,
+                fontWeight: FontWeight.w700,
+                color: kAnnInkSoft,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Text(
+                  _formatDate(item.createdAt),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: kAnnInkSoft,
+                  ),
+                ),
+                const Spacer(),
+                if (!widget.isOwner)
+                  Text(
+                    item.acknowledged ? 'Ознакомлен' : 'Не ознакомлен',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: item.acknowledged ? kAnnBlue : kAnnViolet,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -569,79 +965,326 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kStaffBgTop,
+      backgroundColor: kAnnMintTop,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
           'Объявления',
           style: TextStyle(
-            color: kStaffInkPrimary,
+            color: Colors.white,
             fontWeight: FontWeight.w900,
           ),
         ),
-        iconTheme: const IconThemeData(color: kStaffInkPrimary),
+        iconTheme: const IconThemeData(color: Colors.white),
+        systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
-      floatingActionButton: widget.isOwner
-          ? FloatingActionButton.extended(
-              onPressed: _saving ? null : _showCreateDialog,
-              backgroundColor: kStaffViolet,
-              foregroundColor: Colors.white,
-              icon: _saving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.2,
-                        color: Colors.white,
+      floatingActionButton: widget.isOwner ? _fabButton() : null,
+      body: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.light,
+        child: Stack(
+          children: [
+            _background(),
+            SafeArea(
+              top: false,
+              child: _loading
+                  ? const Center(
+                      child: SizedBox(
+                        width: 42,
+                        height: 42,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          valueColor: AlwaysStoppedAnimation(kAnnViolet),
+                        ),
                       ),
                     )
-                  : const Icon(CupertinoIcons.add),
-              label: const Text(
-                'Создать',
-                style: TextStyle(fontWeight: FontWeight.w900),
+                  : RefreshIndicator(
+                      color: kAnnViolet,
+                      backgroundColor: Colors.white,
+                      onRefresh: _load,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                        children: [
+                          _stagger(index: 0, child: _headerCard()),
+                          const SizedBox(height: 14),
+                          if (_error != null)
+                            _stagger(
+                              index: 1,
+                              child: _stateCard(
+                                icon: CupertinoIcons.exclamationmark_circle_fill,
+                                title: 'Ошибка',
+                                subtitle: _error!,
+                              ),
+                            )
+                          else if (_items.isEmpty)
+                            _stagger(
+                              index: 1,
+                              child: _stateCard(
+                                icon: CupertinoIcons.bell_fill,
+                                title: 'Объявлений пока нет',
+                                subtitle: widget.isOwner
+                                    ? 'Создай первое объявление для сотрудников'
+                                    : 'Когда владелец добавит объявление, оно появится здесь',
+                              ),
+                            )
+                          else
+                            ..._items.asMap().entries.map(
+                              (entry) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _stagger(
+                                  index: entry.key + 1,
+                                  child: _announcementCard(entry.value),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GlassCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final double radius;
+
+  const _GlassCard({
+    required this.child,
+    required this.padding,
+    required this.radius,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(radius),
+            gradient: LinearGradient(
+              colors: [
+                kAnnCardStrong,
+                kAnnCard,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(color: kAnnStroke),
+            boxShadow: [
+              BoxShadow(
+                color: kAnnShadow.withOpacity(0.10),
+                blurRadius: 24,
+                offset: const Offset(0, 14),
               ),
-            )
-          : null,
-      body: StaffScreenBackground(
-        child: SafeArea(
-          child: _loading
-              ? const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation(kStaffViolet),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    children: [
-                      _headerCard(),
-                      const SizedBox(height: 14),
-                      if (_error != null)
-                        _stateCard(
-                          icon: CupertinoIcons.exclamationmark_circle_fill,
-                          title: 'Ошибка',
-                          subtitle: _error!,
-                        )
-                      else if (_items.isEmpty)
-                        _stateCard(
-                          icon: CupertinoIcons.bell_fill,
-                          title: 'Объявлений пока нет',
-                          subtitle: widget.isOwner
-                              ? 'Создай первое объявление для сотрудников'
-                              : 'Когда владелец добавит объявление, оно появится здесь',
-                        )
-                      else
-                        ..._items.map(
-                          (item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _announcementCard(item),
-                          ),
-                        ),
-                    ],
-                  ),
+            ],
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingGlyph extends StatelessWidget {
+  final IconData icon;
+  final Color mainColor;
+  final Color secondaryColor;
+  final double size;
+  final double iconSize;
+
+  const _FloatingGlyph({
+    required this.icon,
+    required this.mainColor,
+    required this.secondaryColor,
+    this.size = 76,
+    this.iconSize = 34,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  mainColor.withOpacity(0.22),
+                  secondaryColor.withOpacity(0.16),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          Container(
+            width: size * 0.74,
+            height: size * 0.74,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.86),
+              boxShadow: [
+                BoxShadow(
+                  color: mainColor.withOpacity(0.20),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
                 ),
+              ],
+            ),
+          ),
+          Container(
+            width: size * 0.54,
+            height: size * 0.54,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [mainColor, secondaryColor],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: iconSize,
+            ),
+          ),
+          Positioned(
+            top: size * 0.11,
+            right: size * 0.14,
+            child: Container(
+              width: size * 0.14,
+              height: size * 0.14,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.90),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyOrb extends StatelessWidget {
+  final IconData icon;
+
+  const _EmptyOrb({
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 82,
+      height: 82,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 82,
+            height: 82,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  kAnnBlue.withOpacity(0.18),
+                  kAnnViolet.withOpacity(0.10),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.92),
+            ),
+            child: Icon(
+              icon,
+              color: kAnnInkSoft,
+              size: 28,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Pressable extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  final double borderRadius;
+
+  const _Pressable({
+    required this.child,
+    required this.onTap,
+    required this.borderRadius,
+  });
+
+  @override
+  State<_Pressable> createState() => _PressableState();
+}
+
+class _PressableState extends State<_Pressable> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (_pressed == value) return;
+    setState(() => _pressed = value);
+  }
+
+  void _tap() {
+    HapticFeedback.lightImpact();
+    widget.onTap();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _setPressed(true),
+      onTapUp: (_) => _setPressed(false),
+      onTapCancel: () => _setPressed(false),
+      onTap: _tap,
+      child: AnimatedScale(
+        scale: _pressed ? 0.982 : 1,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutCubic,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            boxShadow: _pressed
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : null,
+          ),
+          child: widget.child,
         ),
       ),
     );

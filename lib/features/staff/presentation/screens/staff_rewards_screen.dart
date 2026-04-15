@@ -1,6 +1,9 @@
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/staff_rewards_api.dart';
+import 'staff_design_system.dart';
 import 'staff_reward_redemptions_history_screen.dart';
 
 class StaffRewardsScreen extends StatefulWidget {
@@ -41,19 +44,14 @@ class _StaffRewardsScreenState extends State<StaffRewardsScreen> {
     });
 
     try {
-      final items = await _api.getRewards(
-        establishmentId: widget.establishmentId,
-      );
-
+      final items = await _api.getRewards(establishmentId: widget.establishmentId);
       if (!mounted) return;
-
       setState(() {
         _items = items.where((e) => e.isActive).toList();
         _loading = false;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
-
       setState(() {
         _loading = false;
         _error = 'Ошибка загрузки наград';
@@ -74,15 +72,12 @@ class _StaffRewardsScreenState extends State<StaffRewardsScreen> {
         rewardId: reward.rewardId,
         comment: 'Погашение из Staff',
       );
-
       if (!mounted) return;
-
       setState(() {
         _success = 'Награда погашена. Новый баланс: ${result.newBalance}';
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
-
       setState(() {
         _error = 'Ошибка погашения награды';
       });
@@ -102,122 +97,85 @@ class _StaffRewardsScreenState extends State<StaffRewardsScreen> {
   }
 
   Widget _rewardCard(StaffRewardItem item) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              item.title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+    return StaffGlassCard(
+      glow: kHomePink,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const StaffFloatingGlyph(
+                icon: CupertinoIcons.gift_fill,
+                mainColor: kHomePink,
+                secondaryColor: kHomeViolet,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(item.description ?? '-'),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(item.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: kHomeInk)),
+              ),
+            ],
+          ),
+          if ((item.description ?? '').trim().isNotEmpty) ...[
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.black12,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${item.pointsCost} баллов',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _redeemReward(item),
-                icon: const Icon(Icons.card_giftcard),
-                label: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text('Погасить'),
-                ),
-              ),
-            ),
+            Text(item.description!, style: const TextStyle(fontSize: 13.5, height: 1.4, color: kHomeInkSoft, fontWeight: FontWeight.w700)),
           ],
-        ),
+          const SizedBox(height: 12),
+          StaffInfoChip(label: 'Стоимость', value: '${item.pointsCost} баллов', color: kHomeBlue),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: StaffPillButton(
+              text: 'Погасить',
+              icon: CupertinoIcons.gift,
+              onTap: () => _redeemReward(item),
+              colors: const [kHomeBlue, kHomePink],
+            ),
+          ),
+        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Подарки / погашение'),
-        actions: [
-          IconButton(
-            onPressed: _openHistory,
-            icon: const Icon(Icons.history),
+    return StaffUnifiedScaffold(
+      title: 'Подарки / погашение',
+      onRefresh: _loadRewards,
+      actions: [
+        const SizedBox(width: 8),
+        GestureDetector(
+          onTap: _openHistory,
+          child: const Icon(CupertinoIcons.time, color: Colors.white, size: 22),
+        ),
+      ],
+      useList: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          StaffGlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.clientName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: kHomeInk)),
+                const SizedBox(height: 6),
+                const Text('Доступные награды и быстрое погашение', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kHomeInkSoft)),
+              ],
+            ),
           ),
-          IconButton(
-            onPressed: _loadRewards,
-            icon: const Icon(Icons.refresh),
-          ),
+          if (_success != null) ...[
+            const SizedBox(height: 12),
+            StaffGlassCard(glow: kHomeMintTop, child: Text(_success!, style: const TextStyle(color: kHomeInk, fontWeight: FontWeight.w900))),
+          ],
+          const SizedBox(height: 14),
+          if (_loading)
+            const StaffStateCard(icon: CupertinoIcons.clock_fill, title: 'Загрузка', subtitle: 'Получаем награды', glow: kHomeBlue)
+          else if (_error != null)
+            StaffStateCard(icon: CupertinoIcons.exclamationmark_circle_fill, title: 'Ошибка', subtitle: _error!, glow: kHomeAccentRed)
+          else if (_items.isEmpty)
+            const StaffStateCard(icon: CupertinoIcons.gift, title: 'Пока пусто', subtitle: 'Доступных наград пока нет', glow: kHomePink)
+          else
+            ..._items.map((e) => Padding(padding: const EdgeInsets.only(bottom: 12), child: _rewardCard(e))),
         ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-                ? Center(child: Text(_error!))
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.clientName,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      if (_success != null)
-                        Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Text(
-                            _success!,
-                            style: const TextStyle(color: Colors.green),
-                          ),
-                        ),
-                      if (_items.isEmpty)
-                        const Expanded(
-                          child: Center(
-                            child: Text('Доступных наград пока нет'),
-                          ),
-                        )
-                      else
-                        Expanded(
-                          child: ListView.separated(
-                            itemCount: _items.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 12),
-                            itemBuilder: (context, index) => _rewardCard(_items[index]),
-                          ),
-                        ),
-                    ],
-                  ),
       ),
     );
   }

@@ -457,7 +457,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   border: Border.all(color: Colors.white.withOpacity(0.16)),
                 ),
                 child: Text(
-                  'Flowru · Система лояльности',
+                  '· Flowru ·',
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w800,

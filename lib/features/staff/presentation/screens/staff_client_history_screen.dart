@@ -1,12 +1,34 @@
 import 'dart:convert';
+import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../auth/data/auth_storage.dart';
 import '../../../../core/config/app_config.dart';
-import '../widgets/staff_glass_ui.dart';
+
+const Color kClientHistoryMintTop = Color(0xFF0CB7B3);
+const Color kClientHistoryMintMid = Color(0xFF08A9AB);
+const Color kClientHistoryMintBottom = Color(0xFF067D87);
+const Color kClientHistoryMintDeep = Color(0xFF055E66);
+
+const Color kClientHistoryAccent = Color(0xFFFFA11D);
+const Color kClientHistoryAccentSoft = Color(0xFFFFC45E);
+
+const Color kClientHistoryCard = Color(0xCCFFFFFF);
+const Color kClientHistoryCardStrong = Color(0xE8FFFFFF);
+const Color kClientHistoryStroke = Color(0xA6FFFFFF);
+
+const Color kClientHistoryInk = Color(0xFF103238);
+const Color kClientHistoryInkSoft = Color(0xFF58767D);
+const Color kClientHistoryShadow = Color(0x22062E36);
+
+const Color kClientHistoryBlue = Color(0xFF4E7CFF);
+const Color kClientHistoryPink = Color(0xFFFF5F8F);
+const Color kClientHistoryViolet = Color(0xFF7A63FF);
 
 class StaffClientHistoryScreen extends StatefulWidget {
   final int establishmentId;
@@ -27,15 +49,37 @@ class StaffClientHistoryScreen extends StatefulWidget {
       _StaffClientHistoryScreenState();
 }
 
-class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen> {
+class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
+    with TickerProviderStateMixin {
   bool _loading = true;
   String? _error;
   List<_HistoryItem> _items = [];
 
+  late final AnimationController _bgController;
+  late final AnimationController _introController;
+
   @override
   void initState() {
     super.initState();
+
+    _bgController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 6800),
+    )..repeat();
+
+    _introController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 950),
+    );
+
     _load();
+  }
+
+  @override
+  void dispose() {
+    _bgController.dispose();
+    _introController.dispose();
+    super.dispose();
   }
 
   Future<String> _token() async {
@@ -92,48 +136,161 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen> {
             .toList();
         _loading = false;
       });
+
+      _introController.forward(from: 0);
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _loading = false;
         _error = 'Не удалось загрузить историю клиента';
       });
+      _introController.forward(from: 0);
     }
   }
 
-  Widget _stateCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
+  Widget _stagger({
+    required int index,
+    required Widget child,
   }) {
-    return StaffGlassPanel(
-      radius: 26,
-      child: Column(
-        children: [
-          StaffGradientIcon(icon: icon, size: 24),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.w900,
-              color: kStaffInkPrimary,
+    final start = (index * 0.08).clamp(0.0, 0.82);
+    final end = (start + 0.24).clamp(0.0, 1.0);
+
+    final animation = CurvedAnimation(
+      parent: _introController,
+      curve: Interval(start, end, curve: Curves.easeOutCubic),
+    );
+
+    return AnimatedBuilder(
+      animation: animation,
+      child: child,
+      builder: (context, child) {
+        final t = animation.value;
+        return Opacity(
+          opacity: t,
+          child: Transform.translate(
+            offset: Offset(0, 22 * (1 - t)),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _softBlob({
+    required double width,
+    required double height,
+    required List<Color> colors,
+  }) {
+    return IgnorePointer(
+      child: ImageFiltered(
+        imageFilter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(width),
+            gradient: LinearGradient(
+              colors: colors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.4,
-              color: kStaffInkSecondary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _background() {
+    return AnimatedBuilder(
+      animation: _bgController,
+      builder: (context, child) {
+        final t = _bgController.value;
+        final shiftA = math.sin(t * math.pi * 2) * 18;
+        final shiftB = math.cos(t * math.pi * 2) * 12;
+        final rotate = math.sin(t * math.pi * 2) * 0.03;
+
+        return Stack(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    kClientHistoryMintTop,
+                    kClientHistoryMintMid,
+                    kClientHistoryMintBottom,
+                    kClientHistoryMintDeep,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  stops: [0.0, 0.40, 0.78, 1.0],
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.07),
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.10),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: -84 + shiftA,
+              right: -36,
+              child: Transform.rotate(
+                angle: rotate,
+                child: _softBlob(
+                  width: 280,
+                  height: 280,
+                  colors: [
+                    Colors.white.withOpacity(0.16),
+                    kClientHistoryAccent.withOpacity(0.12),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: -64,
+              top: 210 + shiftB,
+              child: Transform.rotate(
+                angle: -rotate,
+                child: _softBlob(
+                  width: 220,
+                  height: 220,
+                  colors: [
+                    Colors.white.withOpacity(0.10),
+                    kClientHistoryBlue.withOpacity(0.07),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 48 - shiftA,
+              right: -18,
+              child: Transform.rotate(
+                angle: rotate,
+                child: _softBlob(
+                  width: 210,
+                  height: 210,
+                  colors: [
+                    kClientHistoryAccentSoft.withOpacity(0.10),
+                    Colors.white.withOpacity(0.05),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -142,13 +299,13 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen> {
       case 'accrual':
       case 'visit':
       case 'earn':
-        return kStaffBlue;
+        return kClientHistoryBlue;
       case 'spend':
       case 'redeem':
       case 'write_off':
-        return kStaffPink;
+        return kClientHistoryPink;
       default:
-        return kStaffViolet;
+        return kClientHistoryViolet;
     }
   }
 
@@ -198,29 +355,101 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen> {
     }
   }
 
+  Widget _headerCard() {
+    return _GlassCard(
+      radius: 30,
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        children: [
+          const _FloatingGlyph(
+            icon: CupertinoIcons.time,
+            mainColor: kClientHistoryBlue,
+            secondaryColor: kClientHistoryViolet,
+            size: 82,
+            iconSize: 34,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.clientName,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: kClientHistoryInk,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  widget.establishmentName,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: kClientHistoryInkSoft,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _stateCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return _GlassCard(
+      radius: 28,
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        children: [
+          _EmptyOrb(icon: icon),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.w900,
+              color: kClientHistoryInk,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              color: kClientHistoryInkSoft,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _itemCard(_HistoryItem item) {
     final color = _typeColor(item.operationType);
 
-    return StaffGlassPanel(
-      radius: 22,
-      glowColor: color.withOpacity(0.10),
+    return _GlassCard(
+      radius: 26,
+      padding: const EdgeInsets.all(18),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              color: color.withOpacity(0.12),
-            ),
-            child: Icon(
-              _typeIcon(item.operationType),
-              color: color,
-              size: 22,
-            ),
+          _HistoryGlyph(
+            icon: _typeIcon(item.operationType),
+            color: color,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -228,9 +457,9 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen> {
                 Text(
                   _typeLabel(item.operationType),
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 17,
                     fontWeight: FontWeight.w900,
-                    color: kStaffInkPrimary,
+                    color: kClientHistoryInk,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -249,7 +478,7 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen> {
                     style: const TextStyle(
                       fontSize: 13.5,
                       height: 1.35,
-                      color: kStaffInkSecondary,
+                      color: kClientHistoryInkSoft,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -259,7 +488,7 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen> {
                   _formatDate(item.createdAt),
                   style: const TextStyle(
                     fontSize: 12.5,
-                    color: kStaffInkSecondary,
+                    color: kClientHistoryInkSoft,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -274,82 +503,323 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kStaffBgTop,
+      backgroundColor: kClientHistoryMintTop,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
           'История клиента',
           style: TextStyle(
-            color: kStaffInkPrimary,
+            color: Colors.white,
             fontWeight: FontWeight.w900,
           ),
         ),
-        iconTheme: const IconThemeData(color: kStaffInkPrimary),
+        iconTheme: const IconThemeData(color: Colors.white),
+        systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
-      body: StaffScreenBackground(
-        child: SafeArea(
-          child: _loading
-              ? const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation(kStaffViolet),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    children: [
-                      StaffGlassPanel(
-                        radius: 26,
-                        glowColor: kStaffBlue.withOpacity(0.10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.clientName,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                color: kStaffInkPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              widget.establishmentName,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: kStaffInkSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      if (_error != null)
-                        _stateCard(
-                          icon: CupertinoIcons.exclamationmark_circle_fill,
-                          title: 'Ошибка',
-                          subtitle: _error!,
-                        )
-                      else if (_items.isEmpty)
-                        _stateCard(
-                          icon: CupertinoIcons.time_solid,
-                          title: 'История пока пустая',
-                          subtitle: 'По этому клиенту пока нет операций',
-                        )
-                      else
-                        ..._items.map(
-                          (item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _itemCard(item),
+      body: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.light,
+        child: Stack(
+          children: [
+            _background(),
+            SafeArea(
+              top: false,
+              child: _loading
+                  ? const Center(
+                      child: SizedBox(
+                        width: 42,
+                        height: 42,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          valueColor: AlwaysStoppedAnimation(
+                            kClientHistoryViolet,
                           ),
                         ),
-                    ],
-                  ),
-                ),
+                      ),
+                    )
+                  : RefreshIndicator(
+                      color: kClientHistoryViolet,
+                      backgroundColor: Colors.white,
+                      onRefresh: _load,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                        children: [
+                          _stagger(index: 0, child: _headerCard()),
+                          const SizedBox(height: 14),
+                          if (_error != null)
+                            _stagger(
+                              index: 1,
+                              child: _stateCard(
+                                icon: CupertinoIcons.exclamationmark_circle_fill,
+                                title: 'Ошибка',
+                                subtitle: _error!,
+                              ),
+                            )
+                          else if (_items.isEmpty)
+                            _stagger(
+                              index: 1,
+                              child: _stateCard(
+                                icon: CupertinoIcons.time_solid,
+                                title: 'История пока пустая',
+                                subtitle: 'По этому клиенту пока нет операций',
+                              ),
+                            )
+                          else
+                            ..._items.asMap().entries.map(
+                              (entry) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _stagger(
+                                  index: entry.key + 1,
+                                  child: _itemCard(entry.value),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+class _GlassCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final double radius;
+
+  const _GlassCard({
+    required this.child,
+    required this.padding,
+    required this.radius,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(radius),
+            gradient: LinearGradient(
+              colors: [
+                kClientHistoryCardStrong,
+                kClientHistoryCard,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(color: kClientHistoryStroke),
+            boxShadow: [
+              BoxShadow(
+                color: kClientHistoryShadow.withOpacity(0.10),
+                blurRadius: 24,
+                offset: const Offset(0, 14),
+              ),
+            ],
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingGlyph extends StatelessWidget {
+  final IconData icon;
+  final Color mainColor;
+  final Color secondaryColor;
+  final double size;
+  final double iconSize;
+
+  const _FloatingGlyph({
+    required this.icon,
+    required this.mainColor,
+    required this.secondaryColor,
+    this.size = 76,
+    this.iconSize = 34,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  mainColor.withOpacity(0.22),
+                  secondaryColor.withOpacity(0.16),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          Container(
+            width: size * 0.74,
+            height: size * 0.74,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.86),
+              boxShadow: [
+                BoxShadow(
+                  color: mainColor.withOpacity(0.20),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: size * 0.54,
+            height: size * 0.54,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [mainColor, secondaryColor],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: iconSize,
+            ),
+          ),
+          Positioned(
+            top: size * 0.11,
+            right: size * 0.14,
+            child: Container(
+              width: size * 0.14,
+              height: size * 0.14,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.90),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HistoryGlyph extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+
+  const _HistoryGlyph({
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 58,
+      height: 58,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  color.withOpacity(0.22),
+                  color.withOpacity(0.10),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.92),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.18),
+                  blurRadius: 14,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 22,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyOrb extends StatelessWidget {
+  final IconData icon;
+
+  const _EmptyOrb({
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 82,
+      height: 82,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 82,
+            height: 82,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  kClientHistoryBlue.withOpacity(0.18),
+                  kClientHistoryViolet.withOpacity(0.10),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.92),
+            ),
+            child: Icon(
+              icon,
+              color: kClientHistoryInkSoft,
+              size: 28,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -379,9 +849,8 @@ class _HistoryItem {
 
     return _HistoryItem(
       id: json['id']?.toString() ?? '',
-      operationType: json['operation_type']?.toString() ??
-          json['type']?.toString() ??
-          '',
+      operationType:
+          json['operation_type']?.toString() ?? json['type']?.toString() ?? '',
       amount: parseNum(json['amount']),
       comment: json['comment']?.toString() ?? '',
       createdAt: json['created_at']?.toString() ?? '',

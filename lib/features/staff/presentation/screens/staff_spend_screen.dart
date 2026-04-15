@@ -1,6 +1,9 @@
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/staff_spend_api.dart';
+import 'staff_design_system.dart';
 
 class StaffSpendScreen extends StatefulWidget {
   final String clientId;
@@ -23,7 +26,6 @@ class StaffSpendScreen extends StatefulWidget {
 class _StaffSpendScreenState extends State<StaffSpendScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
-
   final StaffSpendApi _spendApi = StaffSpendApi();
 
   bool _loading = false;
@@ -81,9 +83,8 @@ class _StaffSpendScreenState extends State<StaffSpendScreen> {
         _newBalance = result.newBalance;
         _success = 'Баллы успешно списаны';
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
-
       setState(() {
         _loading = false;
         _error = 'Ошибка списания баллов';
@@ -97,75 +98,82 @@ class _StaffSpendScreenState extends State<StaffSpendScreen> {
         ? '${widget.currentBalance}'
         : _newBalance!.toStringAsFixed(_newBalance! % 1 == 0 ? 0 : 2);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Списать баллы'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.clientName,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text('ID клиента: ${widget.clientId}'),
-            const SizedBox(height: 4),
-            Text('Текущий баланс: $balanceText'),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: 'Сколько баллов списать',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _commentController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Комментарий',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _loading ? null : _submit,
-                icon: const Icon(Icons.remove_circle_outline),
-                label: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  child: _loading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Списать'),
+    return StaffUnifiedScaffold(
+      title: 'Списание',
+      useList: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          StaffGlassCard(
+            child: Row(
+              children: [
+                const StaffFloatingGlyph(
+                  icon: CupertinoIcons.minus,
+                  mainColor: kHomeBlue,
+                  secondaryColor: kHomeMintTop,
                 ),
-              ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(widget.clientName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: kHomeInk)),
+                      const SizedBox(height: 4),
+                      Text('ID клиента: ${widget.clientId}', style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: kHomeInkSoft)),
+                      const SizedBox(height: 8),
+                      StaffInfoChip(label: 'Текущий баланс', value: balanceText, color: kHomeBlue),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            if (_error != null)
-              Text(
-                _error!,
-                style: const TextStyle(color: Colors.red, fontSize: 16),
-              ),
-            if (_success != null)
-              Text(
-                _success!,
-                style: const TextStyle(color: Colors.green, fontSize: 16),
-              ),
+          ),
+          const SizedBox(height: 16),
+          StaffGlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const StaffSectionHeader(title: 'Данные', subtitle: 'Сколько баллов нужно списать'),
+                const SizedBox(height: 14),
+                StaffTextFieldCard(
+                  controller: _amountController,
+                  hint: 'Количество баллов',
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  prefix: const Icon(CupertinoIcons.star_fill, color: kHomeInkSoft),
+                ),
+                const SizedBox(height: 12),
+                StaffTextFieldCard(
+                  controller: _commentController,
+                  hint: 'Комментарий',
+                  maxLines: 3,
+                  prefix: const Icon(CupertinoIcons.text_alignleft, color: kHomeInkSoft),
+                ),
+              ],
+            ),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            StaffStateCard(icon: CupertinoIcons.exclamationmark_circle_fill, title: 'Ошибка', subtitle: _error!, glow: kHomeAccentRed),
           ],
-        ),
+          if (_success != null) ...[
+            const SizedBox(height: 12),
+            StaffGlassCard(
+              glow: kHomeMintTop,
+              child: Text(_success!, style: const TextStyle(color: kHomeInk, fontWeight: FontWeight.w900)),
+            ),
+          ],
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            child: StaffPillButton(
+              text: 'Списать',
+              icon: CupertinoIcons.minus_circle_fill,
+              onTap: _submit,
+              loading: _loading,
+              colors: const [kHomePink, kHomeViolet],
+            ),
+          ),
+        ],
       ),
     );
   }
