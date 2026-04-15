@@ -4,10 +4,22 @@ import '../features/auth/data/auth_storage.dart';
 import '../features/auth/presentation/screens/login_phone_screen.dart';
 import '../features/staff/presentation/screens/staff_establishments_screen.dart';
 
-class FlowruStaffApp extends StatelessWidget {
-  FlowruStaffApp({super.key});
+void mainAppLog(Object error, StackTrace stackTrace) {
+  debugPrint('APP START ERROR: $error');
+  debugPrintStack(stackTrace: stackTrace);
+}
 
-  final Future<String?> _tokenFuture = AuthStorage.getAccessToken();
+class FlowruStaffApp extends StatelessWidget {
+  const FlowruStaffApp({super.key});
+
+  Future<String?> _loadToken() async {
+    try {
+      return await AuthStorage.getAccessToken();
+    } catch (e, st) {
+      mainAppLog(e, st);
+      return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,8 +34,12 @@ class FlowruStaffApp extends StatelessWidget {
         ),
       ),
       home: FutureBuilder<String?>(
-        future: _tokenFuture,
+        future: _loadToken(),
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const LoginPhoneScreen();
+          }
+
           if (snapshot.connectionState != ConnectionState.done) {
             return const _AppLoadingScreen();
           }
@@ -55,6 +71,13 @@ class _AppLoadingScreen extends StatelessWidget {
               'assets/images/flowru_logo.png',
               width: 72,
               height: 72,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(
+                  Icons.flutter_dash,
+                  size: 72,
+                  color: Color(0xFF7D63FF),
+                );
+              },
             ),
             const SizedBox(height: 18),
             const SizedBox(
