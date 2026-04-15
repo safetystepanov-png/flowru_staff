@@ -1,16 +1,29 @@
-import Flutter
 import UIKit
+import Flutter
+import FlutterPluginRegistrant
 
 @main
-@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+@objc class AppDelegate: FlutterAppDelegate {
+  lazy var flutterEngine = FlutterEngine(name: "flowru_engine")
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
-  }
+    flutterEngine.run()
+    GeneratedPluginRegistrant.register(with: flutterEngine)
 
-  func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
-    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    let flutterVC = FlutterViewController(
+      engine: flutterEngine,
+      nibName: nil,
+      bundle: nil
+    )
+
+    let window = UIWindow(frame: UIScreen.main.bounds)
+    window.rootViewController = flutterVC
+    window.makeKeyAndVisible()
+    self.window = window
+
+    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }
