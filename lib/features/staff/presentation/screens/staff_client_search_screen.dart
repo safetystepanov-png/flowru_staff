@@ -10,7 +10,6 @@ import 'package:http/http.dart' as http;
 import '../../../auth/data/auth_storage.dart';
 import '../../../../core/config/app_config.dart';
 import 'staff_client_detail_screen.dart';
-import 'staff_qr_search_screen.dart';
 import 'staff_qr_scanner_screen.dart';
 
 const Color kSearchMintTop = Color(0xFF0CB7B3);
@@ -164,22 +163,24 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
   }
 
   Future<void> _openQrSearch() async {
-    final qrValue = await Navigator.of(context).push<String>(
+    final result = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         builder: (_) => const StaffQrScannerScreen(),
       ),
     );
 
-    if (qrValue == null || qrValue.trim().isEmpty) return;
+    if (result == null || result.trim().isEmpty) return;
     if (!mounted) return;
 
-    final normalized = qrValue.trim();
-
-    setState(() {
-      _controller.text = normalized;
-    });
-
-    await _search();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => StaffClientDetailScreen(
+          establishmentId: widget.establishmentId,
+          establishmentName: widget.establishmentName,
+          clientId: result.trim(),
+        ),
+      ),
+    );
   }
 
   void _openClient(_ClientSearchItem item) {
@@ -1198,12 +1199,4 @@ class _ClientSearchItem {
     if (parts.length == 1) return parts.first[0].toUpperCase();
     return (parts.first[0] + parts.last[0]).toUpperCase();
   }
-}
-
-class _QrSearchResult {
-  final String clientId;
-
-  const _QrSearchResult({
-    required this.clientId,
-  });
 }
