@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../auth/data/auth_session.dart';
@@ -14,6 +15,27 @@ import 'staff_announcements_screen.dart';
 import 'staff_chat_screen.dart';
 import 'staff_client_search_screen.dart';
 import 'staff_establishment_history_screen.dart';
+
+const Color kHomeMintTop = Color(0xFF0CB7B3);
+const Color kHomeMintMid = Color(0xFF08A9AB);
+const Color kHomeMintBottom = Color(0xFF067D87);
+const Color kHomeMintDeep = Color(0xFF055E66);
+
+const Color kHomeAccent = Color(0xFFFFA11D);
+const Color kHomeAccentSoft = Color(0xFFFFC45E);
+const Color kHomeAccentRed = Color(0xFFFF6A5E);
+
+const Color kHomeCard = Color(0xCCFFFFFF);
+const Color kHomeCardStrong = Color(0xE8FFFFFF);
+const Color kHomeStroke = Color(0xA6FFFFFF);
+
+const Color kHomeInk = Color(0xFF103238);
+const Color kHomeInkSoft = Color(0xFF58767D);
+const Color kHomeShadow = Color(0x22062E36);
+
+const Color kHomeBlue = Color(0xFF4E7CFF);
+const Color kHomePink = Color(0xFFFF5F8F);
+const Color kHomeViolet = Color(0xFF7A63FF);
 
 class StaffHomeScreen extends StatefulWidget {
   final int establishmentId;
@@ -60,12 +82,12 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
 
     _introController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 980),
+      duration: const Duration(milliseconds: 1050),
     );
 
     _ambientController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 5600),
+      duration: const Duration(milliseconds: 7800),
     )..repeat();
 
     _loadDashboard();
@@ -136,7 +158,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       List<dynamic> chatItems;
       if (chatDecoded is List) {
         chatItems = chatDecoded;
-      } else if (chatDecoded is Map<String, dynamic> && chatDecoded['items'] is List) {
+      } else if (chatDecoded is Map<String, dynamic> &&
+          chatDecoded['items'] is List) {
         chatItems = chatDecoded['items'] as List<dynamic>;
       } else {
         chatItems = [];
@@ -145,7 +168,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       List<dynamic> annItems;
       if (annDecoded is List) {
         annItems = annDecoded;
-      } else if (annDecoded is Map<String, dynamic> && annDecoded['items'] is List) {
+      } else if (annDecoded is Map<String, dynamic> &&
+          annDecoded['items'] is List) {
         annItems = annDecoded['items'] as List<dynamic>;
       } else {
         annItems = [];
@@ -236,12 +260,12 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   }
 
   String get _chatBadge {
-    if (_chatCount <= 0) return '';
+    if (_chatCount <= 0) return '0';
     return _chatCount > 99 ? '99+' : '$_chatCount';
   }
 
   String get _announcementBadge {
-    if (_announcementCount <= 0) return '';
+    if (_announcementCount <= 0) return '0';
     return _announcementCount > 99 ? '99+' : '$_announcementCount';
   }
 
@@ -249,8 +273,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     required int index,
     required Widget child,
   }) {
-    final start = (index * 0.09).clamp(0.0, 0.82);
-    final end = (start + 0.22).clamp(0.0, 1.0);
+    final start = (index * 0.08).clamp(0.0, 0.82);
+    final end = (start + 0.24).clamp(0.0, 1.0);
 
     final animation = CurvedAnimation(
       parent: _introController,
@@ -265,8 +289,11 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         return Opacity(
           opacity: t,
           child: Transform.translate(
-            offset: Offset(0, 22 * (1 - t)),
-            child: child,
+            offset: Offset(0, 24 * (1 - t)),
+            child: Transform.scale(
+              scale: 0.985 + (0.015 * t),
+              child: child,
+            ),
           ),
         );
       },
@@ -278,54 +305,87 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       animation: _ambientController,
       builder: (context, child) {
         final t = _ambientController.value;
-        final shiftA = math.sin(t * math.pi * 2) * 24;
-        final shiftB = math.cos(t * math.pi * 2) * 18;
+        final shiftA = math.sin(t * math.pi * 2) * 18;
+        final shiftB = math.cos(t * math.pi * 2) * 12;
+        final rotate = math.sin(t * math.pi * 2) * 0.03;
 
         return Stack(
           children: [
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [kStaffBgTop, kStaffBgBottom],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  colors: [
+                    kHomeMintTop,
+                    kHomeMintMid,
+                    kHomeMintBottom,
+                    kHomeMintDeep,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  stops: [0.0, 0.40, 0.78, 1.0],
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.07),
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.10),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
                 ),
               ),
             ),
             Positioned(
-              top: -80 + shiftA,
+              top: -90 + shiftA,
               right: -40,
-              child: _softBlob(
-                width: 260,
-                height: 260,
-                colors: [
-                  kStaffBlue.withOpacity(0.11),
-                  kStaffPink.withOpacity(0.05),
-                ],
+              child: Transform.rotate(
+                angle: rotate,
+                child: _softBlob(
+                  width: 280,
+                  height: 280,
+                  colors: [
+                    Colors.white.withOpacity(0.16),
+                    kHomeAccent.withOpacity(0.12),
+                  ],
+                ),
               ),
             ),
             Positioned(
-              top: 220 + shiftB,
-              left: -55,
-              child: _softBlob(
-                width: 210,
-                height: 210,
-                colors: [
-                  kStaffViolet.withOpacity(0.12),
-                  kStaffBlue.withOpacity(0.04),
-                ],
+              top: 210 + shiftB,
+              left: -70,
+              child: Transform.rotate(
+                angle: -rotate * 0.9,
+                child: _softBlob(
+                  width: 220,
+                  height: 220,
+                  colors: [
+                    Colors.white.withOpacity(0.10),
+                    kHomeBlue.withOpacity(0.06),
+                  ],
+                ),
               ),
             ),
             Positioned(
-              bottom: 90 - shiftA,
-              right: 8,
-              child: _softBlob(
-                width: 190,
-                height: 190,
-                colors: [
-                  kStaffPink.withOpacity(0.10),
-                  Colors.white.withOpacity(0.02),
-                ],
+              bottom: 60 - shiftA,
+              right: -20,
+              child: Transform.rotate(
+                angle: rotate,
+                child: _softBlob(
+                  width: 210,
+                  height: 210,
+                  colors: [
+                    kHomeAccentSoft.withOpacity(0.10),
+                    Colors.white.withOpacity(0.05),
+                  ],
+                ),
               ),
             ),
           ],
@@ -340,15 +400,18 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     required List<Color> colors,
   }) {
     return IgnorePointer(
-      child: Container(
-        width: width,
-        height: height,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(width),
-          gradient: LinearGradient(
-            colors: colors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      child: ImageFiltered(
+        imageFilter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(width),
+            gradient: LinearGradient(
+              colors: colors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
         ),
       ),
@@ -358,7 +421,13 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   Widget _buildTopBar() {
     return Row(
       children: [
-        const StaffLogoBadge(size: 58),
+        const SizedBox(
+          width: 72,
+          height: 72,
+          child: Center(
+            child: StaffLogoBadge(size: 54),
+          ),
+        ),
         const SizedBox(width: 14),
         Expanded(
           child: Column(
@@ -371,76 +440,125 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 style: const TextStyle(
                   fontSize: 27,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: -0.8,
-                  color: kStaffInkPrimary,
+                  letterSpacing: -0.9,
+                  color: Colors.white,
+                  height: 1.0,
                 ),
               ),
-              const SizedBox(height: 2),
-              const Text(
-                'Flowru Сотрудник',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                  color: kStaffInkSecondary,
+              const SizedBox(height: 5),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Colors.white.withOpacity(0.16)),
+                ),
+                child: Text(
+                  'Flowru · Система лояльности',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white.withOpacity(0.94),
+                    letterSpacing: 0.1,
+                  ),
                 ),
               ),
             ],
           ),
         ),
-        _Pressable(
+        _TopIconButton(
+          icon: CupertinoIcons.refresh,
           onTap: _loadDashboard,
-          borderRadius: 18,
-          child: Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.82),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: kStaffBorder),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: const Icon(
-              CupertinoIcons.refresh,
-              color: kStaffInkPrimary,
-              size: 21,
-            ),
-          ),
         ),
         const SizedBox(width: 8),
-        _Pressable(
+        _TopIconButton(
+          icon: Icons.logout_rounded,
           onTap: () => AuthSession.logout(context),
-          borderRadius: 18,
-          child: Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.82),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: kStaffBorder),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPromoBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        gradient: const LinearGradient(
+          colors: [
+            Color(0x1FFFFFFF),
+            Color(0x14FFFFFF),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: Colors.white.withOpacity(0.20)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    gradient: const LinearGradient(
+                      colors: [kHomeAccent, kHomeAccentSoft],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: kHomeAccent.withOpacity(0.30),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: const Text(
+                    'ГЛАВНЫЙ ЭКРАН',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Быстрая работа\nс клиентами',
+                  style: TextStyle(
+                    fontSize: 29,
+                    height: 1.02,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -1.0,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Поиск, чат, объявления и история — всё под рукой.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white.withOpacity(0.84),
+                  ),
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.logout_rounded,
-              color: kStaffInkPrimary,
-              size: 21,
-            ),
           ),
-        ),
-      ],
+          const SizedBox(width: 14),
+          const _DecorPercent(),
+        ],
+      ),
     );
   }
 
@@ -448,132 +566,192 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     return _Pressable(
       onTap: _openClientSearch,
       borderRadius: 34,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(34),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Container(
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(34),
-              gradient: LinearGradient(
-                colors: [
-                  Colors.white.withOpacity(0.86),
-                  Colors.white.withOpacity(0.72),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              border: Border.all(color: Colors.white.withOpacity(0.94)),
-              boxShadow: [
-                BoxShadow(
-                  color: kStaffBlue.withOpacity(0.08),
-                  blurRadius: 22,
-                  offset: const Offset(0, 12),
-                ),
-                BoxShadow(
-                  color: kStaffPink.withOpacity(0.08),
-                  blurRadius: 18,
-                  offset: const Offset(0, 10),
-                ),
-              ],
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(34),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.11),
+              blurRadius: 26,
+              offset: const Offset(0, 18),
             ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 11,
-                        vertical: 7,
-                      ),
+            BoxShadow(
+              color: kHomeAccent.withOpacity(0.22),
+              blurRadius: 30,
+              spreadRadius: -4,
+              offset: const Offset(0, 14),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(34),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: Container(
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(34),
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.white.withOpacity(0.96),
+                    Colors.white.withOpacity(0.82),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(color: Colors.white.withOpacity(0.94)),
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    top: -18,
+                    right: -4,
+                    child: Container(
+                      width: 126,
+                      height: 126,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(999),
-                        color: kStaffBlue.withOpacity(0.10),
-                      ),
-                      child: Text(
-                        _roleLabel.toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.8,
-                          color: kStaffInkPrimary,
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            kHomeAccent.withOpacity(0.22),
+                            Colors.transparent,
+                          ],
                         ),
                       ),
                     ),
-                    const Spacer(),
-                    const StaffGradientIcon(
-                      icon: CupertinoIcons.search_circle_fill,
-                      size: 24,
+                  ),
+                  Positioned(
+                    bottom: -28,
+                    left: -26,
+                    child: Container(
+                      width: 118,
+                      height: 118,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            kHomeMintTop.withOpacity(0.14),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const Row(
-                  children: [
-                    Expanded(
-                      child: Text(
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 11,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(999),
+                              gradient: const LinearGradient(
+                                colors: [kHomeAccent, kHomeAccentSoft],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: kHomeAccent.withOpacity(0.28),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              _roleLabel.toUpperCase(),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.8,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            width: 54,
+                            height: 54,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(18),
+                              color: kHomeInk.withOpacity(0.06),
+                            ),
+                            child: const Icon(
+                              CupertinoIcons.search,
+                              size: 26,
+                              color: kHomeInk,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
                         'Найти клиента',
                         style: TextStyle(
-                          fontSize: 30,
+                          fontSize: 31,
                           height: 1.02,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: -0.9,
-                          color: kStaffInkPrimary,
+                          letterSpacing: -1.0,
+                          color: kHomeInk,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Главное действие на этом экране.\nПоиск по телефону или по данным клиента.',
-                    style: TextStyle(
-                      fontSize: 14.5,
-                      height: 1.4,
-                      fontWeight: FontWeight.w700,
-                      color: kStaffInkSecondary,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Container(
-                  height: 58,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    color: Colors.white.withOpacity(0.88),
-                    border: Border.all(color: kStaffBorder),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(
-                        CupertinoIcons.search,
-                        color: kStaffInkSecondary,
-                        size: 20,
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Главное действие на экране.\nБыстрый поиск по телефону, имени или номеру клиента.',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          height: 1.42,
+                          fontWeight: FontWeight.w700,
+                          color: kHomeInkSoft,
+                        ),
                       ),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Телефон, имя, номер клиента',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: kStaffInkSecondary,
+                      const SizedBox(height: 18),
+                      Container(
+                        height: 60,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(22),
+                          color: Colors.white.withOpacity(0.94),
+                          border: Border.all(
+                            color: const Color(0xFFE7EEF0),
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
                         ),
-                      ),
-                      Icon(
-                        CupertinoIcons.arrow_right_circle_fill,
-                        color: kStaffViolet,
-                        size: 24,
+                        child: const Row(
+                          children: [
+                            Icon(
+                              CupertinoIcons.search,
+                              color: kHomeInkSoft,
+                              size: 20,
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Телефон, имя, номер клиента',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: kHomeInkSoft,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            _MiniActionPill(),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -587,11 +765,11 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         Expanded(
           child: _ModuleCard(
             title: 'Чат',
-            subtitle: _chatCount > 0 ? '$_chatBadge новых' : 'Без новых',
-            icon: CupertinoIcons.chat_bubble_2_fill,
-            badge: _chatCount > 0 ? _chatBadge : null,
-            badgeColor: const Color(0xFFFF5F7A),
-            glowColor: kStaffBlue,
+            subtitle: _chatCount > 0 ? 'Новые сообщения' : 'Без новых',
+            count: _chatBadge,
+            icon: CupertinoIcons.chat_bubble_2,
+            glowColor: kHomeBlue,
+            countColor: const Color(0xFF4E7CFF),
             onTap: _openChat,
           ),
         ),
@@ -600,10 +778,10 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           child: _ModuleCard(
             title: 'Объявления',
             subtitle: _announcementCount > 0 ? 'Есть новые' : 'Пока пусто',
-            icon: CupertinoIcons.bell_fill,
-            badge: _announcementCount > 0 ? _announcementBadge : null,
-            badgeColor: const Color(0xFF7D63FF),
-            glowColor: kStaffPink,
+            count: _announcementBadge,
+            icon: CupertinoIcons.bell,
+            glowColor: kHomePink,
+            countColor: const Color(0xFFFF5F8F),
             onTap: _openAnnouncements,
           ),
         ),
@@ -615,25 +793,17 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     return _Pressable(
       onTap: _openHistory,
       borderRadius: 30,
-      child: Container(
+      child: _GlassCard(
         padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(30),
-          color: Colors.white.withOpacity(0.68),
-          border: Border.all(color: Colors.white.withOpacity(0.96)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.035),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
+        radius: 30,
         child: Row(
           children: [
-            const StaffGradientIcon(
-              icon: CupertinoIcons.time_solid,
-              size: 24,
+            const _FloatingGlyph(
+              icon: CupertinoIcons.time,
+              mainColor: kHomeMintTop,
+              secondaryColor: kHomeBlue,
+              size: 68,
+              iconSize: 30,
             ),
             const SizedBox(width: 15),
             const Expanded(
@@ -645,17 +815,17 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                     style: TextStyle(
                       fontSize: 18.5,
                       fontWeight: FontWeight.w900,
-                      color: kStaffInkPrimary,
+                      color: kHomeInk,
                     ),
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Операции и события по заведению.',
+                    'Операции, действия и события по заведению.',
                     style: TextStyle(
                       fontSize: 13.5,
                       height: 1.35,
                       fontWeight: FontWeight.w700,
-                      color: kStaffInkSecondary,
+                      color: kHomeInkSoft,
                     ),
                   ),
                 ],
@@ -663,16 +833,17 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
             ),
             const SizedBox(width: 10),
             Container(
-              width: 42,
-              height: 42,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15),
-                color: Colors.white.withOpacity(0.82),
+                borderRadius: BorderRadius.circular(16),
+                color: Colors.white.withOpacity(0.72),
+                border: Border.all(color: Colors.white.withOpacity(0.72)),
               ),
               child: const Icon(
                 CupertinoIcons.chevron_right,
                 size: 18,
-                color: kStaffInkPrimary,
+                color: kHomeInk,
               ),
             ),
           ],
@@ -685,90 +856,82 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     final hasChat = _chatCount > 0;
     final hasAnnouncements = _announcementCount > 0;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(30),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30),
-            color: Colors.white.withOpacity(0.64),
-            border: Border.all(color: Colors.white.withOpacity(0.96)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return _GlassCard(
+      padding: const EdgeInsets.all(18),
+      radius: 30,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
             children: [
-              const Text(
+              Text(
                 'Сводка',
                 style: TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.w900,
-                  color: kStaffInkPrimary,
+                  color: kHomeInk,
                 ),
               ),
-              const SizedBox(height: 6),
-              const Text(
-                'Состояние по основным разделам.',
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                  color: kStaffInkSecondary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              _SummaryLine(
-                title: 'Чат',
-                subtitle: hasChat ? 'Есть новые сообщения' : 'Новых сообщений нет',
-                active: hasChat,
-                activeColor: kStaffBlue,
-              ),
-              const SizedBox(height: 12),
-              _SummaryLine(
-                title: 'Объявления',
-                subtitle: hasAnnouncements
-                    ? 'Есть активные объявления'
-                    : 'Сейчас без объявлений',
-                active: hasAnnouncements,
-                activeColor: kStaffPink,
-              ),
+              Spacer(),
+              _ActivityChip(),
             ],
           ),
-        ),
+          const SizedBox(height: 6),
+          const Text(
+            'Состояние по основным разделам.',
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: kHomeInkSoft,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _SummaryLine(
+            title: 'Чат',
+            subtitle: hasChat ? 'Есть новые сообщения' : 'Новых сообщений нет',
+            active: hasChat,
+            activeColor: kHomeBlue,
+          ),
+          const SizedBox(height: 12),
+          _SummaryLine(
+            title: 'Объявления',
+            subtitle: hasAnnouncements
+                ? 'Есть активные объявления'
+                : 'Сейчас без объявлений',
+            active: hasAnnouncements,
+            activeColor: kHomePink,
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildSectionTitle(String title, String subtitle) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.5,
-            color: kStaffInkPrimary,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.5,
+              color: Colors.white,
+            ),
           ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: kStaffInkSecondary,
+          const SizedBox(height: 5),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colors.white.withOpacity(0.82),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -778,15 +941,22 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: const Color(0xFFFFF4F4),
-        border: Border.all(color: const Color(0xFFFFDDDD)),
+        borderRadius: BorderRadius.circular(22),
+        color: const Color(0xFFFFF4F2).withOpacity(0.96),
+        border: Border.all(color: const Color(0xFFFFD7D0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF7E67).withOpacity(0.14),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: const Row(
         children: [
           Icon(
             CupertinoIcons.exclamationmark_circle_fill,
-            color: Color(0xFFD34D4D),
+            color: Color(0xFFE25B46),
             size: 20,
           ),
           SizedBox(width: 10),
@@ -807,11 +977,11 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   Widget _buildLoader() {
     return const Center(
       child: SizedBox(
-        width: 40,
-        height: 40,
+        width: 42,
+        height: 42,
         child: CircularProgressIndicator(
           strokeWidth: 3,
-          valueColor: AlwaysStoppedAnimation(kStaffViolet),
+          valueColor: AlwaysStoppedAnimation(Colors.white),
         ),
       ),
     );
@@ -820,53 +990,339 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kStaffBgTop,
-      body: Stack(
-        children: [
-          _buildBackground(),
-          SafeArea(
-            child: _loading
-                ? _buildLoader()
-                : RefreshIndicator(
-                    color: kStaffViolet,
-                    backgroundColor: Colors.white,
-                    onRefresh: _loadDashboard,
-                    child: ListView(
-                      physics: const BouncingScrollPhysics(
-                        parent: AlwaysScrollableScrollPhysics(),
+      backgroundColor: kHomeMintTop,
+      body: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.light,
+        child: Stack(
+          children: [
+            _buildBackground(),
+            SafeArea(
+              child: _loading
+                  ? _buildLoader()
+                  : RefreshIndicator(
+                      color: kHomeViolet,
+                      backgroundColor: Colors.white,
+                      onRefresh: _loadDashboard,
+                      child: ListView(
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 30),
+                        children: [
+                          _stagger(index: 0, child: _buildTopBar()),
+                          const SizedBox(height: 18),
+                          _stagger(index: 1, child: _buildPromoBanner()),
+                          const SizedBox(height: 14),
+                          _stagger(index: 2, child: _buildSearchHeroCard()),
+                          const SizedBox(height: 14),
+                          _stagger(index: 3, child: _buildTopModulesRow()),
+                          const SizedBox(height: 16),
+                          _stagger(index: 4, child: _buildError()),
+                          if (_error != null) const SizedBox(height: 16),
+                          _stagger(
+                            index: 5,
+                            child: _buildSectionTitle(
+                              'Дополнительно',
+                              'Ещё один важный рабочий раздел',
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          _stagger(index: 6, child: _buildHistoryCard()),
+                          const SizedBox(height: 22),
+                          _stagger(
+                            index: 7,
+                            child: _buildSectionTitle(
+                              'Активность',
+                              'Состояние по основным разделам',
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          _stagger(index: 8, child: _buildSummaryCard()),
+                        ],
                       ),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-                      children: [
-                        _stagger(index: 0, child: _buildTopBar()),
-                        const SizedBox(height: 18),
-                        _stagger(index: 1, child: _buildSearchHeroCard()),
-                        const SizedBox(height: 14),
-                        _stagger(index: 2, child: _buildTopModulesRow()),
-                        const SizedBox(height: 16),
-                        _stagger(index: 3, child: _buildError()),
-                        if (_error != null) const SizedBox(height: 16),
-                        _stagger(
-                          index: 4,
-                          child: _buildSectionTitle(
-                            'Дополнительно',
-                            'Ещё один важный рабочий раздел',
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        _stagger(index: 5, child: _buildHistoryCard()),
-                        const SizedBox(height: 22),
-                        _stagger(
-                          index: 6,
-                          child: _buildSectionTitle(
-                            'Активность',
-                            'Состояние по основным разделам',
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        _stagger(index: 7, child: _buildSummaryCard()),
-                      ],
                     ),
-                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TopIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _TopIconButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _Pressable(
+      onTap: onTap,
+      borderRadius: 18,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          child: Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.16),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withOpacity(0.24)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 21,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GlassCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final double radius;
+
+  const _GlassCard({
+    required this.child,
+    required this.padding,
+    required this.radius,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(radius),
+            gradient: LinearGradient(
+              colors: [
+                kHomeCardStrong,
+                kHomeCard,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(color: kHomeStroke),
+            boxShadow: [
+              BoxShadow(
+                color: kHomeShadow.withOpacity(0.10),
+                blurRadius: 24,
+                offset: const Offset(0, 14),
+              ),
+            ],
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniActionPill extends StatelessWidget {
+  const _MiniActionPill();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: const LinearGradient(
+          colors: [kHomeAccent, kHomeAccentSoft],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: kHomeAccent.withOpacity(0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: const Icon(
+        CupertinoIcons.arrow_right,
+        color: Colors.white,
+        size: 17,
+      ),
+    );
+  }
+}
+
+class _ActivityChip extends StatelessWidget {
+  const _ActivityChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: kHomeMintTop.withOpacity(0.10),
+        border: Border.all(
+          color: kHomeMintTop.withOpacity(0.14),
+        ),
+      ),
+      child: const Text(
+        'LIVE',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.6,
+          color: kHomeMintBottom,
+        ),
+      ),
+    );
+  }
+}
+
+class _DecorPercent extends StatelessWidget {
+  const _DecorPercent();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 88,
+      height: 108,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        color: Colors.white.withOpacity(0.14),
+        border: Border.all(color: Colors.white.withOpacity(0.22)),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: 12,
+            right: 10,
+            child: Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.85),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: Center(
+              child: Text(
+                '%',
+                style: TextStyle(
+                  fontSize: 56,
+                  fontWeight: FontWeight.w900,
+                  color: kHomeAccent.withOpacity(0.97),
+                  letterSpacing: -2,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FloatingGlyph extends StatelessWidget {
+  final IconData icon;
+  final Color mainColor;
+  final Color secondaryColor;
+  final double size;
+  final double iconSize;
+
+  const _FloatingGlyph({
+    required this.icon,
+    required this.mainColor,
+    required this.secondaryColor,
+    this.size = 76,
+    this.iconSize = 34,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  mainColor.withOpacity(0.22),
+                  secondaryColor.withOpacity(0.16),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          Container(
+            width: size * 0.74,
+            height: size * 0.74,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.86),
+              boxShadow: [
+                BoxShadow(
+                  color: mainColor.withOpacity(0.20),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: size * 0.54,
+            height: size * 0.54,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [mainColor, secondaryColor],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: iconSize,
+            ),
+          ),
+          Positioned(
+            top: size * 0.11,
+            right: size * 0.14,
+            child: Container(
+              width: size * 0.14,
+              height: size * 0.14,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.90),
+              ),
+            ),
           ),
         ],
       ),
@@ -877,19 +1333,19 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
 class _ModuleCard extends StatelessWidget {
   final String title;
   final String subtitle;
+  final String count;
   final IconData icon;
-  final String? badge;
-  final Color badgeColor;
   final Color glowColor;
+  final Color countColor;
   final VoidCallback onTap;
 
   const _ModuleCard({
     required this.title,
     required this.subtitle,
+    required this.count,
     required this.icon,
-    required this.badge,
-    required this.badgeColor,
     required this.glowColor,
+    required this.countColor,
     required this.onTap,
   });
 
@@ -898,88 +1354,64 @@ class _ModuleCard extends StatelessWidget {
     return _Pressable(
       onTap: onTap,
       borderRadius: 30,
-      child: Container(
+      child: _GlassCard(
         padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(30),
-          color: Colors.white.withOpacity(0.72),
-          border: Border.all(color: Colors.white.withOpacity(0.96)),
-          boxShadow: [
-            BoxShadow(
-              color: glowColor.withOpacity(0.09),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
+        radius: 30,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                if (badge != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
+                _FloatingGlyph(
+                  icon: icon,
+                  mainColor: glowColor,
+                  secondaryColor: glowColor == kHomeBlue ? kHomeMintTop : kHomeViolet,
+                  size: 82,
+                  iconSize: 34,
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    color: countColor.withOpacity(0.12),
+                    border: Border.all(
+                      color: countColor.withOpacity(0.18),
                     ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(999),
-                      color: badgeColor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: badgeColor.withOpacity(0.26),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
+                  ),
+                  child: Text(
+                    count,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      color: countColor,
+                      letterSpacing: -0.2,
                     ),
-                    child: Text(
-                      badge!,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
-                    ),
-                  )
-                else
-                  const SizedBox(height: 24),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 16),
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                gradient: const LinearGradient(
-                  colors: [kStaffBlue, kStaffPink],
-                ),
-              ),
-              child: Icon(
-                icon,
-                size: 26,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 18),
             Text(
               title,
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: FontWeight.w900,
-                color: kStaffInkPrimary,
+                color: kHomeInk,
+                letterSpacing: -0.4,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 5),
             Text(
               subtitle,
               style: const TextStyle(
-                fontSize: 13,
-                height: 1.3,
+                fontSize: 13.5,
+                height: 1.34,
                 fontWeight: FontWeight.w700,
-                color: kStaffInkSecondary,
+                color: kHomeInkSoft,
               ),
             ),
           ],
@@ -1010,16 +1442,16 @@ class _SummaryLine extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 13,
-          height: 13,
+          width: 14,
+          height: 14,
           margin: const EdgeInsets.only(top: 3),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: color,
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.24),
-                blurRadius: 10,
+                color: color.withOpacity(0.30),
+                blurRadius: 12,
                 spreadRadius: 1,
               ),
             ],
@@ -1035,7 +1467,7 @@ class _SummaryLine extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 14.5,
                   fontWeight: FontWeight.w800,
-                  color: kStaffInkPrimary,
+                  color: kHomeInk,
                 ),
               ),
               const SizedBox(height: 3),
@@ -1045,7 +1477,7 @@ class _SummaryLine extends StatelessWidget {
                   fontSize: 13,
                   height: 1.3,
                   fontWeight: FontWeight.w700,
-                  color: kStaffInkSecondary,
+                  color: kHomeInkSoft,
                 ),
               ),
             ],
@@ -1079,15 +1511,20 @@ class _PressableState extends State<_Pressable> {
     setState(() => _pressed = value);
   }
 
+  void _tap() {
+    HapticFeedback.lightImpact();
+    widget.onTap();
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTapDown: (_) => _setPressed(true),
       onTapUp: (_) => _setPressed(false),
       onTapCancel: () => _setPressed(false),
-      onTap: widget.onTap,
+      onTap: _tap,
       child: AnimatedScale(
-        scale: _pressed ? 0.985 : 1,
+        scale: _pressed ? 0.982 : 1,
         duration: const Duration(milliseconds: 120),
         curve: Curves.easeOutCubic,
         child: AnimatedContainer(
@@ -1095,6 +1532,15 @@ class _PressableState extends State<_Pressable> {
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(widget.borderRadius),
+            boxShadow: _pressed
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : null,
           ),
           child: widget.child,
         ),
