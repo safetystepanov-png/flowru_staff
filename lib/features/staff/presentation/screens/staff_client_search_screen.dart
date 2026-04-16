@@ -58,6 +58,10 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
   late final AnimationController _bgController;
   late final AnimationController _introController;
 
+  bool get _hasResult => _items.isNotEmpty;
+
+  _ClientSearchItem? get _primaryItem => _items.isNotEmpty ? _items.first : null;
+
   @override
   void initState() {
     super.initState();
@@ -88,6 +92,16 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
     return token;
   }
 
+  void _resetSearch() {
+    setState(() {
+      _items = [];
+      _error = null;
+      _controller.clear();
+      _loading = false;
+    });
+    _introController.forward(from: 0);
+  }
+
   Future<void> _search() async {
     final query = _controller.text.trim();
 
@@ -103,6 +117,7 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
     setState(() {
       _loading = true;
       _error = null;
+      _items = [];
     });
 
     try {
@@ -143,12 +158,15 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
 
       if (!mounted) return;
 
+      final found = raw
+          .map((e) => _ClientSearchItem.fromJson(e as Map<String, dynamic>))
+          .where((e) => e.clientId.isNotEmpty)
+          .toList();
+
       setState(() {
-        _items = raw
-            .map((e) => _ClientSearchItem.fromJson(e as Map<String, dynamic>))
-            .where((e) => e.clientId.isNotEmpty)
-            .toList();
+        _items = found;
         _loading = false;
+        _error = found.isEmpty ? 'Клиент не найден' : null;
       });
 
       _introController.forward(from: 0);
@@ -378,92 +396,33 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
     );
   }
 
-  Widget _headerCard() {
-    return _GlassCard(
-      radius: 30,
-      padding: const EdgeInsets.all(18),
-      child: Row(
-        children: [
-          const _FloatingGlyph(
-            icon: CupertinoIcons.search,
-            mainColor: kSearchBlue,
-            secondaryColor: kSearchViolet,
-            size: 82,
-            iconSize: 34,
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.establishmentName,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: kSearchInk,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Поиск по телефону, имени или QR-коду',
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.4,
-                    fontWeight: FontWeight.w700,
-                    color: kSearchInkSoft,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _heroSearchCard() {
-    return _GlassCard(
-      radius: 32,
-      padding: const EdgeInsets.all(20),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -16,
-            right: -6,
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    kSearchAccent.withOpacity(0.18),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(32),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(32),
+            gradient: LinearGradient(
+              colors: [
+                Colors.white.withOpacity(0.96),
+                Colors.white.withOpacity(0.86),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ),
-          Positioned(
-            bottom: -24,
-            left: -18,
-            child: Container(
-              width: 110,
-              height: 110,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    kSearchMintTop.withOpacity(0.12),
-                    Colors.transparent,
-                  ],
-                ),
+            border: Border.all(color: Colors.white.withOpacity(0.95)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 22,
+                offset: const Offset(0, 14),
               ),
-            ),
+            ],
           ),
-          Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -537,7 +496,7 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(22),
-                  color: Colors.white.withOpacity(0.94),
+                  color: Colors.white.withOpacity(0.95),
                   border: Border.all(color: const Color(0xFFE7EEF0)),
                   boxShadow: [
                     BoxShadow(
@@ -667,7 +626,7 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -709,59 +668,180 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
     );
   }
 
-  Widget _clientCard(_ClientSearchItem item) {
+  Widget _foundClientCard(_ClientSearchItem item) {
     return _Pressable(
       onTap: () => _openClient(item),
-      borderRadius: 28,
+      borderRadius: 30,
       child: _GlassCard(
-        radius: 28,
-        padding: const EdgeInsets.all(18),
-        child: Row(
+        radius: 30,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _AvatarGlyph(initials: item.initials),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
+              children: [
+                _AvatarGlyph(initials: item.initials),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(999),
+                          gradient: const LinearGradient(
+                            colors: [kSearchBlue, kSearchViolet],
+                          ),
+                        ),
+                        child: const Text(
+                          'КЛИЕНТ НАЙДЕН',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.8,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        item.displayName,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: kSearchInk,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        item.phone.isEmpty ? 'Телефон не указан' : item.phone,
+                        style: const TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                          color: kSearchInkSoft,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                color: kSearchBlue.withOpacity(0.08),
+                border: Border.all(color: kSearchBlue.withOpacity(0.10)),
+              ),
+              child: Row(
                 children: [
-                  Text(
-                    item.displayName,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                      color: kSearchInk,
+                  const Icon(
+                    CupertinoIcons.person_crop_circle_fill,
+                    color: kSearchBlue,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Открыть карточку клиента и продолжить работу',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: kSearchInk.withOpacity(0.92),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 5),
-                  Text(
-                    item.phone.isEmpty ? 'Телефон не указан' : item.phone,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: kSearchInkSoft,
+                  const SizedBox(width: 10),
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: const LinearGradient(
+                        colors: [kSearchBlue, kSearchViolet],
+                      ),
+                    ),
+                    child: const Icon(
+                      CupertinoIcons.chevron_right,
+                      color: Colors.white,
+                      size: 18,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 10),
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: Colors.white.withOpacity(0.72),
-                border: Border.all(color: Colors.white.withOpacity(0.72)),
-              ),
-              child: const Icon(
-                CupertinoIcons.chevron_right,
-                color: kSearchInk,
-                size: 18,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _secondaryActionButton({
+    required String text,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          colors: [kSearchPink, kSearchViolet],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: kSearchPink.withOpacity(0.22),
+            blurRadius: 16,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 16,
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _resultsBlock() {
+    final item = _primaryItem!;
+    return Column(
+      children: [
+        _foundClientCard(item),
+        const SizedBox(height: 14),
+        _secondaryActionButton(
+          text: 'Назад к поиску',
+          icon: CupertinoIcons.arrow_turn_up_left,
+          onTap: _resetSearch,
+        ),
+      ],
     );
   }
 
@@ -785,8 +865,8 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: _topIconButton(
-              icon: CupertinoIcons.search,
-              onTap: _search,
+              icon: _hasResult ? CupertinoIcons.refresh : CupertinoIcons.search,
+              onTap: _hasResult ? _resetSearch : _search,
             ),
           ),
         ],
@@ -801,39 +881,25 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 children: [
-                  _stagger(index: 0, child: _headerCard()),
-                  const SizedBox(height: 14),
-                  _stagger(index: 1, child: _heroSearchCard()),
-                  const SizedBox(height: 14),
-                  if (_error != null)
+                  if (_hasResult)
                     _stagger(
-                      index: 2,
-                      child: _stateCard(
-                        icon: CupertinoIcons.exclamationmark_circle_fill,
-                        title: 'Ошибка',
-                        subtitle: _error!,
-                      ),
+                      index: 0,
+                      child: _resultsBlock(),
                     )
-                  else if (_items.isEmpty)
-                    _stagger(
-                      index: 2,
-                      child: _stateCard(
-                        icon: CupertinoIcons.person_2_fill,
-                        title: 'Начни поиск',
-                        subtitle:
-                            'Введи телефон или имя клиента,\nлибо открой QR-сканер',
-                      ),
-                    )
-                  else
-                    ..._items.asMap().entries.map(
-                      (entry) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _stagger(
-                          index: entry.key + 2,
-                          child: _clientCard(entry.value),
+                  else ...[
+                    _stagger(index: 0, child: _heroSearchCard()),
+                    if (_error != null) ...[
+                      const SizedBox(height: 14),
+                      _stagger(
+                        index: 1,
+                        child: _stateCard(
+                          icon: CupertinoIcons.exclamationmark_circle_fill,
+                          title: 'Ошибка',
+                          subtitle: _error!,
                         ),
                       ),
-                    ),
+                    ],
+                  ],
                 ],
               ),
             ),
@@ -884,94 +950,6 @@ class _GlassCard extends StatelessWidget {
           ),
           child: child,
         ),
-      ),
-    );
-  }
-}
-
-class _FloatingGlyph extends StatelessWidget {
-  final IconData icon;
-  final Color mainColor;
-  final Color secondaryColor;
-  final double size;
-  final double iconSize;
-
-  const _FloatingGlyph({
-    required this.icon,
-    required this.mainColor,
-    required this.secondaryColor,
-    this.size = 76,
-    this.iconSize = 34,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  mainColor.withOpacity(0.22),
-                  secondaryColor.withOpacity(0.16),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
-          Container(
-            width: size * 0.74,
-            height: size * 0.74,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.86),
-              boxShadow: [
-                BoxShadow(
-                  color: mainColor.withOpacity(0.20),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: size * 0.54,
-            height: size * 0.54,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [mainColor, secondaryColor],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: iconSize,
-            ),
-          ),
-          Positioned(
-            top: size * 0.11,
-            right: size * 0.14,
-            child: Container(
-              width: size * 0.14,
-              height: size * 0.14,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.90),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1036,14 +1014,14 @@ class _AvatarGlyph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 78,
-      height: 78,
+      width: 86,
+      height: 86,
       child: Stack(
         alignment: Alignment.center,
         children: [
           Container(
-            width: 78,
-            height: 78,
+            width: 86,
+            height: 86,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
@@ -1057,8 +1035,8 @@ class _AvatarGlyph extends StatelessWidget {
             ),
           ),
           Container(
-            width: 58,
-            height: 58,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: const LinearGradient(
@@ -1080,17 +1058,17 @@ class _AvatarGlyph extends StatelessWidget {
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
-                  fontSize: 19,
+                  fontSize: 21,
                 ),
               ),
             ),
           ),
           Positioned(
-            top: 8,
+            top: 9,
             right: 10,
             child: Container(
-              width: 10,
-              height: 10,
+              width: 11,
+              height: 11,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withOpacity(0.90),

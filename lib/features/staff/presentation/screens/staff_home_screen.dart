@@ -15,6 +15,7 @@ import 'staff_announcements_screen.dart';
 import 'staff_chat_screen.dart';
 import 'staff_client_search_screen.dart';
 import 'staff_establishment_history_screen.dart';
+import 'staff_work_schedule_screen.dart';
 
 const Color kHomeMintTop = Color(0xFF0CB7B3);
 const Color kHomeMintMid = Color(0xFF08A9AB);
@@ -36,6 +37,7 @@ const Color kHomeShadow = Color(0x22062E36);
 const Color kHomeBlue = Color(0xFF4E7CFF);
 const Color kHomePink = Color(0xFFFF5F8F);
 const Color kHomeViolet = Color(0xFF7A63FF);
+const Color kHomePulseGreen = Color(0xFF22C55E);
 
 class StaffHomeScreen extends StatefulWidget {
   final int establishmentId;
@@ -259,14 +261,17 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         .then((_) => _loadDashboard());
   }
 
-  String get _chatBadge {
-    if (_chatCount <= 0) return '0';
-    return _chatCount > 99 ? '99+' : '$_chatCount';
-  }
-
-  String get _announcementBadge {
-    if (_announcementCount <= 0) return '0';
-    return _announcementCount > 99 ? '99+' : '$_announcementCount';
+  void _openWorkSchedule() {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => StaffWorkScheduleScreen(
+              establishmentId: widget.establishmentId,
+              establishmentName: widget.establishmentName,
+            ),
+          ),
+        )
+        .then((_) => _loadDashboard());
   }
 
   Widget _stagger({
@@ -445,27 +450,6 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   height: 1.0,
                 ),
               ),
-              const SizedBox(height: 5),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.14),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: Colors.white.withOpacity(0.16)),
-                ),
-                child: Text(
-                  '· Flowru ·',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white.withOpacity(0.94),
-                    letterSpacing: 0.1,
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -606,37 +590,52 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   Positioned(
                     top: -18,
                     right: -4,
-                    child: Container(
-                      width: 126,
-                      height: 126,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            kHomeAccent.withOpacity(0.22),
-                            Colors.transparent,
-                          ],
+                    child: ImageFiltered(
+                      imageFilter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                      child: Container(
+                        width: 126,
+                        height: 126,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              kHomeAccent.withOpacity(0.18),
+                              Colors.transparent,
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
+
+                  // Мягкая подложка без резкого обрыва
                   Positioned(
-                    bottom: -28,
-                    left: -26,
-                    child: Container(
-                      width: 118,
-                      height: 118,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            kHomeMintTop.withOpacity(0.14),
-                            Colors.transparent,
-                          ],
+                    left: -12,
+                    right: -12,
+                    bottom: 46,
+                    child: IgnorePointer(
+                      child: ImageFiltered(
+                        imageFilter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+                        child: Container(
+                          height: 110,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                kHomeMintTop.withOpacity(0.05),
+                                Colors.white.withOpacity(0.10),
+                                Colors.white.withOpacity(0.0),
+                              ],
+                              stops: const [0.0, 0.45, 0.78, 1.0],
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
+
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -765,24 +764,23 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         Expanded(
           child: _ModuleCard(
             title: 'Чат',
-            subtitle: _chatCount > 0 ? 'Новые сообщения' : 'Без новых',
-            count: _chatBadge,
+            subtitle: _chatCount > 0 ? 'Есть новые сообщения' : 'Все просмотрено',
             icon: CupertinoIcons.chat_bubble_2,
             glowColor: kHomeBlue,
-            countColor: const Color(0xFF4E7CFF),
             onTap: _openChat,
+            showPulse: _chatCount > 0,
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: _ModuleCard(
             title: 'Объявления',
-            subtitle: _announcementCount > 0 ? 'Есть новые' : 'Пока пусто',
-            count: _announcementBadge,
+            subtitle:
+                _announcementCount > 0 ? 'Есть новые' : 'Все просмотрено',
             icon: CupertinoIcons.bell,
             glowColor: kHomePink,
-            countColor: const Color(0xFFFF5F8F),
             onTap: _openAnnouncements,
+            showPulse: _announcementCount > 0,
           ),
         ),
       ],
@@ -811,7 +809,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'История заведения',
+                    'История',
                     style: TextStyle(
                       fontSize: 18.5,
                       fontWeight: FontWeight.w900,
@@ -820,7 +818,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Операции, действия и события по заведению.',
+                    'События и действия по заведению',
                     style: TextStyle(
                       fontSize: 13.5,
                       height: 1.35,
@@ -852,82 +850,107 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     );
   }
 
-  Widget _buildSummaryCard() {
-    final hasChat = _chatCount > 0;
-    final hasAnnouncements = _announcementCount > 0;
-
-    return _GlassCard(
-      padding: const EdgeInsets.all(18),
-      radius: 30,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Text(
-                'Сводка',
-                style: TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w900,
-                  color: kHomeInk,
-                ),
-              ),
-              Spacer(),
-              _ActivityChip(),
-            ],
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Состояние по основным разделам.',
-            style: TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w700,
-              color: kHomeInkSoft,
+  Widget _buildWorkScheduleCard() {
+    return _Pressable(
+      onTap: _openWorkSchedule,
+      borderRadius: 30,
+      child: _GlassCard(
+        padding: const EdgeInsets.all(18),
+        radius: 30,
+        child: Row(
+          children: [
+            const _FloatingGlyph(
+              icon: CupertinoIcons.calendar,
+              mainColor: kHomeViolet,
+              secondaryColor: kHomeBlue,
+              size: 68,
+              iconSize: 30,
             ),
-          ),
-          const SizedBox(height: 16),
-          _SummaryLine(
-            title: 'Чат',
-            subtitle: hasChat ? 'Есть новые сообщения' : 'Новых сообщений нет',
-            active: hasChat,
-            activeColor: kHomeBlue,
-          ),
-          const SizedBox(height: 12),
-          _SummaryLine(
-            title: 'Объявления',
-            subtitle: hasAnnouncements
-                ? 'Есть активные объявления'
-                : 'Сейчас без объявлений',
-            active: hasAnnouncements,
-            activeColor: kHomePink,
-          ),
-        ],
+            const SizedBox(width: 15),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'График работы',
+                    style: TextStyle(
+                      fontSize: 18.5,
+                      fontWeight: FontWeight.w900,
+                      color: kHomeInk,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Месяц, смены и рабочие дни',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      height: 1.35,
+                      fontWeight: FontWeight.w700,
+                      color: kHomeInkSoft,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: Colors.white.withOpacity(0.72),
+                border: Border.all(color: Colors.white.withOpacity(0.72)),
+              ),
+              child: const Icon(
+                CupertinoIcons.chevron_right,
+                size: 18,
+                color: kHomeInk,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title, String subtitle) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: Column(
+  Widget _buildTipCard() {
+    return _GlassCard(
+      padding: const EdgeInsets.all(18),
+      radius: 30,
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.5,
-              color: Colors.white,
-            ),
+          const _FloatingGlyph(
+            icon: CupertinoIcons.lightbulb_fill,
+            mainColor: kHomeAccent,
+            secondaryColor: kHomePink,
+            size: 68,
+            iconSize: 30,
           ),
-          const SizedBox(height: 5),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: Colors.white.withOpacity(0.82),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Подсказка',
+                  style: TextStyle(
+                    fontSize: 18.5,
+                    fontWeight: FontWeight.w900,
+                    color: kHomeInk,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Если появились новые сообщения или объявления, справа будет зелёная пульсация.',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                    color: kHomeInkSoft,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -1017,27 +1040,31 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                           const SizedBox(height: 14),
                           _stagger(index: 3, child: _buildTopModulesRow()),
                           const SizedBox(height: 16),
-                          _stagger(index: 4, child: _buildError()),
-                          if (_error != null) const SizedBox(height: 16),
+                          if (_error != null) ...[
+                            _stagger(index: 4, child: _buildError()),
+                            const SizedBox(height: 16),
+                          ],
                           _stagger(
                             index: 5,
-                            child: _buildSectionTitle(
-                              'Дополнительно',
-                              'Ещё один важный рабочий раздел',
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 2),
+                              child: Text(
+                                'Дополнительно',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 14),
                           _stagger(index: 6, child: _buildHistoryCard()),
-                          const SizedBox(height: 22),
-                          _stagger(
-                            index: 7,
-                            child: _buildSectionTitle(
-                              'Активность',
-                              'Состояние по основным разделам',
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          _stagger(index: 8, child: _buildSummaryCard()),
+                          const SizedBox(height: 12),
+                          _stagger(index: 7, child: _buildWorkScheduleCard()),
+                          const SizedBox(height: 12),
+                          _stagger(index: 8, child: _buildTipCard()),
                         ],
                       ),
                     ),
@@ -1164,33 +1191,6 @@ class _MiniActionPill extends StatelessWidget {
         CupertinoIcons.arrow_right,
         color: Colors.white,
         size: 17,
-      ),
-    );
-  }
-}
-
-class _ActivityChip extends StatelessWidget {
-  const _ActivityChip();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        color: kHomeMintTop.withOpacity(0.10),
-        border: Border.all(
-          color: kHomeMintTop.withOpacity(0.14),
-        ),
-      ),
-      child: const Text(
-        'LIVE',
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0.6,
-          color: kHomeMintBottom,
-        ),
       ),
     );
   }
@@ -1333,20 +1333,18 @@ class _FloatingGlyph extends StatelessWidget {
 class _ModuleCard extends StatelessWidget {
   final String title;
   final String subtitle;
-  final String count;
   final IconData icon;
   final Color glowColor;
-  final Color countColor;
   final VoidCallback onTap;
+  final bool showPulse;
 
   const _ModuleCard({
     required this.title,
     required this.subtitle,
-    required this.count,
     required this.icon,
     required this.glowColor,
-    required this.countColor,
     required this.onTap,
+    required this.showPulse,
   });
 
   @override
@@ -1365,33 +1363,13 @@ class _ModuleCard extends StatelessWidget {
                 _FloatingGlyph(
                   icon: icon,
                   mainColor: glowColor,
-                  secondaryColor: glowColor == kHomeBlue ? kHomeMintTop : kHomeViolet,
+                  secondaryColor:
+                      glowColor == kHomeBlue ? kHomeMintTop : kHomeViolet,
                   size: 82,
                   iconSize: 34,
                 ),
                 const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    color: countColor.withOpacity(0.12),
-                    border: Border.all(
-                      color: countColor.withOpacity(0.18),
-                    ),
-                  ),
-                  child: Text(
-                    count,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                      color: countColor,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                ),
+                if (showPulse) const _PulseDot(),
               ],
             ),
             const SizedBox(height: 18),
@@ -1421,69 +1399,77 @@ class _ModuleCard extends StatelessWidget {
   }
 }
 
-class _SummaryLine extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final bool active;
-  final Color activeColor;
+class _PulseDot extends StatefulWidget {
+  const _PulseDot();
 
-  const _SummaryLine({
-    required this.title,
-    required this.subtitle,
-    required this.active,
-    required this.activeColor,
-  });
+  @override
+  State<_PulseDot> createState() => _PulseDotState();
+}
+
+class _PulseDotState extends State<_PulseDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? activeColor : const Color(0xFFB6C6D3);
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final t = _controller.value;
+        final scale = 1.0 + (t * 1.8);
+        final opacity = (1.0 - t).clamp(0.0, 1.0);
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 14,
-          height: 14,
-          margin: const EdgeInsets.only(top: 3),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color,
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.30),
-                blurRadius: 12,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 11),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        return SizedBox(
+          width: 28,
+          height: 28,
+          child: Stack(
+            alignment: Alignment.center,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w800,
-                  color: kHomeInk,
+              Transform.scale(
+                scale: scale,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: kHomePulseGreen.withOpacity(0.35 * opacity),
+                  ),
                 ),
               ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 1.3,
-                  fontWeight: FontWeight.w700,
-                  color: kHomeInkSoft,
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: kHomePulseGreen,
+                  boxShadow: [
+                    BoxShadow(
+                      color: kHomePulseGreen.withOpacity(0.55),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }

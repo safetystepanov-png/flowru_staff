@@ -33,6 +33,10 @@ const Color kClientShadow = Color(0x22062E36);
 const Color kClientBlue = Color(0xFF4E7CFF);
 const Color kClientPink = Color(0xFFFF5F8F);
 const Color kClientViolet = Color(0xFF7A63FF);
+const Color kClientGreen = Color(0xFF12B886);
+const Color kClientGreenSoft = Color(0xFF38D9A9);
+const Color kClientRed = Color(0xFFFF6B6B);
+const Color kClientRedSoft = Color(0xFFFF8787);
 
 class StaffClientDetailScreen extends StatefulWidget {
   final int establishmentId;
@@ -113,7 +117,9 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
       );
 
       if (response.statusCode != 200) {
-        throw Exception('detail failed: ${response.statusCode} ${response.body}');
+        throw Exception(
+          'detail failed: ${response.statusCode} ${response.body}',
+        );
       }
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
@@ -156,7 +162,10 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
           opacity: t,
           child: Transform.translate(
             offset: Offset(0, 22 * (1 - t)),
-            child: child,
+            child: Transform.scale(
+              scale: 0.985 + (0.015 * t),
+              child: child,
+            ),
           ),
         );
       },
@@ -284,184 +293,473 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
   Widget _topCard() {
     final client = _client!;
 
-    return _GlassCard(
-      radius: 32,
-      padding: const EdgeInsets.all(22),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -18,
-            right: -8,
-            child: Container(
-              width: 126,
-              height: 126,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    kClientAccent.withOpacity(0.18),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(34),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(34),
+            gradient: const LinearGradient(
+              colors: [
+                Color(0xFFFDFEFF),
+                Color(0xFFF4FBFC),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ),
-          Positioned(
-            bottom: -24,
-            left: -16,
-            child: Container(
-              width: 110,
-              height: 110,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    kClientMintTop.withOpacity(0.12),
-                    Colors.transparent,
-                  ],
-                ),
+            border: Border.all(color: Colors.white.withOpacity(0.92)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.10),
+                blurRadius: 26,
+                offset: const Offset(0, 18),
               ),
-            ),
+              BoxShadow(
+                color: kClientBlue.withOpacity(0.14),
+                blurRadius: 28,
+                spreadRadius: -4,
+                offset: const Offset(0, 12),
+              ),
+            ],
           ),
-          Column(
+          child: Stack(
             children: [
-              Container(
-                width: 86,
-                height: 86,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      kClientBlue.withOpacity(0.22),
-                      kClientPink.withOpacity(0.16),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              Positioned(
+                top: -28,
+                right: -22,
+                child: Container(
+                  width: 170,
+                  height: 170,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        kClientAccent.withOpacity(0.14),
+                        Colors.transparent,
+                      ],
+                    ),
                   ),
                 ),
-                child: Center(
-                  child: Container(
-                    width: 62,
-                    height: 62,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [kClientBlue, kClientPink],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+              ),
+              Positioned(
+                bottom: -34,
+                left: -30,
+                child: Container(
+                  width: 170,
+                  height: 170,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        kClientBlue.withOpacity(0.12),
+                        Colors.transparent,
+                      ],
                     ),
-                    child: Center(
-                      child: Text(
-                        client.initials,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 11,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(999),
+                            gradient: const LinearGradient(
+                              colors: [kClientAccent, kClientAccentSoft],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: kClientAccent.withOpacity(0.24),
+                                blurRadius: 14,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: const Text(
+                            'КАРТА КЛИЕНТА',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.8,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
-                      ),
+                        const Spacer(),
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(18),
+                            color: kClientInk.withOpacity(0.05),
+                          ),
+                          child: const Icon(
+                            CupertinoIcons.person_crop_circle_fill,
+                            size: 28,
+                            color: kClientInk,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                client.displayName,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 25,
-                  fontWeight: FontWeight.w900,
-                  color: kClientInk,
-                  letterSpacing: -0.6,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                client.phone ?? 'Телефон не указан',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: kClientInkSoft,
+                    const SizedBox(height: 20),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _AvatarGlyph(
+                          initials: client.initials,
+                          size: 96,
+                          innerSize: 68,
+                          fontSize: 23,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  client.displayName,
+                                  style: const TextStyle(
+                                    fontSize: 28,
+                                    height: 1.05,
+                                    fontWeight: FontWeight.w900,
+                                    color: kClientInk,
+                                    letterSpacing: -0.9,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  client.phone ?? 'Телефон не указан',
+                                  style: const TextStyle(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: kClientInkSoft,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 22),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _bigMetricCard(
+                            title: 'Баланс',
+                            value: client.balanceLabel,
+                            subtitle: 'доступно',
+                            icon: CupertinoIcons.star_fill,
+                            colors: const [kClientBlue, kClientViolet],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _bigMetricCard(
+                            title: 'Визиты',
+                            value: client.visitsLabel,
+                            subtitle: 'всего',
+                            icon: CupertinoIcons.ticket_fill,
+                            colors: const [kClientPink, kClientViolet],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _bigMetricCard(
+                            title: 'Потрачено',
+                            value: client.spentLabel,
+                            subtitle: 'сумма',
+                            icon: CupertinoIcons.creditcard_fill,
+                            colors: const [Color(0xFF10B8A5), Color(0xFF4E7CFF)],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    _detailLine(
+                      icon: CupertinoIcons.phone_fill,
+                      label: 'Телефон',
+                      value: client.phone ?? 'Телефон не указан',
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _metrics() {
-    final client = _client!;
-    return Row(
-      children: [
-        Expanded(
-          child: _metricCard(
-            title: 'Баланс',
-            value: client.balanceLabel,
-            icon: CupertinoIcons.star_fill,
-            glow: kClientBlue,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _metricCard(
-            title: 'Визиты',
-            value: client.visitsLabel,
-            icon: CupertinoIcons.ticket_fill,
-            glow: kClientPink,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _metricCard(
-            title: 'Потрачено',
-            value: client.spentLabel,
-            icon: CupertinoIcons.creditcard_fill,
-            glow: kClientViolet,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _metricCard({
+  Widget _bigMetricCard({
     required String title,
     required String value,
+    required String subtitle,
     required IconData icon,
-    required Color glow,
+    required List<Color> colors,
   }) {
-    return _GlassCard(
-      radius: 24,
+    return Container(
+      height: 150,
       padding: const EdgeInsets.all(14),
-      child: Column(
-        children: [
-          _MiniGlyph(
-            icon: icon,
-            color: glow,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colors.first.withOpacity(0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
           ),
-          const SizedBox(height: 10),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.18),
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 18,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: Colors.white.withOpacity(0.90),
+            ),
+          ),
+          const SizedBox(height: 5),
           Text(
             value,
-            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 16,
+              fontSize: 19,
+              height: 1.06,
               fontWeight: FontWeight.w900,
-              color: kClientInk,
+              color: Colors.white,
+              letterSpacing: -0.4,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 12.5,
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11.5,
               fontWeight: FontWeight.w700,
-              color: kClientInkSoft,
+              color: Colors.white.withOpacity(0.86),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _detailLine({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.white.withOpacity(0.74),
+        border: Border.all(color: Colors.white.withOpacity(0.84)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.025),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  kClientBlue.withOpacity(0.16),
+                  kClientViolet.withOpacity(0.12),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: kClientInk,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: kClientInkSoft,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w900,
+                    color: kClientInk,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            'Действия с клиентом',
+            style: TextStyle(
+              fontSize: 21,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              letterSpacing: -0.4,
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: _actionButton(
+                title: 'Начислить',
+                subtitle: 'добавить бонусы',
+                icon: CupertinoIcons.plus_circle_fill,
+                colors: const [kClientGreen, kClientGreenSoft],
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => StaffClientAccrualScreen(
+                        establishmentId: widget.establishmentId,
+                        establishmentName: widget.establishmentName,
+                        clientId: widget.clientId,
+                        clientName: _client!.displayName,
+                      ),
+                    ),
+                  );
+                  _load();
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _actionButton(
+                title: 'Списать',
+                subtitle: 'провести оплату',
+                icon: CupertinoIcons.minus_circle_fill,
+                colors: const [kClientRed, kClientRedSoft],
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => StaffClientSpendScreen(
+                        establishmentId: widget.establishmentId,
+                        establishmentName: widget.establishmentName,
+                        clientId: widget.clientId,
+                        clientName: _client!.displayName,
+                      ),
+                    ),
+                  );
+                  _load();
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _softActionTile(
+          title: 'История клиента',
+          subtitle: 'Посмотреть все операции и движения по клиенту',
+          icon: CupertinoIcons.time_solid,
+          glow: kClientBlue,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => StaffClientHistoryScreen(
+                  establishmentId: widget.establishmentId,
+                  establishmentName: widget.establishmentName,
+                  clientId: widget.clientId,
+                  clientName: _client!.displayName,
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        _softActionTile(
+          title: 'Награды',
+          subtitle: 'Доступные подарки и выдача награды клиенту',
+          icon: CupertinoIcons.gift_fill,
+          glow: kClientPink,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => StaffClientRewardsScreen(
+                  establishmentId: widget.establishmentId,
+                  establishmentName: widget.establishmentName,
+                  clientId: widget.clientId,
+                  clientName: _client!.displayName,
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -494,35 +792,43 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
             borderRadius: BorderRadius.circular(24),
           ),
         ),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.white, size: 22),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
+        child: SizedBox(
+          height: 76,
+          child: Row(
+            children: [
+              Icon(icon, color: Colors.white, size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.92),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12.5,
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.92),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12.5,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -640,98 +946,8 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     return Column(
       children: [
         _stagger(index: 0, child: _topCard()),
-        const SizedBox(height: 14),
-        _stagger(index: 1, child: _metrics()),
         const SizedBox(height: 18),
-        _stagger(
-          index: 2,
-          child: _actionButton(
-            title: 'Начислить',
-            subtitle: 'Провести покупку и начислить по логике лояльности',
-            icon: CupertinoIcons.plus_circle_fill,
-            colors: const [kClientBlue, kClientViolet],
-            onTap: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => StaffClientAccrualScreen(
-                    establishmentId: widget.establishmentId,
-                    establishmentName: widget.establishmentName,
-                    clientId: widget.clientId,
-                    clientName: _client!.displayName,
-                  ),
-                ),
-              );
-              _load();
-            },
-          ),
-        ),
-        const SizedBox(height: 12),
-        _stagger(
-          index: 3,
-          child: _actionButton(
-            title: 'Списать',
-            subtitle: 'Проверить доступное списание и провести оплату',
-            icon: CupertinoIcons.minus_circle_fill,
-            colors: const [kClientPink, kClientViolet],
-            onTap: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => StaffClientSpendScreen(
-                    establishmentId: widget.establishmentId,
-                    establishmentName: widget.establishmentName,
-                    clientId: widget.clientId,
-                    clientName: _client!.displayName,
-                  ),
-                ),
-              );
-              _load();
-            },
-          ),
-        ),
-        const SizedBox(height: 12),
-        _stagger(
-          index: 4,
-          child: _softActionTile(
-            title: 'История клиента',
-            subtitle: 'Посмотреть все операции и движения по клиенту',
-            icon: CupertinoIcons.time_solid,
-            glow: kClientBlue,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => StaffClientHistoryScreen(
-                    establishmentId: widget.establishmentId,
-                    establishmentName: widget.establishmentName,
-                    clientId: widget.clientId,
-                    clientName: _client!.displayName,
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 12),
-        _stagger(
-          index: 5,
-          child: _softActionTile(
-            title: 'Награды',
-            subtitle: 'Доступные подарки и выдача награды клиенту',
-            icon: CupertinoIcons.gift_fill,
-            glow: kClientPink,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => StaffClientRewardsScreen(
-                    establishmentId: widget.establishmentId,
-                    establishmentName: widget.establishmentName,
-                    clientId: widget.clientId,
-                    clientName: _client!.displayName,
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
+        _stagger(index: 1, child: _buildActionSection()),
       ],
     );
   }
@@ -908,6 +1124,70 @@ class _EmptyOrb extends StatelessWidget {
   }
 }
 
+class _AvatarGlyph extends StatelessWidget {
+  final String initials;
+  final double size;
+  final double innerSize;
+  final double fontSize;
+
+  const _AvatarGlyph({
+    required this.initials,
+    this.size = 86,
+    this.innerSize = 62,
+    this.fontSize = 20,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  kClientBlue.withOpacity(0.22),
+                  kClientPink.withOpacity(0.16),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          Container(
+            width: innerSize,
+            height: innerSize,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [kClientBlue, kClientPink],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Center(
+              child: Text(
+                initials,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Pressable extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
@@ -1031,7 +1311,8 @@ class _ClientDetail {
   String get initials {
     final name = displayName.trim();
     if (name.isEmpty) return 'C';
-    final parts = name.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    final parts =
+        name.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
     if (parts.isEmpty) return 'C';
     final first = parts.first.isNotEmpty ? parts.first[0] : 'C';
     if (parts.length == 1) return first.toUpperCase();

@@ -353,50 +353,6 @@ class _StaffEstablishmentHistoryScreenState
     }
   }
 
-  Widget _headerCard() {
-    return _GlassCard(
-      radius: 30,
-      padding: const EdgeInsets.all(18),
-      child: Row(
-        children: [
-          const _FloatingGlyph(
-            icon: CupertinoIcons.time,
-            mainColor: kHistBlue,
-            secondaryColor: kHistViolet,
-            size: 82,
-            iconSize: 34,
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.establishmentName,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: kHistInk,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Последние операции по заведению',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: kHistInkSoft,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _stateCard({
     required IconData icon,
     required String title,
@@ -551,11 +507,9 @@ class _StaffEstablishmentHistoryScreenState
                       child: ListView(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                         children: [
-                          _stagger(index: 0, child: _headerCard()),
-                          const SizedBox(height: 14),
                           if (_error != null)
                             _stagger(
-                              index: 1,
+                              index: 0,
                               child: _stateCard(
                                 icon: CupertinoIcons.exclamationmark_circle_fill,
                                 title: 'Ошибка',
@@ -564,7 +518,7 @@ class _StaffEstablishmentHistoryScreenState
                             )
                           else if (_items.isEmpty)
                             _stagger(
-                              index: 1,
+                              index: 0,
                               child: _stateCard(
                                 icon: CupertinoIcons.time_solid,
                                 title: 'История пока пустая',
@@ -576,7 +530,7 @@ class _StaffEstablishmentHistoryScreenState
                               (entry) => Padding(
                                 padding: const EdgeInsets.only(bottom: 12),
                                 child: _stagger(
-                                  index: entry.key + 1,
+                                  index: entry.key,
                                   child: _itemCard(entry.value),
                                 ),
                               ),

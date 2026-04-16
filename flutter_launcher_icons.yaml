@@ -1,16 +1,19 @@
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/flowru_logo.png"
+  image_path: "assets/images/app_icon.png"
   remove_alpha_ios: true
+
   web:
     generate: true
-    image_path: "assets/images/flowru_logo.png"
+    image_path: "assets/images/app_icon.png"
     background_color: "#F6F7FB"
     theme_color: "#7D63FF"
+
   windows:
     generate: true
-    image_path: "assets/images/flowru_logo.png"
+    image_path: "assets/images/app_icon.png"
+
   macos:
     generate: true
-    image_path: "assets/images/flowru_logo.png"
+    image_path: "assets/images/app_icon.png"

@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../auth/data/auth_storage.dart';
 import '../../../../core/config/app_config.dart';
@@ -32,6 +31,9 @@ const Color kChatShadow = Color(0x22062E36);
 const Color kChatBlue = Color(0xFF4E7CFF);
 const Color kChatPink = Color(0xFFFF5F8F);
 const Color kChatViolet = Color(0xFF7A63FF);
+const Color kChatGreen = Color(0xFF1FCB7B);
+const Color kChatRed = Color(0xFFFF6A5E);
+const Color kChatAmber = Color(0xFFFFA11D);
 
 class StaffChatScreen extends StatefulWidget {
   final int establishmentId;
@@ -51,6 +53,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _messageFocusNode = FocusNode();
   final ImagePicker _picker = ImagePicker();
 
   bool _loading = true;
@@ -63,21 +66,44 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   Uint8List? _pendingImageBytes;
   String? _pendingImageName;
 
+  String? _editingMessageId;
+  bool _showEmojiPanel = false;
+  String? _emojiTargetMessageId;
+
   late final AnimationController _bgController;
   late final AnimationController _introController;
 
-  static SharedPreferences? _prefs;
-
-  static Future<SharedPreferences> get _sharedPrefs async {
-    _prefs ??= await SharedPreferences.getInstance();
-    return _prefs!;
-  }
-
-  String get _seenKey => 'staff_chat_seen_${widget.establishmentId}';
+  static const List<String> _emojiPalette = <String>[
+    '👍',
+    '❤️',
+    '🔥',
+    '👏',
+    '😂',
+    '😍',
+    '😮',
+    '😎',
+    '🙏',
+    '✅',
+    '🎉',
+    '💯',
+    '👀',
+    '🤝',
+    '👌',
+    '😢',
+    '😡',
+    '🤔',
+    '🙌',
+    '💥',
+    '🥳',
+    '😴',
+    '👎',
+    '💔',
+  ];
 
   @override
   void initState() {
     super.initState();
+
     _bgController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 6800),
@@ -88,13 +114,18 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       duration: const Duration(milliseconds: 950),
     );
 
-    _load();
+    _init();
+  }
+
+  Future<void> _init() async {
+    await _load();
   }
 
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _messageFocusNode.dispose();
     _bgController.dispose();
     _introController.dispose();
     super.dispose();
@@ -108,9 +139,25 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     return token;
   }
 
-  Future<void> _markSeen() async {
-    final prefs = await _sharedPrefs;
-    await prefs.setInt(_seenKey, _messages.length);
+  String _extractErrorText(http.Response response) {
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        final detail = decoded['detail'];
+        if (detail is String && detail.trim().isNotEmpty) {
+          return detail;
+        }
+        final message = decoded['message'];
+        if (message is String && message.trim().isNotEmpty) {
+          return message;
+        }
+        final error = decoded['error'];
+        if (error is String && error.trim().isNotEmpty) {
+          return error;
+        }
+      }
+    } catch (_) {}
+    return 'Ошибка ${response.statusCode}';
   }
 
   Future<void> _loadCurrentUser() async {
@@ -154,9 +201,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       );
 
       if (response.statusCode != 200) {
-        throw Exception(
-          'chat load failed: ${response.statusCode} ${response.body}',
-        );
+        throw Exception(_extractErrorText(response));
       }
 
       final decoded = jsonDecode(response.body);
@@ -179,26 +224,30 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         _loading = false;
       });
 
-      await _markSeen();
       _introController.forward(from: 0);
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToBottom();
+        _scrollToBottom(jump: true);
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Не удалось загрузить чат';
+        _error = e.toString().replaceFirst('Exception: ', '');
       });
       _introController.forward(from: 0);
     }
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool jump = false}) {
     if (!_scrollController.hasClients) return;
+    final target = _scrollController.position.maxScrollExtent + 180;
+    if (jump) {
+      _scrollController.jumpTo(target);
+      return;
+    }
     _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent + 140,
+      target,
       duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
     );
@@ -208,8 +257,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     try {
       final file = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 42,
-        maxWidth: 1600,
+        imageQuality: 74,
+        maxWidth: 1800,
       );
 
       if (file == null) return;
@@ -221,6 +270,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         _pendingImageBytes = bytes;
         _pendingImageName = file.name;
       });
+      _messageFocusNode.requestFocus();
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -236,11 +286,143 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     });
   }
 
+  bool _isMine(_ChatMessage message) {
+    if (_currentUserId == null || _currentUserId!.isEmpty) return false;
+    return message.senderUserId == _currentUserId;
+  }
+
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
 
     if (text.isEmpty && _pendingImageBytes == null) return;
     if (_sending) return;
+
+    if (_editingMessageId != null) {
+      await _saveEditedMessage();
+      return;
+    }
+
+    setState(() {
+      _sending = true;
+      _error = null;
+      _showEmojiPanel = false;
+      _emojiTargetMessageId = null;
+    });
+
+    try {
+      final token = await _token();
+
+      if (_pendingImageBytes != null) {
+        final uri = Uri.parse(
+          '${AppConfig.baseUrl}/api/v1/staff/chat/messages/upload-image',
+        );
+
+        final request = http.MultipartRequest('POST', uri)
+          ..headers['Authorization'] = 'Bearer $token'
+          ..headers['Accept'] = 'application/json'
+          ..fields['establishment_id'] = widget.establishmentId.toString()
+          ..files.add(
+            http.MultipartFile.fromBytes(
+              'file',
+              _pendingImageBytes!,
+              filename: _pendingImageName ?? 'chat_image.jpg',
+            ),
+          );
+
+        final streamed = await request.send();
+        final response = await http.Response.fromStream(streamed);
+
+        if (response.statusCode != 200 && response.statusCode != 201) {
+          throw Exception(_extractErrorText(response));
+        }
+
+        if (text.isNotEmpty) {
+          final textResponse = await http.post(
+            Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'establishment_id': widget.establishmentId,
+              'message_text': text,
+            }),
+          );
+
+          if (textResponse.statusCode != 200 &&
+              textResponse.statusCode != 201) {
+            throw Exception(_extractErrorText(textResponse));
+          }
+        }
+      } else {
+        final response = await http.post(
+          Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'establishment_id': widget.establishmentId,
+            'message_text': text,
+          }),
+        );
+
+        if (response.statusCode != 200 && response.statusCode != 201) {
+          throw Exception(_extractErrorText(response));
+        }
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _messageController.clear();
+        _pendingImageBytes = null;
+        _pendingImageName = null;
+        _sending = false;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
+      });
+
+      Future.delayed(const Duration(milliseconds: 250), _load);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  Future<void> _startEditMessage(_ChatMessage message) async {
+    setState(() {
+      _editingMessageId = message.id;
+      _messageController.text = message.messageText;
+      _showEmojiPanel = false;
+      _emojiTargetMessageId = null;
+    });
+    _messageFocusNode.requestFocus();
+    await Future.delayed(const Duration(milliseconds: 120));
+    _messageController.selection = TextSelection.fromPosition(
+      TextPosition(offset: _messageController.text.length),
+    );
+  }
+
+  void _cancelEdit() {
+    setState(() {
+      _editingMessageId = null;
+      _messageController.clear();
+    });
+  }
+
+  Future<void> _saveEditedMessage() async {
+    final messageId = _editingMessageId;
+    final text = _messageController.text.trim();
+    if (messageId == null) return;
+    if (text.isEmpty) return;
 
     setState(() {
       _sending = true;
@@ -250,12 +432,185 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     try {
       final token = await _token();
 
-      final effectiveText = _pendingImageBytes != null
-          ? (text.isEmpty ? '📷 Изображение' : '$text\n📷 Изображение')
-          : text;
+      final response = await http.patch(
+        Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages/$messageId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'message_text': text,
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(_extractErrorText(response));
+      }
+
+      final index = _messages.indexWhere((m) => m.id == messageId);
+      if (index >= 0) {
+        final updated = [..._messages];
+        updated[index] = updated[index].copyWith(
+          messageText: text,
+          isEdited: true,
+        );
+        _messages = updated;
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _editingMessageId = null;
+        _messageController.clear();
+        _sending = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  Future<void> _deleteForMe(_ChatMessage message) async {
+    try {
+      final token = await _token();
+
+      final response = await http.delete(
+        Uri.parse(
+          '${AppConfig.baseUrl}/api/v1/staff/chat/messages/${message.id}?scope=me&establishment_id=${widget.establishmentId}',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(_extractErrorText(response));
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _messages = _messages.where((m) => m.id != message.id).toList();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  Future<void> _deleteForAll(_ChatMessage message) async {
+    try {
+      final token = await _token();
+
+      final response = await http.delete(
+        Uri.parse(
+          '${AppConfig.baseUrl}/api/v1/staff/chat/messages/${message.id}?scope=all&establishment_id=${widget.establishmentId}',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(_extractErrorText(response));
+      }
+
+      final index = _messages.indexWhere((m) => m.id == message.id);
+      if (index >= 0) {
+        final updated = [..._messages];
+        updated[index] = updated[index].copyWith(
+          messageText: '',
+          isDeleted: true,
+          reactions: const [],
+        );
+        _messages = updated;
+      }
+
+      if (!mounted) return;
+      setState(() {});
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  Future<void> _showDeleteSheet(_ChatMessage message) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.94),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: Colors.white.withOpacity(0.96)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Удалить сообщение',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: kChatInk,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    _sheetAction(
+                      icon: CupertinoIcons.eye_slash,
+                      color: kChatBlue,
+                      title: 'Удалить у себя',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _deleteForMe(message);
+                      },
+                    ),
+                    if (_isMine(message)) ...[
+                      const SizedBox(height: 10),
+                      _sheetAction(
+                        icon: CupertinoIcons.delete_solid,
+                        color: kChatRed,
+                        title: 'Удалить у всех',
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          _deleteForAll(message);
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _toggleReaction(_ChatMessage message, String emoji) async {
+    try {
+      final token = await _token();
 
       final response = await http.post(
-        Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages'),
+        Uri.parse(
+          '${AppConfig.baseUrl}/api/v1/staff/chat/messages/${message.id}/react',
+        ),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
@@ -263,55 +618,33 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         },
         body: jsonEncode({
           'establishment_id': widget.establishmentId,
-          'message_text': effectiveText,
+          'emoji': emoji,
         }),
       );
 
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception(
-          'chat send failed: ${response.statusCode} ${response.body}',
-        );
+      if (response.statusCode != 200) {
+        throw Exception(_extractErrorText(response));
       }
 
-      final localMessage = _ChatMessage(
-        id: 'local_${DateTime.now().millisecondsSinceEpoch}',
-        senderUserId: _currentUserId ?? '',
-        senderName: 'Вы',
-        messageText: text,
-        createdAt: DateTime.now().toIso8601String(),
-        localImageBytes: _pendingImageBytes,
-        reactions: const [],
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _messages = [..._messages, localMessage];
-        _messageController.clear();
-        _pendingImageBytes = null;
-        _pendingImageName = null;
-        _sending = false;
-      });
-
-      await _markSeen();
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToBottom();
-      });
-
-      Future.delayed(const Duration(milliseconds: 400), _load);
-    } catch (_) {
+      await _load();
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _sending = false;
-        _error = 'Не удалось отправить сообщение';
+        _error = e.toString().replaceFirst('Exception: ', '');
       });
     }
   }
 
-  bool _isMine(_ChatMessage message) {
-    if (_currentUserId == null || _currentUserId!.isEmpty) return false;
-    return message.senderUserId == _currentUserId;
+  void _openEmojiPanel(_ChatMessage message) {
+    setState(() {
+      if (_showEmojiPanel && _emojiTargetMessageId == message.id) {
+        _showEmojiPanel = false;
+        _emojiTargetMessageId = null;
+      } else {
+        _showEmojiPanel = true;
+        _emojiTargetMessageId = message.id;
+      }
+    });
   }
 
   String _formatDate(String value) {
@@ -326,86 +659,38 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     }
   }
 
-  Future<void> _showReactionPicker(_ChatMessage message) async {
-    final emojis = ['👍', '🔥', '❤️', '👏', '😂', '😮', '✅', '🎉'];
-
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.92),
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: Colors.white.withOpacity(0.94)),
-                ),
-                child: Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: emojis
-                      .map(
-                        (emoji) => InkWell(
-                          borderRadius: BorderRadius.circular(18),
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            _addLocalReaction(message.id, emoji);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(18),
-                              color: kChatBlue.withOpacity(0.08),
-                            ),
-                            child: Text(
-                              emoji,
-                              style: const TextStyle(fontSize: 24),
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
+  Widget _sheetAction({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: color.withOpacity(0.10),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                color: kChatInk,
               ),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
-  }
-
-  void _addLocalReaction(String messageId, String emoji) {
-    final idx = _messages.indexWhere((m) => m.id == messageId);
-    if (idx < 0) return;
-
-    final updated = [..._messages];
-    final old = updated[idx];
-
-    final reactions = [...old.reactions];
-    final existing = reactions.indexWhere((r) => r.emoji == emoji);
-
-    if (existing >= 0) {
-      reactions[existing] = reactions[existing].copyWith(
-        count: reactions[existing].count + 1,
-      );
-    } else {
-      reactions.add(_ReactionItem(emoji: emoji, count: 1));
-    }
-
-    updated[idx] = old.copyWith(reactions: reactions);
-
-    setState(() {
-      _messages = updated;
-    });
   }
 
   Widget _stagger({
@@ -591,55 +876,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     );
   }
 
-  Widget _headerCard() {
-    return _GlassCard(
-      radius: 30,
-      padding: const EdgeInsets.all(18),
-      child: Row(
-        children: [
-          const _FloatingGlyph(
-            icon: CupertinoIcons.chat_bubble_2,
-            mainColor: kChatBlue,
-            secondaryColor: kChatViolet,
-            size: 82,
-            iconSize: 34,
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.establishmentName,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: kChatInk,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Чат команды заведения',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: kChatInkSoft,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          _InlineIconButton(
-            icon: CupertinoIcons.refresh,
-            onTap: _load,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _errorCard() {
     if (_error == null) return const SizedBox.shrink();
 
@@ -700,7 +936,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   Widget _reactionRow(_ChatMessage message, bool mine) {
-    if (message.reactions.isEmpty) {
+    if (message.reactions.isEmpty || message.isDeleted) {
       return const SizedBox.shrink();
     }
 
@@ -713,28 +949,201 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       child: Wrap(
         spacing: 8,
         runSpacing: 6,
-        children: message.reactions
-            .map(
-              (r) => Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
+        children: message.reactions.map((entry) {
+          final selected = entry.reactedByMe;
+
+          return InkWell(
+            borderRadius: BorderRadius.circular(999),
+            onTap: () => _toggleReaction(message, entry.emoji),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 6,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                color: selected
+                    ? kChatGreen.withOpacity(0.16)
+                    : Colors.white.withOpacity(0.84),
+                border: Border.all(
+                  color: selected
+                      ? kChatGreen.withOpacity(0.45)
+                      : const Color(0xFFE7EEF0),
                 ),
+              ),
+              child: Text(
+                '${entry.emoji} ${entry.count}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: kChatInk,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _messageImage(_ChatMessage message) {
+    if (message.localImageBytes != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: GestureDetector(
+          onTap: () => _openBytesPreview(message.localImageBytes!),
+          child: Image.memory(
+            message.localImageBytes!,
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    }
+
+    if (message.imageUrl != null && message.imageUrl!.trim().isNotEmpty) {
+      final url = message.imageUrl!;
+      final fullUrl = url.startsWith('http')
+          ? url
+          : '${AppConfig.baseUrl}${url.startsWith('/') ? '' : '/'}$url';
+
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: GestureDetector(
+          onTap: () => _openUrlPreview(fullUrl),
+          child: Image.network(
+            fullUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                height: 180,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(999),
-                  color: Colors.white.withOpacity(0.84),
-                  border: Border.all(color: const Color(0xFFE7EEF0)),
+                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.black.withOpacity(0.08),
                 ),
-                child: Text(
-                  '${r.emoji} ${r.count}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: kChatInk,
+                alignment: Alignment.center,
+                child: const Text(
+                  'Не удалось загрузить изображение',
+                  style: TextStyle(
+                    color: kChatInkSoft,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
+  void _openBytesPreview(Uint8List bytes) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _ImagePreviewScreen.memory(bytes: bytes),
+      ),
+    );
+  }
+
+  void _openUrlPreview(String url) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _ImagePreviewScreen.network(url: url),
+      ),
+    );
+  }
+
+  Widget _emojiPanel(_ChatMessage message, bool mine) {
+    final visible = _showEmojiPanel && _emojiTargetMessageId == message.id;
+    if (!visible || message.isDeleted) return const SizedBox.shrink();
+
+    return Padding(
+      padding: EdgeInsets.only(
+        top: 8,
+        left: mine ? 36 : 0,
+        right: mine ? 0 : 36,
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          color: Colors.white.withOpacity(0.96),
+          border: Border.all(color: Colors.white),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ..._emojiPalette.map(
+              (emoji) => InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () async {
+                  setState(() {
+                    _showEmojiPanel = false;
+                    _emojiTargetMessageId = null;
+                  });
+                  await _toggleReaction(message, emoji);
+                },
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    color: kChatBlue.withOpacity(0.06),
+                  ),
+                  child: Text(
+                    emoji,
+                    style: const TextStyle(fontSize: 22),
                   ),
                 ),
               ),
-            )
-            .toList(),
+            ),
+            InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () async {
+                setState(() {
+                  _showEmojiPanel = false;
+                  _emojiTargetMessageId = null;
+                });
+
+                final selected = message.reactions.firstWhere(
+                  (r) => r.reactedByMe,
+                  orElse: () => const _ReactionItem(
+                    emoji: '',
+                    count: 0,
+                    reactedByMe: false,
+                  ),
+                );
+
+                if (selected.emoji.isNotEmpty) {
+                  await _toggleReaction(message, selected.emoji);
+                }
+              },
+              child: Container(
+                width: 42,
+                height: 42,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  color: kChatRed.withOpacity(0.08),
+                ),
+                child: const Icon(
+                  CupertinoIcons.xmark,
+                  color: kChatRed,
+                  size: 20,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -754,106 +1163,143 @@ class _StaffChatScreenState extends State<StaffChatScreen>
             if (!mine)
               Padding(
                 padding: const EdgeInsets.only(right: 8, bottom: 4),
-                child: _reactionFab(message),
+                child: _bubbleSideButton(
+                  icon: CupertinoIcons.smiley,
+                  onTap: () => _openEmojiPanel(message),
+                ),
               ),
             ConstrainedBox(
               constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.68,
+                maxWidth: MediaQuery.of(context).size.width * 0.72,
               ),
               child: Column(
                 crossAxisAlignment:
                     mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(24),
-                        topRight: const Radius.circular(24),
-                        bottomLeft: Radius.circular(mine ? 24 : 8),
-                        bottomRight: Radius.circular(mine ? 8 : 24),
-                      ),
-                      gradient: mine
-                          ? const LinearGradient(
-                              colors: [kChatBlue, kChatViolet],
-                            )
-                          : null,
-                      color: mine ? null : Colors.white.withOpacity(0.88),
-                      border: mine
-                          ? null
-                          : Border.all(color: Colors.white.withOpacity(0.94)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (mine ? kChatBlue : Colors.black)
-                              .withOpacity(0.08),
-                          blurRadius: 12,
-                          offset: const Offset(0, 8),
+                  GestureDetector(
+                    onLongPress: () => _openMessageActions(message),
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.only(
+                          topLeft: const Radius.circular(24),
+                          topRight: const Radius.circular(24),
+                          bottomLeft: Radius.circular(mine ? 24 : 8),
+                          bottomRight: Radius.circular(mine ? 8 : 24),
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (!mine)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: Text(
-                              message.senderName.isEmpty
-                                  ? 'Сотрудник'
-                                  : message.senderName,
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w900,
-                                color: kChatInkSoft,
+                        gradient: mine
+                            ? const LinearGradient(
+                                colors: [kChatBlue, kChatViolet],
+                              )
+                            : const LinearGradient(
+                                colors: [
+                                  Color(0xF4FFFFFF),
+                                  Color(0xEAFFFFFF),
+                                ],
+                              ),
+                        border: mine
+                            ? null
+                            : Border.all(color: Colors.white.withOpacity(0.94)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (mine ? kChatBlue : Colors.black)
+                                .withOpacity(0.08),
+                            blurRadius: 12,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (!mine)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Text(
+                                message.senderName.isEmpty
+                                    ? 'Сотрудник'
+                                    : message.senderName,
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: kChatInkSoft,
+                                ),
                               ),
                             ),
-                          ),
-                        if (message.localImageBytes != null) ...[
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.memory(
-                              message.localImageBytes!,
-                              fit: BoxFit.cover,
+                          if (message.hasImage) ...[
+                            _messageImage(message),
+                            if (!message.isDeleted &&
+                                message.messageText.trim().isNotEmpty)
+                              const SizedBox(height: 10),
+                          ],
+                          if (message.isDeleted)
+                            Text(
+                              'Сообщение удалено',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontStyle: FontStyle.italic,
+                                fontWeight: FontWeight.w700,
+                                color: mine
+                                    ? Colors.white.withOpacity(0.88)
+                                    : kChatInkSoft,
+                              ),
+                            )
+                          else if (message.messageText.trim().isNotEmpty)
+                            Text(
+                              message.messageText,
+                              style: TextStyle(
+                                fontSize: 15,
+                                height: 1.42,
+                                fontWeight: FontWeight.w700,
+                                color: mine ? Colors.white : kChatInk,
+                              ),
                             ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (message.isEdited && !message.isDeleted)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: Text(
+                                    'изменено',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: mine
+                                          ? Colors.white.withOpacity(0.80)
+                                          : kChatInkSoft,
+                                    ),
+                                  ),
+                                ),
+                              Text(
+                                _formatDate(message.createdAt),
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: mine
+                                      ? Colors.white.withOpacity(0.86)
+                                      : kChatInkSoft,
+                                ),
+                              ),
+                            ],
                           ),
-                          if (message.messageText.trim().isNotEmpty)
-                            const SizedBox(height: 10),
                         ],
-                        if (message.messageText.trim().isNotEmpty)
-                          Text(
-                            message.messageText,
-                            style: TextStyle(
-                              fontSize: 15,
-                              height: 1.42,
-                              fontWeight: FontWeight.w700,
-                              color: mine ? Colors.white : kChatInk,
-                            ),
-                          ),
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.bottomRight,
-                          child: Text(
-                            _formatDate(message.createdAt),
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w800,
-                              color: mine
-                                  ? Colors.white.withOpacity(0.86)
-                                  : kChatInkSoft,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                   _reactionRow(message, mine),
+                  _emojiPanel(message, mine),
                 ],
               ),
             ),
             if (mine)
               Padding(
                 padding: const EdgeInsets.only(left: 8, bottom: 4),
-                child: _reactionFab(message),
+                child: _bubbleSideButton(
+                  icon: CupertinoIcons.ellipsis,
+                  onTap: () => _openMessageActions(message),
+                ),
               ),
           ],
         ),
@@ -861,10 +1307,13 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     );
   }
 
-  Widget _reactionFab(_ChatMessage message) {
+  Widget _bubbleSideButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
-      onTap: () => _showReactionPicker(message),
+      onTap: onTap,
       child: Container(
         width: 34,
         height: 34,
@@ -880,12 +1329,80 @@ class _StaffChatScreenState extends State<StaffChatScreen>
             ),
           ],
         ),
-        child: const Icon(
-          CupertinoIcons.smiley,
+        child: Icon(
+          icon,
           size: 18,
           color: kChatInk,
         ),
       ),
+    );
+  }
+
+  Future<void> _openMessageActions(_ChatMessage message) async {
+    final mine = _isMine(message);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.94),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: Colors.white.withOpacity(0.96)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _sheetAction(
+                      icon: CupertinoIcons.smiley,
+                      color: kChatGreen,
+                      title: 'Добавить реакцию',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _openEmojiPanel(message);
+                      },
+                    ),
+                    if (mine && !message.isDeleted) ...[
+                      const SizedBox(height: 10),
+                      _sheetAction(
+                        icon: CupertinoIcons.pencil,
+                        color: kChatBlue,
+                        title: 'Редактировать',
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          _startEditMessage(message);
+                        },
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    _sheetAction(
+                      icon: CupertinoIcons.delete_solid,
+                      color: kChatRed,
+                      title: mine ? 'Удалить' : 'Скрыть у себя',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        if (mine) {
+                          _showDeleteSheet(message);
+                        } else {
+                          _deleteForMe(message);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -933,11 +1450,61 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     );
   }
 
+  Widget _editBanner() {
+    if (_editingMessageId == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: _GlassCard(
+        radius: 22,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                color: kChatAmber.withOpacity(0.12),
+              ),
+              child: const Icon(
+                CupertinoIcons.pencil,
+                color: kChatAmber,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Режим редактирования сообщения',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: kChatInk,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: _cancelEdit,
+              child: const Text(
+                'Отмена',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: kChatInkSoft,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _composer() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         _pendingImagePreview(),
+        _editBanner(),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
           child: ClipRRect(
@@ -980,12 +1547,15 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                     Expanded(
                       child: TextField(
                         controller: _messageController,
+                        focusNode: _messageFocusNode,
                         minLines: 1,
                         maxLines: 5,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           border: InputBorder.none,
-                          hintText: 'Сообщение',
-                          hintStyle: TextStyle(
+                          hintText: _editingMessageId != null
+                              ? 'Изменить сообщение'
+                              : 'Сообщение',
+                          hintStyle: const TextStyle(
                             color: kChatInkSoft,
                             fontWeight: FontWeight.w700,
                           ),
@@ -996,12 +1566,17 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                     DecoratedBox(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
-                        gradient: const LinearGradient(
-                          colors: [kChatBlue, kChatViolet],
+                        gradient: LinearGradient(
+                          colors: _editingMessageId != null
+                              ? const [kChatAmber, kChatAccentSoft]
+                              : const [kChatBlue, kChatViolet],
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: kChatBlue.withOpacity(0.22),
+                            color: (_editingMessageId != null
+                                    ? kChatAmber
+                                    : kChatBlue)
+                                .withOpacity(0.22),
                             blurRadius: 14,
                             offset: const Offset(0, 8),
                           ),
@@ -1023,8 +1598,10 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                       color: Colors.white,
                                     ),
                                   )
-                                : const Icon(
-                                    CupertinoIcons.arrow_up,
+                                : Icon(
+                                    _editingMessageId != null
+                                        ? CupertinoIcons.check_mark
+                                        : CupertinoIcons.arrow_up,
                                     color: Colors.white,
                                   ),
                           ),
@@ -1045,10 +1622,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     if (_loading) {
       return ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-        children: [
-          _stagger(index: 0, child: _headerCard()),
-          const SizedBox(height: 14),
-          const Center(
+        children: const [
+          Center(
             child: Padding(
               padding: EdgeInsets.only(top: 40),
               child: SizedBox(
@@ -1069,11 +1644,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       return ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         children: [
-          _stagger(index: 0, child: _headerCard()),
-          const SizedBox(height: 14),
-          _stagger(index: 1, child: _errorCard()),
+          _stagger(index: 0, child: _errorCard()),
           if (_error != null) const SizedBox(height: 14),
-          _stagger(index: 2, child: _emptyState()),
+          _stagger(index: 1, child: _emptyState()),
         ],
       );
     }
@@ -1082,13 +1655,11 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
       children: [
-        _stagger(index: 0, child: _headerCard()),
-        const SizedBox(height: 14),
-        _stagger(index: 1, child: _errorCard()),
+        _stagger(index: 0, child: _errorCard()),
         if (_error != null) const SizedBox(height: 14),
         ..._messages.asMap().entries.map(
           (entry) => _stagger(
-            index: entry.key + 2,
+            index: entry.key + 1,
             child: _messageBubble(entry.value),
           ),
         ),
@@ -1122,26 +1693,37 @@ class _StaffChatScreenState extends State<StaffChatScreen>
           ),
         ],
       ),
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
-        child: Stack(
-          children: [
-            _background(),
-            SafeArea(
-              top: false,
-              child: Stack(
-                children: [
-                  Positioned.fill(child: _messagesList()),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: _composer(),
-                  ),
-                ],
+      body: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          if (_showEmojiPanel) {
+            setState(() {
+              _showEmojiPanel = false;
+              _emojiTargetMessageId = null;
+            });
+          }
+        },
+        child: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle.light,
+          child: Stack(
+            children: [
+              _background(),
+              SafeArea(
+                top: false,
+                child: Stack(
+                  children: [
+                    Positioned.fill(child: _messagesList()),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: _composer(),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1193,38 +1775,6 @@ class _GlassCard extends StatelessWidget {
   }
 }
 
-class _InlineIconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _InlineIconButton({
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return _Pressable(
-      onTap: onTap,
-      borderRadius: 16,
-      child: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: Colors.white.withOpacity(0.72),
-          border: Border.all(color: Colors.white.withOpacity(0.72)),
-        ),
-        child: Icon(
-          icon,
-          color: kChatInk,
-          size: 18,
-        ),
-      ),
-    );
-  }
-}
-
 class _EmptyOrb extends StatelessWidget {
   const _EmptyOrb();
 
@@ -1262,94 +1812,6 @@ class _EmptyOrb extends StatelessWidget {
               CupertinoIcons.chat_bubble_2,
               color: kChatInkSoft,
               size: 28,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FloatingGlyph extends StatelessWidget {
-  final IconData icon;
-  final Color mainColor;
-  final Color secondaryColor;
-  final double size;
-  final double iconSize;
-
-  const _FloatingGlyph({
-    required this.icon,
-    required this.mainColor,
-    required this.secondaryColor,
-    this.size = 76,
-    this.iconSize = 34,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  mainColor.withOpacity(0.22),
-                  secondaryColor.withOpacity(0.16),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
-          Container(
-            width: size * 0.74,
-            height: size * 0.74,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.86),
-              boxShadow: [
-                BoxShadow(
-                  color: mainColor.withOpacity(0.20),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: size * 0.54,
-            height: size * 0.54,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [mainColor, secondaryColor],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: iconSize,
-            ),
-          ),
-          Positioned(
-            top: size * 0.11,
-            right: size * 0.14,
-            child: Container(
-              width: size * 0.14,
-              height: size * 0.14,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.90),
-              ),
             ),
           ),
         ],
@@ -1419,6 +1881,39 @@ class _PressableState extends State<_Pressable> {
   }
 }
 
+class _ImagePreviewScreen extends StatelessWidget {
+  final Uint8List? bytes;
+  final String? url;
+
+  const _ImagePreviewScreen.memory({
+    required Uint8List this.bytes,
+    super.key,
+  }) : url = null;
+
+  const _ImagePreviewScreen.network({
+    required String this.url,
+    super.key,
+  }) : bytes = null;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          minScale: 0.8,
+          maxScale: 4,
+          child: bytes != null ? Image.memory(bytes!) : Image.network(url!),
+        ),
+      ),
+    );
+  }
+}
+
 class _ChatMessage {
   final String id;
   final String senderUserId;
@@ -1426,7 +1921,10 @@ class _ChatMessage {
   final String messageText;
   final String createdAt;
   final Uint8List? localImageBytes;
+  final String? imageUrl;
   final List<_ReactionItem> reactions;
+  final bool isDeleted;
+  final bool isEdited;
 
   _ChatMessage({
     required this.id,
@@ -1435,8 +1933,14 @@ class _ChatMessage {
     required this.messageText,
     required this.createdAt,
     required this.localImageBytes,
+    required this.imageUrl,
     required this.reactions,
+    required this.isDeleted,
+    required this.isEdited,
   });
+
+  bool get hasImage =>
+      localImageBytes != null || (imageUrl != null && imageUrl!.trim().isNotEmpty);
 
   factory _ChatMessage.fromJson(Map<String, dynamic> json) {
     List<_ReactionItem> parseReactions(dynamic value) {
@@ -1445,6 +1949,18 @@ class _ChatMessage {
           .map((e) => _ReactionItem.fromJson((e as Map).cast<String, dynamic>()))
           .toList();
     }
+
+    bool parseBool(dynamic value) {
+      if (value is bool) return value;
+      if (value is num) return value != 0;
+      final s = value?.toString().toLowerCase() ?? '';
+      return s == 'true' || s == '1' || s == 'yes';
+    }
+
+    final imageUrl = json['image_url']?.toString() ??
+        json['media_url']?.toString() ??
+        json['file_url']?.toString() ??
+        json['attachment_url']?.toString();
 
     return _ChatMessage(
       id: json['message_id']?.toString() ?? json['id']?.toString() ?? '',
@@ -1460,21 +1976,32 @@ class _ChatMessage {
           '',
       createdAt: json['created_at']?.toString() ?? '',
       localImageBytes: null,
+      imageUrl: imageUrl,
       reactions: parseReactions(json['reactions']),
+      isDeleted: parseBool(json['is_deleted'] ?? json['deleted']),
+      isEdited: parseBool(json['is_edited'] ?? json['edited']),
     );
   }
 
   _ChatMessage copyWith({
+    String? messageText,
+    Uint8List? localImageBytes,
+    String? imageUrl,
     List<_ReactionItem>? reactions,
+    bool? isDeleted,
+    bool? isEdited,
   }) {
     return _ChatMessage(
       id: id,
       senderUserId: senderUserId,
       senderName: senderName,
-      messageText: messageText,
+      messageText: messageText ?? this.messageText,
       createdAt: createdAt,
-      localImageBytes: localImageBytes,
+      localImageBytes: localImageBytes ?? this.localImageBytes,
+      imageUrl: imageUrl ?? this.imageUrl,
       reactions: reactions ?? this.reactions,
+      isDeleted: isDeleted ?? this.isDeleted,
+      isEdited: isEdited ?? this.isEdited,
     );
   }
 }
@@ -1482,10 +2009,12 @@ class _ChatMessage {
 class _ReactionItem {
   final String emoji;
   final int count;
+  final bool reactedByMe;
 
   const _ReactionItem({
     required this.emoji,
     required this.count,
+    required this.reactedByMe,
   });
 
   factory _ReactionItem.fromJson(Map<String, dynamic> json) {
@@ -1496,19 +2025,19 @@ class _ReactionItem {
       return int.tryParse(v.toString()) ?? 1;
     }
 
+    bool parseBool(dynamic value) {
+      if (value is bool) return value;
+      if (value is num) return value != 0;
+      final s = value?.toString().toLowerCase() ?? '';
+      return s == 'true' || s == '1' || s == 'yes';
+    }
+
     return _ReactionItem(
       emoji: json['emoji']?.toString() ?? '👍',
       count: parseInt(json['count']),
-    );
-  }
-
-  _ReactionItem copyWith({
-    String? emoji,
-    int? count,
-  }) {
-    return _ReactionItem(
-      emoji: emoji ?? this.emoji,
-      count: count ?? this.count,
+      reactedByMe: parseBool(
+        json['reacted_by_me'] ?? json['is_mine'] ?? json['selected'],
+      ),
     );
   }
 }

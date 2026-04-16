@@ -355,50 +355,6 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
     }
   }
 
-  Widget _headerCard() {
-    return _GlassCard(
-      radius: 30,
-      padding: const EdgeInsets.all(18),
-      child: Row(
-        children: [
-          const _FloatingGlyph(
-            icon: CupertinoIcons.time,
-            mainColor: kClientHistoryBlue,
-            secondaryColor: kClientHistoryViolet,
-            size: 82,
-            iconSize: 34,
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.clientName,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: kClientHistoryInk,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  widget.establishmentName,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: kClientHistoryInkSoft,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _stateCard({
     required IconData icon,
     required String title,
@@ -544,11 +500,9 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
                       child: ListView(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                         children: [
-                          _stagger(index: 0, child: _headerCard()),
-                          const SizedBox(height: 14),
                           if (_error != null)
                             _stagger(
-                              index: 1,
+                              index: 0,
                               child: _stateCard(
                                 icon: CupertinoIcons.exclamationmark_circle_fill,
                                 title: 'Ошибка',
@@ -557,7 +511,7 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
                             )
                           else if (_items.isEmpty)
                             _stagger(
-                              index: 1,
+                              index: 0,
                               child: _stateCard(
                                 icon: CupertinoIcons.time_solid,
                                 title: 'История пока пустая',
@@ -569,7 +523,7 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
                               (entry) => Padding(
                                 padding: const EdgeInsets.only(bottom: 12),
                                 child: _stagger(
-                                  index: entry.key + 1,
+                                  index: entry.key,
                                   child: _itemCard(entry.value),
                                 ),
                               ),
@@ -625,94 +579,6 @@ class _GlassCard extends StatelessWidget {
           ),
           child: child,
         ),
-      ),
-    );
-  }
-}
-
-class _FloatingGlyph extends StatelessWidget {
-  final IconData icon;
-  final Color mainColor;
-  final Color secondaryColor;
-  final double size;
-  final double iconSize;
-
-  const _FloatingGlyph({
-    required this.icon,
-    required this.mainColor,
-    required this.secondaryColor,
-    this.size = 76,
-    this.iconSize = 34,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  mainColor.withOpacity(0.22),
-                  secondaryColor.withOpacity(0.16),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
-          Container(
-            width: size * 0.74,
-            height: size * 0.74,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.86),
-              boxShadow: [
-                BoxShadow(
-                  color: mainColor.withOpacity(0.20),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: size * 0.54,
-            height: size * 0.54,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [mainColor, secondaryColor],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: iconSize,
-            ),
-          ),
-          Positioned(
-            top: size * 0.11,
-            right: size * 0.14,
-            child: Container(
-              width: size * 0.14,
-              height: size * 0.14,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.90),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

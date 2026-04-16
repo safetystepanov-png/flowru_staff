@@ -29,6 +29,8 @@ const Color kAccrualShadow = Color(0x22062E36);
 const Color kAccrualBlue = Color(0xFF4E7CFF);
 const Color kAccrualPink = Color(0xFFFF5F8F);
 const Color kAccrualViolet = Color(0xFF7A63FF);
+const Color kAccrualGreen = Color(0xFF19B36B);
+const Color kAccrualGreenDark = Color(0xFF12945A);
 
 class StaffClientAccrualScreen extends StatefulWidget {
   final int establishmentId;
@@ -76,12 +78,13 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
       duration: const Duration(milliseconds: 950),
     );
 
-    _loadConfig();
     _amountController.addListener(_recalculate);
+    _loadConfig();
   }
 
   @override
   void dispose() {
+    _amountController.removeListener(_recalculate);
     _amountController.dispose();
     _bgController.dispose();
     _introController.dispose();
@@ -122,7 +125,9 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
       );
 
       if (response.statusCode != 200) {
-        throw Exception('config failed: ${response.statusCode} ${response.body}');
+        throw Exception(
+          'config failed: ${response.statusCode} ${response.body}',
+        );
       }
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
@@ -150,10 +155,13 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
     if (config == null) return;
 
     final amount = _parseAmount();
+
     if (amount <= 0) {
-      setState(() {
-        _preview = null;
-      });
+      if (mounted) {
+        setState(() {
+          _preview = null;
+        });
+      }
       return;
     }
 
@@ -180,13 +188,15 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
       label = 'Начисление не используется';
     }
 
-    setState(() {
-      _preview = _AccrualPreview(
-        checkAmount: amount,
-        added: added,
-        label: label,
-      );
-    });
+    if (mounted) {
+      setState(() {
+        _preview = _AccrualPreview(
+          checkAmount: amount,
+          added: added,
+          label: label,
+        );
+      });
+    }
   }
 
   Future<void> _submit() async {
@@ -225,30 +235,31 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
 
-      showDialog<void>(
+      await showDialog<void>(
         context: context,
         builder: (context) => Dialog(
           backgroundColor: Colors.transparent,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(30),
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
               child: Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.94),
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(30),
                   border: Border.all(color: Colors.white.withOpacity(0.96)),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const _EmptyOrb(
+                    const _ResultOrb(
                       icon: CupertinoIcons.check_mark_circled_solid,
+                      color: kAccrualGreen,
                     ),
                     const SizedBox(height: 14),
                     const Text(
-                      'Готово',
+                      'Начисление выполнено',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
@@ -257,7 +268,7 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      decoded['message']?.toString() ?? 'Начисление выполнено',
+                      decoded['message']?.toString() ?? 'Баллы начислены',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 14,
@@ -271,14 +282,11 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
                         gradient: const LinearGradient(
-                          colors: [kAccrualBlue, kAccrualViolet],
+                          colors: [kAccrualGreen, kAccrualGreenDark],
                         ),
                       ),
                       child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          Navigator.of(this.context).pop(true);
-                        },
+                        onPressed: () => Navigator.of(context).pop(),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
@@ -291,7 +299,7 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
                           ),
                         ),
                         child: const Text(
-                          'OK',
+                          'Готово',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w900,
@@ -306,6 +314,9 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
           ),
         ),
       );
+
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -466,115 +477,181 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
     );
   }
 
-  Widget _headerCard() {
+  Widget _heroCard() {
     return _GlassCard(
-      radius: 30,
-      padding: const EdgeInsets.all(18),
-      child: Row(
+      radius: 34,
+      padding: const EdgeInsets.all(22),
+      child: Stack(
         children: [
-          const _FloatingGlyph(
-            icon: CupertinoIcons.plus_circle_fill,
-            mainColor: kAccrualBlue,
-            secondaryColor: kAccrualViolet,
-            size: 82,
-            iconSize: 34,
+          Positioned(
+            top: -18,
+            right: -8,
+            child: Container(
+              width: 126,
+              height: 126,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    kAccrualAccent.withOpacity(0.18),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.clientName,
+          Positioned(
+            bottom: -24,
+            left: -18,
+            child: Container(
+              width: 110,
+              height: 110,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    kAccrualGreen.withOpacity(0.12),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 11,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      gradient: const LinearGradient(
+                        colors: [kAccrualGreen, kAccrualGreenDark],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: kAccrualGreen.withOpacity(0.28),
+                          blurRadius: 14,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: const Text(
+                      'НАЧИСЛЕНИЕ',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      color: kAccrualInk.withOpacity(0.06),
+                    ),
+                    child: const Icon(
+                      CupertinoIcons.plus_circle_fill,
+                      size: 26,
+                      color: kAccrualInk,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Text(
+                widget.clientName,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: kAccrualInk,
+                  letterSpacing: -0.8,
+                  height: 1.0,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.establishmentName,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: kAccrualInkSoft,
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'Сумма покупки',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: kAccrualInk,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Введи фактическую сумму чека — ниже сразу покажем, сколько начислится клиенту.',
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.42,
+                  fontWeight: FontWeight.w700,
+                  color: kAccrualInkSoft,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  color: Colors.white.withOpacity(0.94),
+                  border: Border.all(color: const Color(0xFFE7EEF0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _amountController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   style: const TextStyle(
-                    fontSize: 22,
+                    fontSize: 18,
                     fontWeight: FontWeight.w900,
                     color: kAccrualInk,
-                    letterSpacing: -0.5,
+                  ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 18,
+                    ),
+                    hintText: 'Например 1250',
+                    hintStyle: TextStyle(
+                      color: kAccrualInkSoft,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    prefixIcon: Icon(
+                      CupertinoIcons.money_rubl_circle_fill,
+                      color: kAccrualInkSoft,
+                    ),
+                    suffixText: '₽',
+                    suffixStyle: TextStyle(
+                      color: kAccrualInkSoft,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  widget.establishmentName,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: kAccrualInkSoft,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _amountCard() {
-    return _GlassCard(
-      radius: 28,
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Сумма чека',
-            style: TextStyle(
-              fontSize: 21,
-              fontWeight: FontWeight.w900,
-              color: kAccrualInk,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Введи фактическую сумму покупки',
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.4,
-              fontWeight: FontWeight.w700,
-              color: kAccrualInkSoft,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              color: Colors.white.withOpacity(0.92),
-              border: Border.all(color: const Color(0xFFE7EEF0)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: TextField(
-              controller: _amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-                color: kAccrualInk,
               ),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 18,
-                ),
-                hintText: 'Например 1250',
-                hintStyle: TextStyle(
-                  color: kAccrualInkSoft,
-                  fontWeight: FontWeight.w700,
-                ),
-                suffixText: '₽',
-                suffixStyle: TextStyle(
-                  color: kAccrualInkSoft,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
+            ],
           ),
         ],
       ),
@@ -586,7 +663,7 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
     final config = _config;
 
     return _GlassCard(
-      radius: 28,
+      radius: 30,
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -601,7 +678,7 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
           ),
           const SizedBox(height: 6),
           const Text(
-            'Что произойдёт после начисления',
+            'Проверь расчет перед подтверждением',
             style: TextStyle(
               fontSize: 14,
               height: 1.4,
@@ -609,43 +686,92 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
               color: kAccrualInkSoft,
             ),
           ),
-          const SizedBox(height: 14),
-          _line('Клиент', widget.clientName),
-          _line('Режим', config?.modeLabel ?? '—'),
-          _line(
-            'Чек',
-            preview != null ? '${preview.checkAmount.toStringAsFixed(0)} ₽' : '—',
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _metricCard(
+                  title: 'Режим',
+                  value: config?.modeLabel ?? '—',
+                  glow: kAccrualBlue,
+                  icon: CupertinoIcons.sparkles,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _metricCard(
+                  title: 'Логика',
+                  value: preview?.label ?? '—',
+                  glow: kAccrualGreen,
+                  icon: CupertinoIcons.chart_bar_alt_fill,
+                ),
+              ),
+            ],
           ),
-          _line('Логика', preview?.label ?? '—'),
-          _line('Начислится', preview != null ? preview.addedLabel : '—'),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _metricCard(
+                  title: 'Чек',
+                  value: preview != null
+                      ? '${preview.checkAmount.toStringAsFixed(0)} ₽'
+                      : '—',
+                  glow: kAccrualAccent,
+                  icon: CupertinoIcons.money_rubl,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _metricCard(
+                  title: 'Начислится',
+                  value: preview?.addedLabel ?? '—',
+                  glow: kAccrualViolet,
+                  icon: CupertinoIcons.plus_circle_fill,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _line(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
+  Widget _metricCard({
+    required String title,
+    required String value,
+    required Color glow,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        color: glow.withOpacity(0.08),
+        border: Border.all(color: glow.withOpacity(0.10)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                color: kAccrualInkSoft,
-                fontWeight: FontWeight.w700,
-              ),
+          _MiniGlyph(icon: icon, color: glow),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: kAccrualInk,
+              fontWeight: FontWeight.w900,
+              fontSize: 15,
             ),
           ),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                color: kAccrualInk,
-                fontWeight: FontWeight.w900,
-              ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: const TextStyle(
+              color: kAccrualInkSoft,
+              fontWeight: FontWeight.w700,
+              fontSize: 12.5,
             ),
           ),
         ],
@@ -685,11 +811,11 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         gradient: const LinearGradient(
-          colors: [kAccrualBlue, kAccrualViolet],
+          colors: [kAccrualGreen, kAccrualGreenDark],
         ),
         boxShadow: [
           BoxShadow(
-            color: kAccrualBlue.withOpacity(0.18),
+            color: kAccrualGreen.withOpacity(0.22),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -715,7 +841,7 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
                 ),
               )
             : const Text(
-                'Начислить',
+                'Подтвердить начисление',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
@@ -764,17 +890,15 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
                   : ListView(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                       children: [
-                        _stagger(index: 0, child: _headerCard()),
+                        _stagger(index: 0, child: _heroCard()),
                         const SizedBox(height: 14),
-                        _stagger(index: 1, child: _amountCard()),
-                        const SizedBox(height: 14),
-                        _stagger(index: 2, child: _previewCard()),
+                        _stagger(index: 1, child: _previewCard()),
                         if (_error != null) ...[
                           const SizedBox(height: 10),
-                          _stagger(index: 3, child: _errorCard()),
+                          _stagger(index: 2, child: _errorCard()),
                         ],
                         const SizedBox(height: 18),
-                        _stagger(index: 4, child: _submitButton()),
+                        _stagger(index: 3, child: _submitButton()),
                       ],
                     ),
             ),
@@ -830,99 +954,42 @@ class _GlassCard extends StatelessWidget {
   }
 }
 
-class _FloatingGlyph extends StatelessWidget {
+class _MiniGlyph extends StatelessWidget {
   final IconData icon;
-  final Color mainColor;
-  final Color secondaryColor;
-  final double size;
-  final double iconSize;
+  final Color color;
 
-  const _FloatingGlyph({
+  const _MiniGlyph({
     required this.icon,
-    required this.mainColor,
-    required this.secondaryColor,
-    this.size = 76,
-    this.iconSize = 34,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  mainColor.withOpacity(0.22),
-                  secondaryColor.withOpacity(0.16),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
-          Container(
-            width: size * 0.74,
-            height: size * 0.74,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.86),
-              boxShadow: [
-                BoxShadow(
-                  color: mainColor.withOpacity(0.20),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: size * 0.54,
-            height: size * 0.54,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [mainColor, secondaryColor],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: iconSize,
-            ),
-          ),
-          Positioned(
-            top: size * 0.11,
-            right: size * 0.14,
-            child: Container(
-              width: size * 0.14,
-              height: size * 0.14,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.90),
-              ),
-            ),
-          ),
-        ],
+      width: 42,
+      height: 42,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color.withOpacity(0.14),
+        ),
+        child: Icon(
+          icon,
+          color: color,
+          size: 20,
+        ),
       ),
     );
   }
 }
 
-class _EmptyOrb extends StatelessWidget {
+class _ResultOrb extends StatelessWidget {
   final IconData icon;
+  final Color color;
 
-  const _EmptyOrb({
+  const _ResultOrb({
     required this.icon,
+    required this.color,
   });
 
   @override
@@ -940,8 +1007,8 @@ class _EmptyOrb extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: LinearGradient(
                 colors: [
-                  kAccrualBlue.withOpacity(0.18),
-                  kAccrualViolet.withOpacity(0.10),
+                  color.withOpacity(0.18),
+                  color.withOpacity(0.08),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -953,12 +1020,12 @@ class _EmptyOrb extends StatelessWidget {
             height: 60,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.92),
+              color: Colors.white.withOpacity(0.94),
             ),
             child: Icon(
               icon,
-              color: kAccrualInkSoft,
-              size: 28,
+              color: color,
+              size: 30,
             ),
           ),
         ],
