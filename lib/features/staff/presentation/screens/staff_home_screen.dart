@@ -127,6 +127,10 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         '${AppConfig.baseUrl}/api/v1/staff/announcements?establishment_id=${widget.establishmentId}',
       );
 
+      debugPrint('HOME baseUrl=${AppConfig.baseUrl}');
+      debugPrint('HOME chatUri=$chatUri');
+      debugPrint('HOME annUri=$annUri');
+
       final responses = await Future.wait([
         http.get(
           chatUri,
@@ -147,11 +151,20 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       final chatResponse = responses[0];
       final annResponse = responses[1];
 
+      debugPrint('HOME chat status=${chatResponse.statusCode}');
+      debugPrint('HOME chat body=${chatResponse.body}');
+      debugPrint('HOME ann status=${annResponse.statusCode}');
+      debugPrint('HOME ann body=${annResponse.body}');
+
       if (chatResponse.statusCode != 200) {
-        throw Exception('chat count failed');
+        throw Exception(
+          'chat count failed: ${chatResponse.statusCode} body=${chatResponse.body}',
+        );
       }
       if (annResponse.statusCode != 200) {
-        throw Exception('ann count failed');
+        throw Exception(
+          'ann count failed: ${annResponse.statusCode} body=${annResponse.body}',
+        );
       }
 
       final chatDecoded = jsonDecode(chatResponse.body);
@@ -186,11 +199,14 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       });
 
       _introController.forward(from: 0);
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('HOME LOAD ERROR: $e');
+      debugPrint('$st');
+
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Не удалось загрузить главную';
+        _error = 'Не удалось загрузить главную: $e';
       });
       _introController.forward(from: 0);
     }
