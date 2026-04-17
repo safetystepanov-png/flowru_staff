@@ -39,6 +39,8 @@ class StaffOwnerScheduleApi {
       '${AppConfig.baseUrl}/api/v1/staff/owner/schedule/save',
     );
 
+    final uniqueLabels = _buildUniqueLabels(days);
+
     final payloadDays = days.map((day) {
       final y = day.date.year.toString().padLeft(4, '0');
       final m = day.date.month.toString().padLeft(2, '0');
@@ -46,21 +48,18 @@ class StaffOwnerScheduleApi {
 
       return {
         'date': '$y-$m-$d',
-        'items': day.items
-            .map(
-              (item) => {
-                'employee_user_id': item.isSchedule
-                    ? (item.employeeName == 'Сотрудник'
-                        ? 'employee_${item.requestId}'
-                        : 'employee_${item.requestId}')
-                    : (item.employeeName == 'Сотрудник'
-                        ? 'swap_${item.requestId}'
-                        : 'swap_${item.requestId}'),
-                'employee_name': item.employeeName,
-                'employee_role': item.isSwap ? 'Смена' : 'Сотрудник',
-              },
-            )
-            .toList(),
+        'items': day.items.map((item) {
+          final employeeUserId =
+              item.isSchedule ? 'employee_${item.requestId}' : 'swap_${item.requestId}';
+
+          return {
+            'employee_user_id': employeeUserId,
+            'employee_name': item.employeeName,
+            'employee_role': item.isSwap ? 'Смена' : 'Сотрудник',
+            'employee_label':
+                uniqueLabels[employeeUserId] ?? item.effectiveCalendarLabel,
+          };
+        }).toList(),
       };
     }).toList();
 
@@ -84,5 +83,45 @@ class StaffOwnerScheduleApi {
         'save schedule failed: ${response.statusCode} body=${response.body}',
       );
     }
+  }
+
+  Map<String, String> _buildUniqueLabels(List<OwnerScheduleSaveDay> days) {
+    final allItems = <OwnerRequestItem>[];
+    for (final day in days) {
+      allItems.addAll(day.items);
+    }
+
+    final groupedByBase = <String, List<String>>{};
+    final employeeToBase = <String, String>{};
+
+    for (final item in allItems) {
+      final employeeUserId =
+          item.isSchedule ? 'employee_${item.requestId}' : 'swap_${item.requestId}';
+      final base = item.effectiveCalendarLabel.toUpperCase();
+
+      employeeToBase[employeeUserId] = base;
+      groupedByBase.putIfAbsent(base, () => <String>[]);
+      if (!groupedByBase[base]!.contains(employeeUserId)) {
+        groupedByBase[base]!.add(employeeUserId);
+      }
+    }
+
+    final result = <String, String>{};
+
+    groupedByBase.forEach((base, employeeIds) {
+      employeeIds.sort();
+
+      if (employeeIds.length == 1) {
+        result[employeeIds.first] = base;
+        return;
+      }
+
+      for (var i = 0; i < employeeIds.length; i++) {
+        final suffix = i == 0 ? '' : '${i + 1}';
+        result[employeeIds[i]] = '$base$suffix';
+      }
+    });
+
+    return result;
   }
 }

@@ -9,11 +9,13 @@ class PublishedSchedulePerson {
   final String employeeUserId;
   final String employeeName;
   final String? employeeRole;
+  final String? employeeLabel;
 
   const PublishedSchedulePerson({
     required this.employeeUserId,
     required this.employeeName,
     required this.employeeRole,
+    required this.employeeLabel,
   });
 
   bool get isMine => employeeUserId == 'me';
@@ -23,6 +25,7 @@ class PublishedSchedulePerson {
       employeeUserId: json['employee_user_id']?.toString() ?? '',
       employeeName: json['employee_name']?.toString() ?? 'Сотрудник',
       employeeRole: json['employee_role']?.toString(),
+      employeeLabel: json['employee_label']?.toString(),
     );
   }
 }
@@ -39,6 +42,7 @@ class PublishedScheduleDay {
   factory PublishedScheduleDay.fromJson(Map<String, dynamic> json) {
     final rawDate = json['date']?.toString() ?? '';
     final parsed = DateTime.tryParse(rawDate);
+
     return PublishedScheduleDay(
       date: parsed == null
           ? DateTime.now()
@@ -97,6 +101,7 @@ class StaffPublishedScheduleApi {
     required int month,
   }) async {
     final token = await _token();
+
     final uri = Uri.parse(
       '${AppConfig.baseUrl}/api/v1/staff/schedule/month?establishment_id=$establishmentId&year=$year&month=$month',
     );

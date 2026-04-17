@@ -54,10 +54,12 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
 
   late final AnimationController _ambientController;
   final StaffScheduleRequestsApi _requestsApi = const StaffScheduleRequestsApi();
-  final StaffPublishedScheduleApi _publishedScheduleApi = const StaffPublishedScheduleApi();
+  final StaffPublishedScheduleApi _publishedScheduleApi =
+      const StaffPublishedScheduleApi();
 
   late DateTime _visibleMonth;
-  Map<DateTime, List<_ShiftAssignment>> _assignments = <DateTime, List<_ShiftAssignment>>{};
+  Map<DateTime, List<_ShiftAssignment>> _assignments =
+      <DateTime, List<_ShiftAssignment>>{};
 
   bool _showOnlyMine = false;
   bool _loadingRequestState = true;
@@ -134,6 +136,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
 
     try {
       final nextMonth = _nextMonthDate();
+
       final latest = await _requestsApi.getLatestMyRequest(
         establishmentId: widget.establishmentId,
         year: nextMonth.year,
@@ -166,15 +169,16 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
 
   void _changeMonth(int delta) {
     final next = DateTime(_visibleMonth.year, _visibleMonth.month + delta);
+
     setState(() {
       _visibleMonth = next;
       _assignments = <DateTime, List<_ShiftAssignment>>{};
       _monthPublished = false;
       _loadingMonthSchedule = true;
     });
+
     _loadAll();
   }
-
 
   Future<void> _loadAll() async {
     await Future.wait([
@@ -196,6 +200,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
       );
 
       final map = <DateTime, List<_ShiftAssignment>>{};
+
       for (final day in month.days) {
         map[_stripTime(day.date)] = day.items
             .map(
@@ -205,6 +210,9 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                 role: (person.employeeRole?.trim().isNotEmpty ?? false)
                     ? person.employeeRole!.trim()
                     : 'Сотрудник',
+                badge: (person.employeeLabel?.trim().isNotEmpty ?? false)
+                    ? person.employeeLabel!.trim().toUpperCase()
+                    : null,
                 color: person.isMine ? kScheduleSuccess : kScheduleAccent,
                 isMine: person.isMine,
               ),
@@ -213,6 +221,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
       }
 
       if (!mounted) return;
+
       setState(() {
         _assignments = map;
         _monthPublished = month.published;
@@ -220,6 +229,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
       });
     } catch (_) {
       if (!mounted) return;
+
       setState(() {
         _assignments = <DateTime, List<_ShiftAssignment>>{};
         _monthPublished = false;
@@ -242,9 +252,11 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
   List<_ShiftAssignment> _getAssignments(DateTime date) {
     final normalized = _stripTime(date);
     final items = _assignments[normalized] ?? const <_ShiftAssignment>[];
+
     if (_showOnlyMine) {
       return items.where((e) => e.employeeId == _myEmployeeId).toList();
     }
+
     return items;
   }
 
@@ -263,21 +275,19 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
 
     for (final day in monthDays) {
       if (day.isBefore(today)) continue;
+
       final mine = (_assignments[day] ?? const <_ShiftAssignment>[])
           .where((item) => item.employeeId == _myEmployeeId)
           .toList();
+
       if (mine.isNotEmpty) {
         return '${day.day} ${_monthNames[day.month - 1].toLowerCase()}';
       }
     }
 
-    if (!_monthPublished) {
-      return _isOwner
-          ? 'График на месяц не заполнен'
-          : 'График на месяц еще не опубликован';
-    }
-
-    return 'На этот месяц смен больше нет';
+    return _monthPublished
+        ? 'На этот месяц смен больше нет'
+        : 'График на этот месяц еще не опубликован';
   }
 
   String _dateTitle(DateTime date) {
@@ -289,40 +299,11 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
     return '${_monthNames[next.month - 1]} ${next.year}';
   }
 
-  String _draftStatusText() {
-    if (_loadingRequestState) {
-      return 'Проверяем статус на ${_nextMonthLabel().toLowerCase()}...';
-    }
-
-    switch (_nextMonthDraftState) {
-      case _ScheduleApprovalState.none:
-        return 'Пожелания на ${_nextMonthLabel().toLowerCase()} еще не отправлены';
-      case _ScheduleApprovalState.pending:
-        return 'Пожелания отправлены владельцу на согласование';
-      case _ScheduleApprovalState.approved:
-        return 'График согласован и закреплен';
-    }
-  }
-
-
-  String _monthStatusText() {
-    if (_loadingMonthSchedule) {
-      return 'Загружаем график месяца...';
-    }
-    if (_monthPublished) {
-      return 'График на месяц опубликован';
-    }
-    return _isOwner
-        ? 'График на месяц не заполнен — заполните его'
-        : 'График на месяц еще не опубликован владельцем';
-  }
-
   Future<void> _showDayDetails(DateTime date) async {
     final rawItems = _assignments[_stripTime(date)] ?? const <_ShiftAssignment>[];
     final visibleItems = _showOnlyMine
         ? rawItems.where((item) => item.employeeId == _myEmployeeId).toList()
         : rawItems;
-    final hasMine = rawItems.any((e) => e.employeeId == _myEmployeeId);
 
     await showDialog<void>(
       context: context,
@@ -396,26 +377,35 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                     ),
                     const SizedBox(height: 14),
                     _StatusBanner(
-                      color: hasMine
-                          ? kScheduleSuccess
-                          : (rawItems.isEmpty ? kScheduleDanger : kScheduleAccent),
-                      title: hasMine
-                          ? 'У вас есть смена'
-                          : (rawItems.isEmpty ? 'Смен на этот день нет' : 'Есть смены у команды'),
-                      subtitle: hasMine
-                          ? 'Ниже показаны детали вашей смены и смен команды.'
-                          : (rawItems.isEmpty
-                              ? 'На выбранную дату пока нет назначений.'
-                              : 'На выбранную дату вы не назначены, но команда работает.'),
+                      color: !_monthPublished
+                          ? kScheduleDanger
+                          : rawItems.any((e) => e.employeeId == _myEmployeeId)
+                              ? kScheduleSuccess
+                              : (rawItems.isEmpty ? kScheduleDanger : kScheduleAccent),
+                      title: !_monthPublished
+                          ? 'График не опубликован'
+                          : rawItems.any((e) => e.employeeId == _myEmployeeId)
+                              ? 'У вас есть смена'
+                              : (rawItems.isEmpty
+                                  ? 'Смен на этот день нет'
+                                  : 'Есть смены у команды'),
+                      subtitle: !_monthPublished
+                          ? 'Владелец еще не заполнил или не опубликовал график на этот месяц.'
+                          : rawItems.any((e) => e.employeeId == _myEmployeeId)
+                              ? 'Ниже показаны детали вашей смены и смен команды.'
+                              : (rawItems.isEmpty
+                                  ? 'На выбранную дату пока нет назначений.'
+                                  : 'На выбранную дату вы не назначены, но команда работает.'),
                     ),
                     const SizedBox(height: 14),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxHeight: 330),
                       child: !_monthPublished
                           ? const _InfoMessageCard(
-                              icon: CupertinoIcons.exclamationmark_circle_fill,
-                              title: 'График еще пустой',
-                              text: 'Как только график на месяц будет заполнен и опубликован, здесь появятся назначения сотрудников.',
+                              icon: CupertinoIcons.calendar,
+                              title: 'График еще не опубликован',
+                              text:
+                                  'Когда владелец заполнит и опубликует график, здесь появятся сотрудники и дни работы.',
                             )
                           : visibleItems.isEmpty
                               ? _InfoMessageCard(
@@ -425,41 +415,34 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                                       : 'На этот день нет назначенных смен',
                                   text: _showOnlyMine
                                       ? 'Отключите фильтр «Только мои», если хотите посмотреть смены всей команды.'
-                                      : 'На выбранную дату пока никого не назначили.',
+                                      : 'Когда владелец добавит сотрудников в график, они появятся здесь.',
                                 )
                               : ListView.separated(
                                   shrinkWrap: true,
                                   itemCount: visibleItems.length,
                                   separatorBuilder: (_, __) => const SizedBox(height: 10),
-                                  itemBuilder: (context, index) => _ShiftTile(item: visibleItems[index]),
+                                  itemBuilder: (context, index) =>
+                                      _ShiftTile(item: visibleItems[index]),
                                 ),
                     ),
                     const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        if (_monthPublished && hasMine)
+                    if (_monthPublished)
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
                           _DialogActionButton(
                             icon: CupertinoIcons.arrow_2_squarepath,
-                            label: _submittingSwap ? 'Отправка...' : 'Попросить замену',
-                            onTap: _submittingSwap
-                                ? () {}
-                                : () async {
+                            label: 'Попросить замену',
+                            onTap: rawItems.any((e) => e.employeeId == _myEmployeeId)
+                                ? () {
                                     Navigator.of(dialogContext).pop();
-                                    await _requestSwap(date);
-                                  },
+                                    _showSwapRequestDialog(date);
+                                  }
+                                : null,
                           ),
-                        _DialogActionButton(
-                          icon: CupertinoIcons.square_list,
-                          label: 'Подробнее',
-                          onTap: () {
-                            Navigator.of(dialogContext).pop();
-                            _showMockAction('Позже здесь откроется полный журнал изменений по дню.');
-                          },
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
                   ],
                 ),
               ),
@@ -470,42 +453,15 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
     );
   }
 
-  Future<void> _requestSwap(DateTime date) async {
-    setState(() {
-      _submittingSwap = true;
-    });
-
-    try {
-      await _requestsApi.requestSwap(
-        establishmentId: widget.establishmentId,
-        shiftDate: date,
-        reason: 'Запрос замены смены из мобильного приложения',
-      );
-
-      if (!mounted) return;
-      _showMockAction('Заявка на замену смены отправлена владельцу.');
-    } catch (e) {
-      if (!mounted) return;
-      _showMockAction('Не удалось отправить заявку на замену: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _submittingSwap = false;
-        });
-      }
-    }
-  }
-
   Future<void> _showComposeScheduleDialog() async {
-    if (_isOwner) {
-      _showMockAction('Здесь у владельца будет отдельное заполнение итогового графика. Этот экран не отправляет пожелания от имени владельца.');
+    if (_nextMonthDraftState == _ScheduleApprovalState.approved) {
+      _showMockAction(
+        'График уже согласован. Изменения сможет внести только владелец.',
+      );
       return;
     }
 
-    if (_nextMonthDraftState == _ScheduleApprovalState.approved) {
-      _showMockAction('График уже согласован. Изменения сможет внести только владелец.');
-      return;
-    }
+    if (_submittingDraft) return;
 
     final nextMonth = _nextMonthDate();
     final daysInMonth = DateTime(nextMonth.year, nextMonth.month + 1, 0).day;
@@ -593,6 +549,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                           children: List<Widget>.generate(daysInMonth, (index) {
                             final day = index + 1;
                             final isSelected = selected.contains(day);
+
                             return Material(
                               color: isSelected
                                   ? kScheduleSuccess.withOpacity(0.16)
@@ -642,11 +599,13 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                               child: _DialogFooterButton(
                                 label: 'Сбросить',
                                 isPrimary: false,
-                                onTap: () {
-                                  setLocalState(() {
-                                    selected.clear();
-                                  });
-                                },
+                                onTap: _submittingDraft
+                                    ? null
+                                    : () {
+                                        setLocalState(() {
+                                          selected.clear();
+                                        });
+                                      },
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -655,49 +614,50 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                                 label: _submittingDraft ? 'Отправка...' : 'Подтвердить',
                                 isPrimary: true,
                                 onTap: _submittingDraft
-                                    ? () {}
+                                    ? null
                                     : () async {
-                                        final selectedList = selected.toList()..sort();
-                                        if (selectedList.isEmpty) {
-                                          _showMockAction('Нужно выбрать хотя бы один день.');
+                                        final selectedDays =
+                                            selected.toList()..sort();
+
+                                        if (selectedDays.isEmpty) {
+                                          _showMockAction(
+                                            'Выберите хотя бы один день.',
+                                          );
                                           return;
                                         }
-
-                                        Navigator.of(dialogContext).pop();
 
                                         setState(() {
                                           _submittingDraft = true;
                                         });
 
                                         try {
-                                          final request = await _requestsApi.submitScheduleRequest(
+                                          await _requestsApi.submitScheduleRequest(
                                             establishmentId: widget.establishmentId,
                                             year: nextMonth.year,
                                             month: nextMonth.month,
-                                            selectedDays: selectedList,
+                                            selectedDays: selectedDays,
                                           );
 
                                           if (!mounted) return;
 
                                           setState(() {
-                                            _requestedNextMonthDays = request.selectedDays;
-                                            _nextMonthDraftState = request.status == 'approved'
-                                                ? _ScheduleApprovalState.approved
-                                                : _ScheduleApprovalState.pending;
+                                            _requestedNextMonthDays = selectedDays;
+                                            _nextMonthDraftState =
+                                                _ScheduleApprovalState.pending;
                                           });
+
+                                          Navigator.of(dialogContext).pop();
 
                                           _showMockAction(
                                             'Пожелания на ${_nextMonthLabel().toLowerCase()} отправлены владельцу.',
                                           );
                                         } catch (e) {
-                                          if (!mounted) return;
-                                          _showMockAction('Не удалось отправить пожелания: $e');
+                                          _showMockAction('Ошибка отправки: $e');
                                         } finally {
-                                          if (mounted) {
-                                            setState(() {
-                                              _submittingDraft = false;
-                                            });
-                                          }
+                                          if (!mounted) return;
+                                          setState(() {
+                                            _submittingDraft = false;
+                                          });
                                         }
                                       },
                               ),
@@ -716,6 +676,175 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
     );
   }
 
+  Future<void> _showSwapRequestDialog(DateTime date) async {
+    if (_submittingSwap) return;
+
+    final controller = TextEditingController();
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(30),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FCFC),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: const Color(0xFFE3F0F0)),
+                ),
+                child: StatefulBuilder(
+                  builder: (context, setLocalState) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Запросить замену',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w900,
+                                      color: kScheduleInkSoft.withOpacity(0.92),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _dateTitle(date),
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w900,
+                                      color: kScheduleInk,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Material(
+                              color: Colors.white,
+                              shape: const CircleBorder(),
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
+                                onTap: () => Navigator.of(dialogContext).pop(),
+                                child: const SizedBox(
+                                  width: 40,
+                                  height: 40,
+                                  child: Icon(CupertinoIcons.xmark, color: kScheduleInk),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: controller,
+                          maxLines: 3,
+                          decoration: InputDecoration(
+                            hintText: 'Причина замены (необязательно)',
+                            hintStyle: TextStyle(
+                              color: kScheduleInkSoft.withOpacity(0.82),
+                              fontWeight: FontWeight.w700,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.all(14),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(18),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFE2EFEF)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(18),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFE2EFEF)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(18),
+                              borderSide: const BorderSide(color: kScheduleBlue),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _DialogFooterButton(
+                                label: 'Отмена',
+                                isPrimary: false,
+                                onTap: _submittingSwap
+                                    ? null
+                                    : () => Navigator.of(dialogContext).pop(),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _DialogFooterButton(
+                                label: _submittingSwap ? 'Отправка...' : 'Отправить',
+                                isPrimary: true,
+                                onTap: _submittingSwap
+                                    ? null
+                                    : () async {
+                                        setState(() {
+                                          _submittingSwap = true;
+                                        });
+
+                                        try {
+                                          final y = date.year.toString().padLeft(4, '0');
+                                          final m = date.month.toString().padLeft(2, '0');
+                                          final d = date.day.toString().padLeft(2, '0');
+
+                                          await _requestsApi.submitSwapRequest(
+                                            establishmentId: widget.establishmentId,
+                                            shiftDate: '$y-$m-$d',
+                                            reason: controller.text.trim().isEmpty
+                                                ? null
+                                                : controller.text.trim(),
+                                          );
+
+                                          if (!mounted) return;
+
+                                          Navigator.of(dialogContext).pop();
+                                          _showMockAction(
+                                            'Заявка на замену смены отправлена владельцу.',
+                                          );
+                                        } catch (e) {
+                                          _showMockAction('Ошибка отправки: $e');
+                                        } finally {
+                                          if (!mounted) return;
+                                          setState(() {
+                                            _submittingSwap = false;
+                                          });
+                                        }
+                                      },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    controller.dispose();
+  }
+
   void _showMockAction(String text) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -723,7 +852,9 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
         SnackBar(
           content: Text(text),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
       );
   }
@@ -856,18 +987,14 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
               Expanded(
                 child: _ActionPill(
                   icon: CupertinoIcons.calendar_badge_plus,
-                  label: _loadingRequestState
-                      ? 'Проверка...'
-                      : _nextMonthDraftState == _ScheduleApprovalState.approved
-                          ? 'Согласовано'
-                          : (_nextMonthDraftState == _ScheduleApprovalState.pending
-                              ? 'На согласовании'
-                              : 'Составить график'),
+                  label: _nextMonthDraftState == _ScheduleApprovalState.approved
+                      ? 'График\nсогласован'
+                      : (_nextMonthDraftState == _ScheduleApprovalState.pending
+                          ? 'На\nсогласовании'
+                          : 'Составить\nграфик'),
                   onTap: _showComposeScheduleDialog,
-                  needsAttention: !_isOwner &&
-                      !_loadingRequestState &&
+                  needsAttention:
                       _nextMonthDraftState == _ScheduleApprovalState.none,
-                  isMuted: _isOwner || _submittingDraft,
                 ),
               ),
               const SizedBox(width: 10),
@@ -876,7 +1003,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                   icon: _showOnlyMine
                       ? CupertinoIcons.person_crop_circle_fill
                       : CupertinoIcons.person_2,
-                  label: _showOnlyMine ? 'Только мои' : 'Вся команда',
+                  label: _showOnlyMine ? 'Только\nмои' : 'Вся\nкоманда',
                   isActive: _showOnlyMine,
                   onTap: () {
                     setState(() {
@@ -946,9 +1073,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
           ),
           const SizedBox(height: 10),
           Text(
-            _monthPublished
-                ? '${_myShiftsCountInMonth()} смен в этом месяце'
-                : 'График не опубликован',
+            '${_myShiftsCountInMonth()} смен в этом месяце',
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w900,
@@ -1021,19 +1146,109 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
           const SizedBox(height: 8),
           const _LegendRow(color: kScheduleAccent, label: 'Есть смены'),
           const SizedBox(height: 8),
-          const _LegendRow(color: kScheduleDanger, label: 'Нет моей смены'),
-          const SizedBox(height: 10),
-          Expanded(
-            child: Align(
-              alignment: Alignment.topLeft,
+          const _LegendRow(color: kScheduleDanger, label: 'Нет смен'),
+          const Spacer(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonthStatusCard() {
+    if (_loadingMonthSchedule) {
+      return _GlassCard(
+        radius: 24,
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: const [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.2,
+                valueColor: AlwaysStoppedAnimation(kScheduleBlue),
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
               child: Text(
-                _draftStatusText(),
-                style: const TextStyle(
-                  fontSize: 12.2,
+                'Загрузка графика...',
+                style: TextStyle(
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w800,
                   color: kScheduleInkSoft,
-                  height: 1.35,
                 ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_monthPublished) {
+      return _GlassCard(
+        radius: 24,
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: kScheduleSuccess.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                CupertinoIcons.check_mark_circled_solid,
+                color: kScheduleSuccess,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'График опубликован',
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w900,
+                  color: kScheduleInk,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return _GlassCard(
+      radius: 24,
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: kScheduleDanger.withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              CupertinoIcons.exclamationmark_triangle_fill,
+              color: kScheduleDanger,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _isOwner
+                  ? 'График на ${_monthNames[_visibleMonth.month - 1].toLowerCase()} не заполнен — заполните и опубликуйте его.'
+                  : 'График на ${_monthNames[_visibleMonth.month - 1].toLowerCase()} еще не заполнен владельцем.',
+              style: const TextStyle(
+                fontSize: 13.2,
+                height: 1.35,
+                fontWeight: FontWeight.w900,
+                color: kScheduleInk,
               ),
             ),
           ),
@@ -1047,7 +1262,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
 
     return _GlassCard(
       radius: 28,
-      padding: const EdgeInsets.fromLTRB(10, 14, 10, 14),
+      padding: const EdgeInsets.fromLTRB(8, 14, 8, 12),
       child: Column(
         children: [
           Row(
@@ -1060,7 +1275,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                         child: Text(
                           day,
                           style: const TextStyle(
-                            fontSize: 12.5,
+                            fontSize: 12,
                             fontWeight: FontWeight.w900,
                             color: kScheduleInkSoft,
                           ),
@@ -1079,11 +1294,12 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
               crossAxisCount: 7,
               mainAxisSpacing: 8,
               crossAxisSpacing: 8,
-              childAspectRatio: 0.92,
+              childAspectRatio: 0.90,
             ),
             itemBuilder: (context, index) {
               final date = days[index];
-              final allItems = _assignments[_stripTime(date)] ?? const <_ShiftAssignment>[];
+              final allItems =
+                  _assignments[_stripTime(date)] ?? const <_ShiftAssignment>[];
               final items = _getAssignments(date);
               final isCurrentMonth = date.month == _visibleMonth.month;
               final isToday = _isToday(date);
@@ -1094,10 +1310,10 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                 isCurrentMonth: isCurrentMonth,
                 isToday: isToday,
                 hasMine: hasMine,
+                published: _monthPublished,
                 labels: items.take(2).map((e) => e.shortLabel).toList(),
                 extraCount: items.length > 2 ? items.length - 2 : 0,
                 allCount: allItems.length,
-                monthPublished: _monthPublished,
                 onTap: () => _showDayDetails(date),
               );
             },
@@ -1131,23 +1347,17 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
             _background(),
             SafeArea(
               top: false,
-              child: RefreshIndicator(
-                color: kScheduleViolet,
-                backgroundColor: Colors.white,
-                onRefresh: _loadAll,
-                child: ListView(
-                  physics: const BouncingScrollPhysics(
-                    parent: AlwaysScrollableScrollPhysics(),
-                  ),
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  children: [
-                    _buildHeaderControls(),
-                    const SizedBox(height: 12),
-                    _buildTopInfoRow(),
-                    const SizedBox(height: 12),
-                    _buildCalendar(),
-                  ],
-                ),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                children: [
+                  _buildHeaderControls(),
+                  const SizedBox(height: 12),
+                  _buildTopInfoRow(),
+                  const SizedBox(height: 12),
+                  _buildMonthStatusCard(),
+                  const SizedBox(height: 12),
+                  _buildCalendar(),
+                ],
               ),
             ),
           ],
@@ -1252,7 +1462,10 @@ class _ActionPill extends StatelessWidget {
         ? kScheduleAccent.withOpacity(0.14)
         : (isMuted
             ? const Color(0xFFE7EBEE)
-            : (isActive ? kScheduleBlue.withOpacity(0.12) : Colors.white.withOpacity(0.76)));
+            : (isActive
+                ? kScheduleBlue.withOpacity(0.12)
+                : Colors.white.withOpacity(0.76)));
+
     final Color iconColor = needsAttention
         ? kScheduleAccent
         : (isMuted ? kScheduleInkSoft : (isActive ? kScheduleBlue : kScheduleInk));
@@ -1288,34 +1501,37 @@ class _ActionPill extends StatelessWidget {
 
     return Material(
       color: fill,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(18),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 17, color: iconColor),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  label,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  style: TextStyle(
-                    fontSize: 12.7,
-                    fontWeight: FontWeight.w900,
-                    color: iconColor,
+        child: SizedBox(
+          height: 62,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: iconColor),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.2,
+                      height: 1.1,
+                      fontWeight: FontWeight.w900,
+                      color: iconColor,
+                    ),
                   ),
                 ),
-              ),
-              if (needsAttention) ...[
-                const SizedBox(width: 8),
-                attentionDot,
+                if (needsAttention) ...[
+                  const SizedBox(width: 8),
+                  attentionDot,
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -1327,7 +1543,10 @@ class _LegendRow extends StatelessWidget {
   final Color color;
   final String label;
 
-  const _LegendRow({required this.color, required this.label});
+  const _LegendRow({
+    required this.color,
+    required this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1369,10 +1588,10 @@ class _CalendarDayTile extends StatelessWidget {
   final bool isCurrentMonth;
   final bool isToday;
   final bool hasMine;
+  final bool published;
   final List<String> labels;
   final int extraCount;
   final int allCount;
-  final bool monthPublished;
   final VoidCallback onTap;
 
   const _CalendarDayTile({
@@ -1380,18 +1599,18 @@ class _CalendarDayTile extends StatelessWidget {
     required this.isCurrentMonth,
     required this.isToday,
     required this.hasMine,
+    required this.published,
     required this.labels,
     required this.extraCount,
     required this.allCount,
-    required this.monthPublished,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final double opacity = isCurrentMonth ? 1 : 0.28;
-    final Color accent = !monthPublished
-        ? const Color(0xFFDDE7EA)
+    final Color accent = !published
+        ? kScheduleDanger
         : hasMine
             ? kScheduleSuccess
             : (allCount == 0 ? kScheduleDanger : kScheduleAccent);
@@ -1399,23 +1618,23 @@ class _CalendarDayTile extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.fromLTRB(7, 7, 7, 7),
+          padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.78),
-            borderRadius: BorderRadius.circular(18),
+            color: Colors.white.withOpacity(0.86),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isToday ? kScheduleBlue : accent.withOpacity(0.88),
-              width: isToday ? 1.8 : 1.15,
+              color: isToday ? kScheduleBlue : const Color(0xFFE1ECEC),
+              width: isToday ? 1.8 : 1.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: accent.withOpacity(0.10),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
+                color: accent.withOpacity(0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -1430,22 +1649,22 @@ class _CalendarDayTile extends StatelessWidget {
                       child: Text(
                         '${date.day}',
                         style: const TextStyle(
-                          fontSize: 15,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w900,
                           color: kScheduleInk,
                         ),
                       ),
                     ),
                     Container(
-                      width: 10,
-                      height: 10,
+                      width: 8,
+                      height: 8,
                       decoration: BoxDecoration(
                         color: accent,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
                             color: accent.withOpacity(0.30),
-                            blurRadius: 8,
+                            blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
                         ],
@@ -1453,72 +1672,69 @@ class _CalendarDayTile extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Expanded(
-                  child: !monthPublished
-                      ? Container(
-                          width: double.infinity,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF5F8F9),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Text('', style: TextStyle(fontSize: 1)),
-                        )
+                  child: !published
+                      ? const SizedBox.shrink()
                       : allCount == 0
-                      ? Container(
-                          width: double.infinity,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: kScheduleDanger.withOpacity(0.10),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Text(
-                            '—',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                              color: kScheduleDanger,
-                            ),
-                          ),
-                        )
-                      : Column(
-                          children: [
-                            ...labels.map(
-                              (label) => Container(
-                                width: double.infinity,
-                                margin: const EdgeInsets.only(bottom: 4),
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color: hasMine
-                                      ? kScheduleSuccess.withOpacity(0.14)
-                                      : kScheduleAccent.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(10),
+                          ? Container(
+                              width: double.infinity,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: kScheduleDanger.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Text(
+                                '—',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                  color: kScheduleDanger,
                                 ),
-                                child: Text(
-                                  label,
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w900,
-                                    color: hasMine ? kScheduleSuccess : kScheduleAccent,
+                              ),
+                            )
+                          : Column(
+                              children: [
+                                ...labels.map(
+                                  (label) => Container(
+                                    width: double.infinity,
+                                    margin: const EdgeInsets.only(bottom: 3),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 2,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: hasMine
+                                          ? kScheduleSuccess.withOpacity(0.14)
+                                          : kScheduleAccent.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      label,
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 8.8,
+                                        fontWeight: FontWeight.w900,
+                                        color: hasMine
+                                            ? kScheduleSuccess
+                                            : kScheduleAccent,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
+                                if (extraCount > 0)
+                                  Text(
+                                    '+$extraCount',
+                                    style: const TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: kScheduleInkSoft,
+                                    ),
+                                  ),
+                              ],
                             ),
-                            if (extraCount > 0)
-                              Text(
-                                '+$extraCount',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w900,
-                                  color: kScheduleInkSoft,
-                                ),
-                              ),
-                          ],
-                        ),
                 ),
               ],
             ),
@@ -1532,7 +1748,9 @@ class _CalendarDayTile extends StatelessWidget {
 class _ShiftTile extends StatelessWidget {
   final _ShiftAssignment item;
 
-  const _ShiftTile({required this.item});
+  const _ShiftTile({
+    required this.item,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1558,7 +1776,7 @@ class _ShiftTile extends StatelessWidget {
                 style: TextStyle(
                   color: item.color,
                   fontWeight: FontWeight.w900,
-                  fontSize: 14,
+                  fontSize: 13,
                 ),
               ),
             ),
@@ -1581,7 +1799,10 @@ class _ShiftTile extends StatelessWidget {
                       ),
                     ),
                     if (item.isMine)
-                      const _StatusPill(color: kScheduleSuccess, label: 'Вы'),
+                      const _StatusPill(
+                        color: kScheduleSuccess,
+                        label: 'Вы',
+                      ),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -1606,7 +1827,10 @@ class _StatusPill extends StatelessWidget {
   final Color color;
   final String label;
 
-  const _StatusPill({required this.color, required this.label});
+  const _StatusPill({
+    required this.color,
+    required this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1687,7 +1911,7 @@ class _StatusBanner extends StatelessWidget {
 class _DialogActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _DialogActionButton({
     required this.icon,
@@ -1697,8 +1921,10 @@ class _DialogActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final disabled = onTap == null;
+
     return Material(
-      color: Colors.white,
+      color: disabled ? const Color(0xFFF2F5F6) : Colors.white,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -1708,14 +1934,18 @@ class _DialogActionButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 18, color: kScheduleInk),
+              Icon(
+                icon,
+                size: 18,
+                color: disabled ? kScheduleInkSoft : kScheduleInk,
+              ),
               const SizedBox(width: 8),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
-                  color: kScheduleInk,
+                  color: disabled ? kScheduleInkSoft : kScheduleInk,
                 ),
               ),
             ],
@@ -1729,7 +1959,7 @@ class _DialogActionButton extends StatelessWidget {
 class _DialogFooterButton extends StatelessWidget {
   final String label;
   final bool isPrimary;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _DialogFooterButton({
     required this.label,
@@ -1739,8 +1969,12 @@ class _DialogFooterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final disabled = onTap == null;
+
     return Material(
-      color: isPrimary ? kScheduleBlue : Colors.white,
+      color: disabled
+          ? const Color(0xFFE7EBEE)
+          : (isPrimary ? kScheduleBlue : Colors.white),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -1753,7 +1987,9 @@ class _DialogFooterButton extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w900,
-                color: isPrimary ? Colors.white : kScheduleInk,
+                color: disabled
+                    ? kScheduleInkSoft
+                    : (isPrimary ? Colors.white : kScheduleInk),
               ),
             ),
           ),
@@ -1826,6 +2062,7 @@ class _ShiftAssignment {
   final String employeeId;
   final String employeeName;
   final String role;
+  final String? badge;
   final Color color;
   final bool isMine;
 
@@ -1833,11 +2070,16 @@ class _ShiftAssignment {
     required this.employeeId,
     required this.employeeName,
     required this.role,
+    required this.badge,
     required this.color,
     this.isMine = false,
   });
 
   String get shortLabel {
+    if (badge != null && badge!.trim().isNotEmpty) {
+      return badge!.trim().toUpperCase();
+    }
+
     if (employeeName.length <= 2) return employeeName.toUpperCase();
     return employeeName.substring(0, 2).toUpperCase();
   }

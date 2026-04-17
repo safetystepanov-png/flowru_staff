@@ -9,6 +9,7 @@ class OwnerRequestItem {
   final int requestId;
   final String requestType;
   final String employeeName;
+  final String? employeeLabel;
   final String subtitle;
   final String status;
   final String? createdAt;
@@ -23,6 +24,7 @@ class OwnerRequestItem {
     required this.requestId,
     required this.requestType,
     required this.employeeName,
+    required this.employeeLabel,
     required this.subtitle,
     required this.status,
     required this.createdAt,
@@ -39,10 +41,25 @@ class OwnerRequestItem {
 
   String get typeLabel => isSchedule ? 'График' : 'Замена';
 
+  String get effectiveCalendarLabel {
+    if (employeeLabel != null && employeeLabel!.trim().isNotEmpty) {
+      return employeeLabel!.trim().toUpperCase();
+    }
+    return buildBaseLabel(employeeName);
+  }
+
   factory OwnerRequestItem.fromScheduleJson(Map<String, dynamic> json) {
-    final employeeName = json['employee_name']?.toString().trim().isNotEmpty == true
-        ? json['employee_name']!.toString().trim()
-        : 'Сотрудник';
+    final employeeName =
+        json['employee_name']?.toString().trim().isNotEmpty == true
+            ? json['employee_name']!.toString().trim()
+            : 'Сотрудник';
+
+    final employeeLabel =
+        json['employee_label']?.toString().trim().isNotEmpty == true
+            ? json['employee_label']!.toString().trim()
+            : (json['calendar_label']?.toString().trim().isNotEmpty == true
+                ? json['calendar_label']!.toString().trim()
+                : null);
 
     final year = (json['year'] as num?)?.toInt();
     final month = (json['month'] as num?)?.toInt();
@@ -61,6 +78,7 @@ class OwnerRequestItem {
       requestId: (json['request_id'] as num?)?.toInt() ?? 0,
       requestType: 'schedule',
       employeeName: employeeName,
+      employeeLabel: employeeLabel,
       subtitle: subtitle,
       status: json['status']?.toString() ?? 'pending',
       createdAt: json['created_at']?.toString(),
@@ -74,9 +92,17 @@ class OwnerRequestItem {
   }
 
   factory OwnerRequestItem.fromSwapJson(Map<String, dynamic> json) {
-    final employeeName = json['requester_name']?.toString().trim().isNotEmpty == true
-        ? json['requester_name']!.toString().trim()
-        : 'Сотрудник';
+    final employeeName =
+        json['requester_name']?.toString().trim().isNotEmpty == true
+            ? json['requester_name']!.toString().trim()
+            : 'Сотрудник';
+
+    final employeeLabel =
+        json['employee_label']?.toString().trim().isNotEmpty == true
+            ? json['employee_label']!.toString().trim()
+            : (json['calendar_label']?.toString().trim().isNotEmpty == true
+                ? json['calendar_label']!.toString().trim()
+                : null);
 
     final shiftDate = json['shift_date']?.toString();
     final subtitle = shiftDate == null || shiftDate.isEmpty
@@ -87,6 +113,7 @@ class OwnerRequestItem {
       requestId: (json['request_id'] as num?)?.toInt() ?? 0,
       requestType: 'swap',
       employeeName: employeeName,
+      employeeLabel: employeeLabel,
       subtitle: subtitle,
       status: json['status']?.toString() ?? 'pending',
       createdAt: json['created_at']?.toString(),
@@ -97,6 +124,29 @@ class OwnerRequestItem {
       comment: null,
       reason: json['reason']?.toString(),
     );
+  }
+
+  static String buildBaseLabel(String rawName) {
+    final name = rawName.trim();
+    if (name.isEmpty || name.toLowerCase() == 'сотрудник') {
+      return 'EM';
+    }
+
+    final parts = name
+        .split(RegExp(r'\s+'))
+        .where((e) => e.trim().isNotEmpty)
+        .toList();
+
+    if (parts.length >= 2) {
+      final first = parts[0];
+      final second = parts[1];
+      return '${first[0]}${second[0]}'.toUpperCase();
+    }
+
+    final word = parts.first.toUpperCase();
+    if (word.length >= 3) return word.substring(0, 3);
+    if (word.length == 2) return word;
+    return '${word}X';
   }
 
   static String _monthRu(int? month) {

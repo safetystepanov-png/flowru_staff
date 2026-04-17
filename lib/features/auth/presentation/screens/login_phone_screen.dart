@@ -416,6 +416,50 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
     );
   }
 
+  Widget _prettySecondaryButton({
+    required String text,
+    required VoidCallback onTap,
+  }) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: Colors.white.withOpacity(0.88),
+        border: Border.all(color: Colors.white.withOpacity(0.95)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          minimumSize: const Size.fromHeight(54),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+        child: ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            colors: [kLoginBlue, kLoginViolet, kLoginPink],
+          ).createShader(bounds),
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15.5,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _card() {
     return Container(
       width: 470,
@@ -454,192 +498,148 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
               ),
               border: Border.all(color: kLoginStroke),
             ),
-            child: Stack(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Positioned(
-                  top: -20,
-                  right: -6,
-                  child: Container(
-                    width: 128,
-                    height: 128,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          kLoginAccent.withOpacity(0.18),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
+                _topBadge(),
+                const SizedBox(height: 18),
+                _logoOrb(),
+                const SizedBox(height: 16),
+                const Text(
+                  'Вход сотрудника',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 31,
+                    fontWeight: FontWeight.w900,
+                    color: kLoginInk,
+                    letterSpacing: -0.9,
+                    height: 1.0,
                   ),
                 ),
-                Positioned(
-                  bottom: -28,
-                  left: -18,
-                  child: Container(
-                    width: 116,
-                    height: 116,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          kLoginMintTop.withOpacity(0.12),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Введите номер телефона и пароль,\nчтобы открыть рабочее пространство.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                    color: kLoginInkSoft,
                   ),
                 ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _topBadge(),
-                    const SizedBox(height: 18),
-                    _logoOrb(),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Вход сотрудника',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 31,
-                        fontWeight: FontWeight.w900,
-                        color: kLoginInk,
-                        letterSpacing: -0.9,
-                        height: 1.0,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Введите номер телефона и пароль,\nчтобы открыть рабочее пространство.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        height: 1.45,
-                        fontWeight: FontWeight.w700,
+                const SizedBox(height: 22),
+                TextField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: _inputDecoration(
+                    'Телефон',
+                    hint: '+7 978 547 30 14',
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _passwordController,
+                  obscureText: !_showPassword,
+                  decoration: _inputDecoration(
+                    'Пароль',
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(() => _showPassword = !_showPassword);
+                      },
+                      icon: Icon(
+                        _showPassword
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
                         color: kLoginInkSoft,
                       ),
                     ),
-                    const SizedBox(height: 22),
-                    TextField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: _inputDecoration(
-                        'Телефон',
-                        hint: '+7 978 547 30 14',
+                  ),
+                ),
+                const SizedBox(height: 14),
+                if (_error != null)
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      color: const Color(0xFFFFF4F2).withOpacity(0.96),
+                      border: Border.all(color: const Color(0xFFFFD7D0)),
+                    ),
+                    child: Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFFE85B63),
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: _passwordController,
-                      obscureText: !_showPassword,
-                      decoration: _inputDecoration(
-                        'Пароль',
-                        suffixIcon: IconButton(
-                          onPressed: () {
-                            setState(() => _showPassword = !_showPassword);
-                          },
-                          icon: Icon(
-                            _showPassword
-                                ? Icons.visibility_off_rounded
-                                : Icons.visibility_rounded,
-                            color: kLoginInkSoft,
-                          ),
-                        ),
-                      ),
+                  ),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: const LinearGradient(
+                      colors: [kLoginBlue, kLoginPink],
                     ),
-                    const SizedBox(height: 14),
-                    if (_error != null)
-                      Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(18),
-                          color: const Color(0xFFFFF4F2).withOpacity(0.96),
-                          border: Border.all(color: const Color(0xFFFFD7D0)),
-                        ),
-                        child: Text(
-                          _error!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Color(0xFFE85B63),
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: kLoginBlue.withOpacity(0.22),
+                        blurRadius: 18,
+                        offset: const Offset(0, 10),
                       ),
-                    DecoratedBox(
-                      decoration: BoxDecoration(
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    onPressed: _loading ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      minimumSize: const Size.fromHeight(58),
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
-                        gradient: const LinearGradient(
-                          colors: [kLoginBlue, kLoginPink],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: kLoginBlue.withOpacity(0.22),
-                            blurRadius: 18,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: ElevatedButton(
-                        onPressed: _loading ? null : _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          minimumSize: const Size.fromHeight(58),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                        child: _loading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.3,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Text(
-                                'Войти',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: _loading ? null : _openRecoverySheet,
-                      child: const Text(
-                        'Забыли пароль?',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: kLoginBlue,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const RegisterScreen(),
+                    child: _loading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.3,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Войти',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
-                        );
-                      },
-                      child: const Text(
-                        'Зарегистрироваться',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: kLoginViolet,
-                        ),
-                      ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: _loading ? null : _openRecoverySheet,
+                  child: const Text(
+                    'Забыли пароль?',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: kLoginBlue,
                     ),
-                  ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                _prettySecondaryButton(
+                  text: 'Зарегистрироваться',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const RegisterScreen(),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -998,15 +998,43 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 46,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD7E4E8),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      width: 46,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD7E4E8),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                    const Spacer(),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            color: Colors.white,
+                            border: Border.all(
+                              color: const Color(0xFFE5EEF1),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            color: kLoginInk,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Container(
                   width: 72,
                   height: 72,
@@ -1054,7 +1082,6 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                   ),
                 ),
                 const SizedBox(height: 18),
-
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -1174,9 +1201,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 18),
-
                 TextField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
@@ -1186,7 +1211,6 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                   ),
                 ),
                 const SizedBox(height: 12),
-
                 DecoratedBox(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(18),
@@ -1230,7 +1254,6 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                           ),
                   ),
                 ),
-
                 if (_requestMessage != null) ...[
                   const SizedBox(height: 12),
                   _messageBox(
@@ -1238,9 +1261,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                     success: _requestSuccess,
                   ),
                 ],
-
                 const SizedBox(height: 18),
-
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -1335,7 +1356,6 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                     ],
                   ),
                 ),
-
                 if (_confirmMessage != null) ...[
                   const SizedBox(height: 12),
                   _messageBox(
@@ -1343,7 +1363,6 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                     success: _confirmSuccess,
                   ),
                 ],
-
                 const SizedBox(height: 8),
               ],
             ),
