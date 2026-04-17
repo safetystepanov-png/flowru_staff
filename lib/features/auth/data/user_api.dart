@@ -72,6 +72,95 @@ class UserMe {
   }
 }
 
+class AccessProfileUser {
+  final String id;
+  final String phone;
+  final bool phoneVerified;
+  final String fullName;
+  final String email;
+  final bool isActive;
+
+  const AccessProfileUser({
+    required this.id,
+    required this.phone,
+    required this.phoneVerified,
+    required this.fullName,
+    required this.email,
+    required this.isActive,
+  });
+
+  factory AccessProfileUser.fromJson(Map<String, dynamic> json) {
+    return AccessProfileUser(
+      id: json['id']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? '',
+      phoneVerified: json['phone_verified'] as bool? ?? false,
+      fullName: json['full_name']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      isActive: json['is_active'] as bool? ?? false,
+    );
+  }
+}
+
+class AccessProfileEstablishment {
+  final int id;
+  final String name;
+  final String role;
+  final String paidUntil;
+  final String subscriptionStatus;
+  final bool accessActive;
+
+  const AccessProfileEstablishment({
+    required this.id,
+    required this.name,
+    required this.role,
+    required this.paidUntil,
+    required this.subscriptionStatus,
+    required this.accessActive,
+  });
+
+  factory AccessProfileEstablishment.fromJson(Map<String, dynamic> json) {
+    return AccessProfileEstablishment(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      name: json['name']?.toString() ?? '',
+      role: json['role']?.toString() ?? '',
+      paidUntil: json['paid_until']?.toString() ?? '',
+      subscriptionStatus: json['subscription_status']?.toString() ?? '',
+      accessActive: json['access_active'] as bool? ?? false,
+    );
+  }
+}
+
+class AccessProfile {
+  final AccessProfileUser? user;
+  final List<String> roles;
+  final bool hasAccess;
+  final List<AccessProfileEstablishment> establishments;
+
+  const AccessProfile({
+    required this.user,
+    required this.roles,
+    required this.hasAccess,
+    required this.establishments,
+  });
+
+  factory AccessProfile.fromJson(Map<String, dynamic> json) {
+    final rolesRaw = (json['roles'] as List?) ?? const [];
+    final establishmentsRaw = (json['establishments'] as List?) ?? const [];
+
+    return AccessProfile(
+      user: json['user'] is Map<String, dynamic>
+          ? AccessProfileUser.fromJson(json['user'] as Map<String, dynamic>)
+          : null,
+      roles: rolesRaw.map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).toList(),
+      hasAccess: json['has_access'] as bool? ?? false,
+      establishments: establishmentsRaw
+          .whereType<Map<String, dynamic>>()
+          .map(AccessProfileEstablishment.fromJson)
+          .toList(),
+    );
+  }
+}
+
 class UserApi {
   Future<AuthResult> register({
     required String phone,
@@ -157,16 +246,35 @@ class UserApi {
     final response = await http.get(
       Uri.parse('${AppConfig.baseUrl}/api/v1/users/me'),
       headers: {
-        'Authorization': 'Bearer $accessToken',
         'Accept': 'application/json',
+        'Authorization': 'Bearer $accessToken',
       },
     );
 
     if (response.statusCode != 200) {
-      throw Exception('getMe failed');
+      throw Exception('GET me failed: ${response.statusCode} ${response.body}');
     }
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     return UserMe.fromJson(decoded);
+  }
+
+  static Future<AccessProfile> getAccessProfile(String accessToken) async {
+    final response = await http.get(
+      Uri.parse('${AppConfig.baseUrl}/api/v1/users/access-profile'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'GET access-profile failed: ${response.statusCode} ${response.body}',
+      );
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return AccessProfile.fromJson(decoded);
   }
 }

@@ -11,6 +11,8 @@ import '../../../auth/data/auth_session.dart';
 import '../../../auth/data/auth_storage.dart';
 import '../../../../core/config/app_config.dart';
 import '../widgets/staff_glass_ui.dart';
+import 'owner_requests_screen.dart';
+import 'owner_schedule_planner_screen.dart';
 import 'staff_announcements_screen.dart';
 import 'staff_chat_screen.dart';
 import 'staff_client_search_screen.dart';
@@ -127,10 +129,6 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         '${AppConfig.baseUrl}/api/v1/staff/announcements?establishment_id=${widget.establishmentId}',
       );
 
-      debugPrint('HOME baseUrl=${AppConfig.baseUrl}');
-      debugPrint('HOME chatUri=$chatUri');
-      debugPrint('HOME annUri=$annUri');
-
       final responses = await Future.wait([
         http.get(
           chatUri,
@@ -150,11 +148,6 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
 
       final chatResponse = responses[0];
       final annResponse = responses[1];
-
-      debugPrint('HOME chat status=${chatResponse.statusCode}');
-      debugPrint('HOME chat body=${chatResponse.body}');
-      debugPrint('HOME ann status=${annResponse.statusCode}');
-      debugPrint('HOME ann body=${annResponse.body}');
 
       if (chatResponse.statusCode != 200) {
         throw Exception(
@@ -284,6 +277,35 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
             builder: (_) => StaffWorkScheduleScreen(
               establishmentId: widget.establishmentId,
               establishmentName: widget.establishmentName,
+              role: widget.role,
+            ),
+          ),
+        )
+        .then((_) => _loadDashboard());
+  }
+
+  void _openOwnerRequests() {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => OwnerRequestsScreen(
+              establishmentId: widget.establishmentId,
+              establishmentName: widget.establishmentName,
+              role: widget.role,
+            ),
+          ),
+        )
+        .then((_) => _loadDashboard());
+  }
+
+  void _openOwnerPlanner() {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => OwnerSchedulePlannerScreen(
+              establishmentId: widget.establishmentId,
+              establishmentName: widget.establishmentName,
+              role: widget.role,
             ),
           ),
         )
@@ -466,6 +488,26 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   height: 1.0,
                 ),
               ),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  color: Colors.white.withOpacity(0.12),
+                  border: Border.all(color: Colors.white.withOpacity(0.18)),
+                ),
+                child: Text(
+                  _roleLabel,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -521,9 +563,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                       ),
                     ],
                   ),
-                  child: const Text(
-                    'ГЛАВНЫЙ ЭКРАН',
-                    style: TextStyle(
+                  child: Text(
+                    _isOwner ? 'РЕЖИМ ВЛАДЕЛЬЦА' : 'ГЛАВНЫЙ ЭКРАН',
+                    style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0.8,
@@ -532,9 +574,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   ),
                 ),
                 const SizedBox(height: 14),
-                const Text(
-                  'Быстрая работа\nс клиентами',
-                  style: TextStyle(
+                Text(
+                  _isOwner ? 'Управление\nзаведением' : 'Быстрая работа\nс клиентами',
+                  style: const TextStyle(
                     fontSize: 29,
                     height: 1.02,
                     fontWeight: FontWeight.w900,
@@ -544,7 +586,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Поиск, чат, объявления и история — всё под рукой.',
+                  _isOwner
+                      ? 'Согласования, график, объявления, история и контроль команды.'
+                      : 'Поиск, чат, объявления и история — всё под рукой.',
                   style: TextStyle(
                     fontSize: 14,
                     height: 1.4,
@@ -623,8 +667,6 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                       ),
                     ),
                   ),
-
-                  // Мягкая подложка без резкого обрыва
                   Positioned(
                     left: -12,
                     right: -12,
@@ -651,7 +693,6 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                       ),
                     ),
                   ),
-
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -693,8 +734,10 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                               borderRadius: BorderRadius.circular(18),
                               color: kHomeInk.withOpacity(0.06),
                             ),
-                            child: const Icon(
-                              CupertinoIcons.search,
+                            child: Icon(
+                              _isOwner
+                                  ? CupertinoIcons.person_2_fill
+                                  : CupertinoIcons.search,
                               size: 26,
                               color: kHomeInk,
                             ),
@@ -702,9 +745,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                         ],
                       ),
                       const SizedBox(height: 20),
-                      const Text(
-                        'Найти клиента',
-                        style: TextStyle(
+                      Text(
+                        _isOwner ? 'Клиенты и команда' : 'Найти клиента',
+                        style: const TextStyle(
                           fontSize: 31,
                           height: 1.02,
                           fontWeight: FontWeight.w900,
@@ -713,9 +756,11 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                         ),
                       ),
                       const SizedBox(height: 10),
-                      const Text(
-                        'Главное действие на экране.\nБыстрый поиск по телефону, имени или номеру клиента.',
-                        style: TextStyle(
+                      Text(
+                        _isOwner
+                            ? 'Главная быстрая точка входа владельца: работа с клиентами и контроль процессов.'
+                            : 'Главное действие на экране.\nБыстрый поиск по телефону, имени или номеру клиента.',
+                        style: const TextStyle(
                           fontSize: 14.5,
                           height: 1.42,
                           fontWeight: FontWeight.w700,
@@ -740,26 +785,30 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                             ),
                           ],
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
                             Icon(
-                              CupertinoIcons.search,
+                              _isOwner
+                                  ? CupertinoIcons.person_2_fill
+                                  : CupertinoIcons.search,
                               color: kHomeInkSoft,
                               size: 20,
                             ),
-                            SizedBox(width: 10),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                'Телефон, имя, номер клиента',
-                                style: TextStyle(
+                                _isOwner
+                                    ? 'Клиенты, начисления, списания, награды'
+                                    : 'Телефон, имя, номер клиента',
+                                style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
                                   color: kHomeInkSoft,
                                 ),
                               ),
                             ),
-                            SizedBox(width: 8),
-                            _MiniActionPill(),
+                            const SizedBox(width: 8),
+                            const _MiniActionPill(),
                           ],
                         ),
                       ),
@@ -929,6 +978,132 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     );
   }
 
+  Widget _buildOwnerRequestsCard() {
+    return _Pressable(
+      onTap: _openOwnerRequests,
+      borderRadius: 30,
+      child: _GlassCard(
+        padding: const EdgeInsets.all(18),
+        radius: 30,
+        child: Row(
+          children: [
+            const _FloatingGlyph(
+              icon: CupertinoIcons.check_mark_circled,
+              mainColor: kHomeAccent,
+              secondaryColor: kHomePink,
+              size: 68,
+              iconSize: 30,
+            ),
+            const SizedBox(width: 15),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Согласования',
+                    style: TextStyle(
+                      fontSize: 18.5,
+                      fontWeight: FontWeight.w900,
+                      color: kHomeInk,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Графики, замены и запросы сотрудников',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      height: 1.35,
+                      fontWeight: FontWeight.w700,
+                      color: kHomeInkSoft,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: Colors.white.withOpacity(0.72),
+                border: Border.all(color: Colors.white.withOpacity(0.72)),
+              ),
+              child: const Icon(
+                CupertinoIcons.chevron_right,
+                size: 18,
+                color: kHomeInk,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOwnerPlannerCard() {
+    return _Pressable(
+      onTap: _openOwnerPlanner,
+      borderRadius: 30,
+      child: _GlassCard(
+        padding: const EdgeInsets.all(18),
+        radius: 30,
+        child: Row(
+          children: [
+            const _FloatingGlyph(
+              icon: CupertinoIcons.calendar_badge_plus,
+              mainColor: kHomeBlue,
+              secondaryColor: kHomeViolet,
+              size: 68,
+              iconSize: 30,
+            ),
+            const SizedBox(width: 15),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Заполнить график',
+                    style: TextStyle(
+                      fontSize: 18.5,
+                      fontWeight: FontWeight.w900,
+                      color: kHomeInk,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Сформировать и сохранить график месяца',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      height: 1.35,
+                      fontWeight: FontWeight.w700,
+                      color: kHomeInkSoft,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: Colors.white.withOpacity(0.72),
+                border: Border.all(color: Colors.white.withOpacity(0.72)),
+              ),
+              child: const Icon(
+                CupertinoIcons.chevron_right,
+                size: 18,
+                color: kHomeInk,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTipCard() {
     return _GlassCard(
       padding: const EdgeInsets.all(18),
@@ -947,19 +1122,21 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
-                  'Подсказка',
-                  style: TextStyle(
+                  _isOwner ? 'Режим владельца' : 'Подсказка',
+                  style: const TextStyle(
                     fontSize: 18.5,
                     fontWeight: FontWeight.w900,
                     color: kHomeInk,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  'Если появились новые сообщения или объявления, справа будет зелёная пульсация.',
-                  style: TextStyle(
+                  _isOwner
+                      ? 'Сначала согласуйте пожелания, затем откройте «Заполнить график» и сохраните итоговый месяц.'
+                      : 'Если появились новые сообщения или объявления, справа будет зелёная пульсация.',
+                  style: const TextStyle(
                     fontSize: 13.5,
                     height: 1.35,
                     fontWeight: FontWeight.w700,
@@ -1028,6 +1205,14 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    int nextIndex = 4;
+
+    Widget staggered(Widget child) {
+      final current = nextIndex;
+      nextIndex += 1;
+      return _stagger(index: current, child: child);
+    }
+
     return Scaffold(
       backgroundColor: kHomeMintTop,
       body: AnnotatedRegion<SystemUiOverlayStyle>(
@@ -1057,12 +1242,11 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                           _stagger(index: 3, child: _buildTopModulesRow()),
                           const SizedBox(height: 16),
                           if (_error != null) ...[
-                            _stagger(index: 4, child: _buildError()),
+                            staggered(_buildError()),
                             const SizedBox(height: 16),
                           ],
-                          _stagger(
-                            index: 5,
-                            child: const Padding(
+                          staggered(
+                            const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 2),
                               child: Text(
                                 'Дополнительно',
@@ -1076,11 +1260,17 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                             ),
                           ),
                           const SizedBox(height: 14),
-                          _stagger(index: 6, child: _buildHistoryCard()),
+                          if (_isOwner) ...[
+                            staggered(_buildOwnerRequestsCard()),
+                            const SizedBox(height: 12),
+                            staggered(_buildOwnerPlannerCard()),
+                            const SizedBox(height: 12),
+                          ],
+                          staggered(_buildHistoryCard()),
                           const SizedBox(height: 12),
-                          _stagger(index: 7, child: _buildWorkScheduleCard()),
+                          staggered(_buildWorkScheduleCard()),
                           const SizedBox(height: 12),
-                          _stagger(index: 8, child: _buildTipCard()),
+                          staggered(_buildTipCard()),
                         ],
                       ),
                     ),
