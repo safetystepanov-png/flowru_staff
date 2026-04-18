@@ -69,8 +69,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   late final AnimationController _ambientController;
 
   List<_PinnedAnnouncement> _pinnedAnnouncements = <_PinnedAnnouncement>[];
-  int _pinnedIndex = 0;
-  Timer? _pinnedTimer;
+  int _heroCarouselIndex = 0;
+  Timer? _heroTimer;
   bool _pinActionLoading = false;
 
   bool get _isOwner {
@@ -84,6 +84,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     if (role == 'admin') return 'Администратор';
     return 'Сотрудник';
   }
+
+  int get _heroSlidesCount => 1 + _pinnedAnnouncements.length;
 
   @override
   void initState() {
@@ -104,7 +106,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
 
   @override
   void dispose() {
-    _pinnedTimer?.cancel();
+    _heroTimer?.cancel();
     _introController.dispose();
     _ambientController.dispose();
     super.dispose();
@@ -118,15 +120,51 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     return token;
   }
 
-  void _restartPinnedTimer() {
-    _pinnedTimer?.cancel();
+  Route<T> _buildAnimatedRoute<T>(Widget page) {
+    return PageRouteBuilder<T>(
+      transitionDuration: const Duration(milliseconds: 420),
+      reverseTransitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
 
-    if (_pinnedAnnouncements.length <= 1) return;
+        final fade = Tween<double>(begin: 0.0, end: 1.0).animate(curved);
+        final slide = Tween<Offset>(
+          begin: const Offset(0.06, 0.03),
+          end: Offset.zero,
+        ).animate(curved);
+        final scale = Tween<double>(
+          begin: 0.965,
+          end: 1.0,
+        ).animate(curved);
 
-    _pinnedTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (!mounted || _pinnedAnnouncements.length <= 1) return;
+        return FadeTransition(
+          opacity: fade,
+          child: SlideTransition(
+            position: slide,
+            child: ScaleTransition(
+              scale: scale,
+              child: child,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _restartHeroTimer() {
+    _heroTimer?.cancel();
+
+    if (_heroSlidesCount <= 1) return;
+
+    _heroTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (!mounted || _heroSlidesCount <= 1) return;
       setState(() {
-        _pinnedIndex = (_pinnedIndex + 1) % _pinnedAnnouncements.length;
+        _heroCarouselIndex = (_heroCarouselIndex + 1) % _heroSlidesCount;
       });
     });
   }
@@ -243,13 +281,13 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         _chatCount = chatItems.length;
         _announcementCount = annItems.length;
         _pinnedAnnouncements = pinned;
-        if (_pinnedIndex >= _pinnedAnnouncements.length) {
-          _pinnedIndex = 0;
+        if (_heroCarouselIndex >= _heroSlidesCount) {
+          _heroCarouselIndex = 0;
         }
         _loading = false;
       });
 
-      _restartPinnedTimer();
+      _restartHeroTimer();
       _introController.forward(from: 0);
     } catch (e, st) {
       debugPrint('HOME LOAD ERROR: $e');
@@ -333,8 +371,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   void _openClientSearch() {
     Navigator.of(context)
         .push(
-          MaterialPageRoute(
-            builder: (_) => StaffClientSearchScreen(
+          _buildAnimatedRoute(
+            StaffClientSearchScreen(
               establishmentId: widget.establishmentId,
               establishmentName: widget.establishmentName,
             ),
@@ -346,8 +384,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   void _openChat() {
     Navigator.of(context)
         .push(
-          MaterialPageRoute(
-            builder: (_) => StaffChatScreen(
+          _buildAnimatedRoute(
+            StaffChatScreen(
               establishmentId: widget.establishmentId,
               establishmentName: widget.establishmentName,
             ),
@@ -365,8 +403,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   void _openAnnouncements() {
     Navigator.of(context)
         .push(
-          MaterialPageRoute(
-            builder: (_) => StaffAnnouncementsScreen(
+          _buildAnimatedRoute(
+            StaffAnnouncementsScreen(
               establishmentId: widget.establishmentId,
               establishmentName: widget.establishmentName,
               isOwner: _isOwner,
@@ -385,8 +423,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   void _openHistory() {
     Navigator.of(context)
         .push(
-          MaterialPageRoute(
-            builder: (_) => StaffEstablishmentHistoryScreen(
+          _buildAnimatedRoute(
+            StaffEstablishmentHistoryScreen(
               establishmentId: widget.establishmentId,
               establishmentName: widget.establishmentName,
             ),
@@ -398,8 +436,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   void _openWorkSchedule() {
     Navigator.of(context)
         .push(
-          MaterialPageRoute(
-            builder: (_) => StaffWorkScheduleScreen(
+          _buildAnimatedRoute(
+            StaffWorkScheduleScreen(
               establishmentId: widget.establishmentId,
               establishmentName: widget.establishmentName,
               role: widget.role,
@@ -412,8 +450,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   void _openOwnerRequests() {
     Navigator.of(context)
         .push(
-          MaterialPageRoute(
-            builder: (_) => OwnerRequestsScreen(
+          _buildAnimatedRoute(
+            OwnerRequestsScreen(
               establishmentId: widget.establishmentId,
               establishmentName: widget.establishmentName,
               role: widget.role,
@@ -617,6 +655,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
 
   Widget _buildPromoBanner() {
     return Container(
+      key: const ValueKey('hero_promo_banner'),
+      height: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
@@ -634,6 +674,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         children: [
           Expanded(
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
@@ -665,11 +706,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   ),
                 ),
                 const SizedBox(height: 14),
-                Text(
-                  _isOwner
-                      ? 'Быстрая работа\nс клиентами'
-                      : 'Быстрая работа\nс клиентами',
-                  style: const TextStyle(
+                const Text(
+                  'Быстрая работа\nс клиентами',
+                  style: TextStyle(
                     fontSize: 29,
                     height: 1.02,
                     fontWeight: FontWeight.w900,
@@ -699,39 +738,29 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     );
   }
 
-  Widget _buildPinnedAnnouncementBanner() {
-    if (_pinnedAnnouncements.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final item = _pinnedAnnouncements[_pinnedIndex];
-
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 350),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      child: Container(
-        key: ValueKey('${item.announcementId}_$_pinnedIndex'),
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(30),
-          gradient: const LinearGradient(
-            colors: [kHomeAccent, kHomeAccentSoft],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: kHomeAccent.withOpacity(0.32),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
-            ),
+  Widget _buildPinnedAnnouncementBanner(_PinnedAnnouncement item, int index) {
+    return Container(
+      key: ValueKey('hero_pinned_${item.announcementId}_$index'),
+      height: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        gradient: const LinearGradient(
+          colors: [
+            Color(0x1FFFFFFF),
+            Color(0x14FFFFFF),
           ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        border: Border.all(color: Colors.white.withOpacity(0.20)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -740,12 +769,20 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(999),
-                    color: Colors.white.withOpacity(0.18),
-                    border: Border.all(color: Colors.white.withOpacity(0.20)),
+                    gradient: const LinearGradient(
+                      colors: [kHomeAccent, kHomeAccentSoft],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: kHomeAccent.withOpacity(0.30),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
-                  child: const Text(
-                    'ЗАКРЕПЛЕНО',
-                    style: TextStyle(
+                  child: Text(
+                    _isOwner ? 'ОБЪЯВЛЕНИЕ' : 'ВАЖНОЕ ОБЪЯВЛЕНИЕ',
+                    style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0.8,
@@ -753,70 +790,56 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                     ),
                   ),
                 ),
-                const Spacer(),
-                if (_pinnedAnnouncements.length > 1)
-                  Text(
-                    '${_pinnedIndex + 1}/${_pinnedAnnouncements.length}',
+                const SizedBox(height: 14),
+                Text(
+                  item.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 29,
+                    height: 1.02,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -1.0,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Text(
+                    item.body,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white.withOpacity(0.92),
+                      fontSize: 14,
+                      height: 1.4,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white.withOpacity(0.84),
                     ),
                   ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Text(
-              item.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 25,
-                height: 1.02,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.8,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              item.body,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 14,
-                height: 1.35,
-                fontWeight: FontWeight.w700,
-                color: Colors.white.withOpacity(0.94),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
+                ),
+                const SizedBox(height: 12),
                 if (_isOwner)
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        color: Colors.white.withOpacity(0.16),
-                        border: Border.all(color: Colors.white.withOpacity(0.18)),
-                      ),
-                      child: Text(
-                        'Ознакомлены: ${item.acknowledgedCount}/${item.totalStaffCount}',
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                        ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      color: Colors.white.withOpacity(0.16),
+                      border: Border.all(color: Colors.white.withOpacity(0.18)),
+                    ),
+                    child: Text(
+                      'Ознакомлены: ${item.acknowledgedCount}/${item.totalStaffCount}',
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
                       ),
                     ),
                   )
                 else
-                  _PinnedActionButton(
+                  _PinnedAccentPillButton(
                     text: item.isAcknowledged ? 'Ознакомлен' : 'Ознакомлен',
                     isLoading: _pinActionLoading,
                     isDone: item.isAcknowledged,
@@ -824,16 +847,58 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                         ? null
                         : () => _acknowledgePinned(item),
                   ),
-                const SizedBox(width: 10),
-                _PinnedActionButton(
-                  text: 'Открыть',
-                  onTap: _openAnnouncements,
-                  isSecondary: true,
-                ),
               ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 14),
+          const _DecorPercent(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroCarousel() {
+    Widget child;
+
+    if (_heroCarouselIndex == 0) {
+      child = _buildPromoBanner();
+    } else {
+      final pinned = _pinnedAnnouncements[_heroCarouselIndex - 1];
+      child = _buildPinnedAnnouncementBanner(pinned, _heroCarouselIndex);
+    }
+
+    return SizedBox(
+      height: 242,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 760),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          final fade = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
+          final slide = Tween<Offset>(
+            begin: const Offset(0.10, 0.0),
+            end: Offset.zero,
+          ).animate(fade);
+          final scale = Tween<double>(
+            begin: 0.955,
+            end: 1.0,
+          ).animate(fade);
+
+          return FadeTransition(
+            opacity: fade,
+            child: SlideTransition(
+              position: slide,
+              child: ScaleTransition(
+                scale: scale,
+                child: child,
+              ),
+            ),
+          );
+        },
+        child: child,
       ),
     );
   }
@@ -1320,7 +1385,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    int nextIndex = 4;
+    int nextIndex = 0;
 
     Widget staggered(Widget child) {
       final current = nextIndex;
@@ -1348,19 +1413,13 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                         ),
                         padding: const EdgeInsets.fromLTRB(16, 14, 16, 30),
                         children: [
-                          _stagger(index: 0, child: _buildTopBar()),
+                          staggered(_buildTopBar()),
                           const SizedBox(height: 18),
-                          _stagger(index: 1, child: _buildPromoBanner()),
+                          staggered(_buildHeroCarousel()),
                           const SizedBox(height: 14),
-                          if (_pinnedAnnouncements.isNotEmpty) ...[
-                            _stagger(index: 2, child: _buildPinnedAnnouncementBanner()),
-                            const SizedBox(height: 14),
-                            _stagger(index: 3, child: _buildSearchHeroCard()),
-                          ] else ...[
-                            _stagger(index: 2, child: _buildSearchHeroCard()),
-                          ],
+                          staggered(_buildSearchHeroCard()),
                           const SizedBox(height: 14),
-                          _stagger(index: 3, child: _buildTopModulesRow()),
+                          staggered(_buildTopModulesRow()),
                           const SizedBox(height: 16),
                           if (_error != null) ...[
                             staggered(_buildError()),
@@ -1387,7 +1446,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                           ],
                           staggered(_buildHistoryCard()),
                           const SizedBox(height: 12),
-                          staggered(_buildWorkScheduleCard()),
+                          if (!_isOwner) ...[
+                            staggered(_buildWorkScheduleCard()),
+                          ],
                         ],
                       ),
                     ),
@@ -1446,17 +1507,15 @@ class _PinnedAnnouncement {
   }
 }
 
-class _PinnedActionButton extends StatelessWidget {
+class _PinnedAccentPillButton extends StatelessWidget {
   final String text;
   final VoidCallback? onTap;
-  final bool isSecondary;
   final bool isLoading;
   final bool isDone;
 
-  const _PinnedActionButton({
+  const _PinnedAccentPillButton({
     required this.text,
     this.onTap,
-    this.isSecondary = false,
     this.isLoading = false,
     this.isDone = false,
   });
@@ -1464,39 +1523,55 @@ class _PinnedActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: isSecondary
-          ? Colors.white.withOpacity(0.16)
-          : (isDone ? Colors.white.withOpacity(0.26) : Colors.white),
-      borderRadius: BorderRadius.circular(18),
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        borderRadius: BorderRadius.circular(999),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: Colors.white.withOpacity(isSecondary ? 0.20 : 0.0),
+            borderRadius: BorderRadius.circular(999),
+            gradient: const LinearGradient(
+              colors: [kHomeAccent, kHomeAccentSoft],
             ),
+            boxShadow: [
+              BoxShadow(
+                color: kHomeAccent.withOpacity(0.28),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
           child: isLoading
-              ? SizedBox(
-                  width: 18,
-                  height: 18,
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation(
-                      isSecondary ? Colors.white : kHomeAccent,
-                    ),
+                    valueColor: AlwaysStoppedAnimation(Colors.white),
                   ),
                 )
-              : Text(
-                  text,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w900,
-                    color: isSecondary ? Colors.white : kHomeAccent,
-                  ),
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isDone) ...[
+                      const Icon(
+                        CupertinoIcons.check_mark,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      text,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.4,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
         ),
       ),
@@ -1919,48 +1994,81 @@ class _Pressable extends StatefulWidget {
   State<_Pressable> createState() => _PressableState();
 }
 
-class _PressableState extends State<_Pressable> {
+class _PressableState extends State<_Pressable>
+    with SingleTickerProviderStateMixin {
   bool _pressed = false;
+  late final AnimationController _glowController;
+
+  @override
+  void initState() {
+    super.initState();
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+      value: 0,
+    );
+  }
+
+  @override
+  void dispose() {
+    _glowController.dispose();
+    super.dispose();
+  }
 
   void _setPressed(bool value) {
     if (_pressed == value) return;
     setState(() => _pressed = value);
+    if (value) {
+      _glowController.forward();
+    } else {
+      _glowController.reverse();
+    }
   }
 
   void _tap() {
-    HapticFeedback.lightImpact();
+    HapticFeedback.mediumImpact();
     widget.onTap();
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => _setPressed(true),
-      onTapUp: (_) => _setPressed(false),
-      onTapCancel: () => _setPressed(false),
-      onTap: _tap,
-      child: AnimatedScale(
-        scale: _pressed ? 0.982 : 1,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOutCubic,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          curve: Curves.easeOutCubic,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            boxShadow: _pressed
-                ? [
+    return AnimatedBuilder(
+      animation: _glowController,
+      builder: (context, child) {
+        final glow = _glowController.value;
+        return GestureDetector(
+          onTapDown: (_) => _setPressed(true),
+          onTapUp: (_) => _setPressed(false),
+          onTapCancel: () => _setPressed(false),
+          onTap: _tap,
+          child: AnimatedScale(
+            scale: _pressed ? 0.965 : 1,
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            child: AnimatedRotation(
+              turns: _pressed ? -0.003 : 0,
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(widget.borderRadius),
+                  boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
+                      color: Colors.black.withOpacity(0.03 + (0.03 * glow)),
+                      blurRadius: 8 + (10 * glow),
+                      offset: Offset(0, 3 + (4 * glow)),
                     ),
-                  ]
-                : null,
+                  ],
+                ),
+                child: child,
+              ),
+            ),
           ),
-          child: widget.child,
-        ),
-      ),
+        );
+      },
+      child: widget.child,
     );
   }
 }
