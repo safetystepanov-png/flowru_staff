@@ -49,8 +49,11 @@ class StaffOwnerScheduleApi {
       return {
         'date': '$y-$m-$d',
         'items': day.items.map((item) {
-          final employeeUserId =
-              item.isSchedule ? 'employee_${item.requestId}' : 'swap_${item.requestId}';
+          final employeeUserId = item.employeeUserId.trim().isEmpty
+              ? (item.isSchedule
+                  ? 'employee_${item.requestId}'
+                  : 'swap_${item.requestId}')
+              : item.employeeUserId.trim();
 
           return {
             'employee_user_id': employeeUserId,
@@ -78,47 +81,53 @@ class StaffOwnerScheduleApi {
       }),
     );
 
-    if (response.statusCode != 200) {
+    if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception(
         'save schedule failed: ${response.statusCode} body=${response.body}',
       );
     }
   }
 
+  Future<void> publishScheduleMonth({
+    required int establishmentId,
+    required int year,
+    required int month,
+    required List<OwnerScheduleSaveDay> days,
+  }) async {
+    await saveScheduleMonth(
+      establishmentId: establishmentId,
+      year: year,
+      month: month,
+      days: days,
+    );
+  }
+
   Map<String, String> _buildUniqueLabels(List<OwnerScheduleSaveDay> days) {
-    final allItems = <OwnerRequestItem>[];
+    final grouped = <String, List<String>>{};
+
     for (final day in days) {
-      allItems.addAll(day.items);
-    }
+      for (final item in day.items) {
+        final employeeUserId = item.employeeUserId.trim().isEmpty
+            ? (item.isSchedule
+                ? 'employee_${item.requestId}'
+                : 'swap_${item.requestId}')
+            : item.employeeUserId.trim();
 
-    final groupedByBase = <String, List<String>>{};
-    final employeeToBase = <String, String>{};
+        final base = item.effectiveCalendarLabel.toUpperCase();
 
-    for (final item in allItems) {
-      final employeeUserId =
-          item.isSchedule ? 'employee_${item.requestId}' : 'swap_${item.requestId}';
-      final base = item.effectiveCalendarLabel.toUpperCase();
-
-      employeeToBase[employeeUserId] = base;
-      groupedByBase.putIfAbsent(base, () => <String>[]);
-      if (!groupedByBase[base]!.contains(employeeUserId)) {
-        groupedByBase[base]!.add(employeeUserId);
+        grouped.putIfAbsent(base, () => <String>[]);
+        if (!grouped[base]!.contains(employeeUserId)) {
+          grouped[base]!.add(employeeUserId);
+        }
       }
     }
 
     final result = <String, String>{};
 
-    groupedByBase.forEach((base, employeeIds) {
-      employeeIds.sort();
-
-      if (employeeIds.length == 1) {
-        result[employeeIds.first] = base;
-        return;
-      }
-
-      for (var i = 0; i < employeeIds.length; i++) {
-        final suffix = i == 0 ? '' : '${i + 1}';
-        result[employeeIds[i]] = '$base$suffix';
+    grouped.forEach((base, ids) {
+      ids.sort();
+      for (var i = 0; i < ids.length; i++) {
+        result[ids[i]] = i == 0 ? base : '$base${i + 1}';
       }
     });
 

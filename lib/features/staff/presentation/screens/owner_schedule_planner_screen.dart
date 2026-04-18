@@ -20,6 +20,7 @@ const Color kOwnerPlanPink = Color(0xFFFF5F8F);
 const Color kOwnerPlanViolet = Color(0xFF7A63FF);
 const Color kOwnerPlanAccent = Color(0xFFFFA11D);
 const Color kOwnerPlanSuccess = Color(0xFF22C55E);
+const Color kOwnerPlanDanger = Color(0xFFE85B63);
 
 class OwnerSchedulePlannerScreen extends StatefulWidget {
   final int establishmentId;
@@ -34,7 +35,8 @@ class OwnerSchedulePlannerScreen extends StatefulWidget {
   });
 
   @override
-  State<OwnerSchedulePlannerScreen> createState() => _OwnerSchedulePlannerScreenState();
+  State<OwnerSchedulePlannerScreen> createState() =>
+      _OwnerSchedulePlannerScreenState();
 }
 
 class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
@@ -51,7 +53,7 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
 
   late DateTime _targetMonth;
   List<OwnerRequestItem> _requests = const [];
-  final Map<DateTime, List<OwnerRequestItem>> _selectedByDay = {};
+  final Map<DateTime, List<_PlannerAssignment>> _selectedByDay = {};
 
   static const List<String> _monthNames = [
     'Январь',
@@ -116,7 +118,9 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
       for (final request in filtered) {
         for (final day in request.selectedDays) {
           final date = DateTime(_targetMonth.year, _targetMonth.month, day);
-          _selectedByDay.putIfAbsent(date, () => <OwnerRequestItem>[]).add(request);
+          _selectedByDay.putIfAbsent(date, () => <_PlannerAssignment>[]).add(
+                _PlannerAssignment.fromApprovedRequest(request),
+              );
         }
       }
 
@@ -151,25 +155,117 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
     return _selectedByDay.values.fold<int>(0, (sum, items) => sum + items.length);
   }
 
+  int get _filledDaysCount {
+    return _selectedByDay.entries.where((e) => e.value.isNotEmpty).length;
+  }
+
+  String _monthLabel(DateTime month) {
+    return '${_monthNames[month.month - 1]} ${month.year}';
+  }
+
+  String _shortEmployeeLabel(String name) {
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    if (parts.isEmpty) return '??';
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    final single = parts.first.toUpperCase();
+    return single.length >= 3 ? single.substring(0, 3) : single;
+  }
+
   Future<void> _pickDay(DateTime date) async {
     if (date.month != _targetMonth.month) return;
 
-    final approved = _requests.where((item) => item.selectedDays.contains(date.day)).toList();
+    final approved =
+        _requests.where((item) => item.selectedDays.contains(date.day)).toList();
+
+    final manualNameController = TextEditingController();
+    final manualCodeController = TextEditingController();
 
     await showDialog<void>(
       context: context,
       barrierDismissible: true,
       builder: (dialogContext) {
-        final selected = <int>{
-          for (final item in (_selectedByDay[date] ?? const <OwnerRequestItem>[]))
-            item.requestId,
+        final selected = <String>{
+          for (final item in (_selectedByDay[date] ?? const <_PlannerAssignment>[]))
+            item.uniqueKey,
         };
+
+        final manualItems = (_selectedByDay[date] ?? const <_PlannerAssignment>[])
+            .where((e) => e.isManual)
+            .toList();
 
         return StatefulBuilder(
           builder: (context, setLocalState) {
+            List<_PlannerAssignment> currentManualItems() {
+              return [
+                ...manualItems,
+              ];
+            }
+
+            void syncSelectedFromManual() {
+              for (final manual in manualItems) {
+                selected.add(manual.uniqueKey);
+              }
+            }
+
+            syncSelectedFromManual();
+
+            Future<void> addManualEmployee() async {
+              final name = manualNameController.text.trim();
+              final code = manualCodeController.text.trim();
+
+              if (name.isEmpty) return;
+
+              final safeCode =
+                  code.isEmpty ? _shortEmployeeLabel(name) : code.toUpperCase();
+
+              final manual = _PlannerAssignment.manual(
+                employeeName: name,
+                badge: safeCode,
+              );
+
+              final exists =
+                  manualItems.any((e) => e.uniqueKey == manual.uniqueKey);
+
+              if (exists) return;
+
+              setLocalState(() {
+                manualItems.add(manual);
+                selected.add(manual.uniqueKey);
+                manualNameController.clear();
+                manualCodeController.clear();
+              });
+            }
+
+            List<_PlannerAssignment> buildPickedAssignments() {
+              final picked = <_PlannerAssignment>[];
+
+              for (final item in approved) {
+                final assignment = _PlannerAssignment.fromApprovedRequest(item);
+                if (selected.contains(assignment.uniqueKey)) {
+                  picked.add(assignment);
+                }
+              }
+
+              for (final manual in manualItems) {
+                if (selected.contains(manual.uniqueKey)) {
+                  picked.add(manual);
+                }
+              }
+
+              return picked;
+            }
+
             return Dialog(
               backgroundColor: Colors.transparent,
-              insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(30),
                 child: BackdropFilter(
@@ -181,162 +277,301 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
                       borderRadius: BorderRadius.circular(30),
                       border: Border.all(color: const Color(0xFFE3F0F0)),
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${date.day} ${_monthNames[date.month - 1]}',
-                                style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w900,
-                                  color: kOwnerPlanInk,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${date.day} ${_monthNames[date.month - 1]}',
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w900,
+                                    color: kOwnerPlanInk,
+                                  ),
                                 ),
                               ),
-                            ),
-                            Material(
-                              color: Colors.white,
-                              shape: const CircleBorder(),
-                              child: InkWell(
-                                customBorder: const CircleBorder(),
-                                onTap: () => Navigator.of(dialogContext).pop(),
-                                child: const SizedBox(
-                                  width: 40,
-                                  height: 40,
-                                  child: Icon(CupertinoIcons.xmark, color: kOwnerPlanInk),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        if (approved.isEmpty)
-                          const _OwnerInfoCard(
-                            icon: CupertinoIcons.person_crop_circle_badge_xmark,
-                            title: 'Нет согласованных пожеланий',
-                            text: 'На этот день пока нет сотрудников с подтвержденными пожеланиями.',
-                          )
-                        else
-                          ...approved.map((item) {
-                            final isSelected = selected.contains(item.requestId);
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Material(
-                                color: isSelected
-                                    ? kOwnerPlanSuccess.withOpacity(0.12)
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(18),
+                              Material(
+                                color: Colors.white,
+                                shape: const CircleBorder(),
                                 child: InkWell(
-                                  borderRadius: BorderRadius.circular(18),
-                                  onTap: () {
-                                    setLocalState(() {
-                                      if (isSelected) {
-                                        selected.remove(item.requestId);
-                                      } else {
-                                        selected.add(item.requestId);
-                                      }
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(14),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(18),
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? kOwnerPlanSuccess
-                                            : const Color(0xFFE4F0F1),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 42,
-                                          height: 42,
-                                          decoration: BoxDecoration(
-                                            color: isSelected
-                                                ? kOwnerPlanSuccess.withOpacity(0.14)
-                                                : kOwnerPlanAccent.withOpacity(0.12),
-                                            borderRadius: BorderRadius.circular(14),
-                                          ),
-                                          child: Icon(
-                                            isSelected
-                                                ? CupertinoIcons.check_mark
-                                                : CupertinoIcons.person_fill,
-                                            color: isSelected ? kOwnerPlanSuccess : kOwnerPlanAccent,
-                                            size: 20,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                item.employeeName,
-                                                style: const TextStyle(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w900,
-                                                  color: kOwnerPlanInk,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                'Пожелание на ${item.selectedDays.length} дн.',
-                                                style: const TextStyle(
-                                                  fontSize: 12.5,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: kOwnerPlanInkSoft,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
+                                  customBorder: const CircleBorder(),
+                                  onTap: () => Navigator.of(dialogContext).pop(),
+                                  child: const SizedBox(
+                                    width: 40,
+                                    height: 40,
+                                    child: Icon(
+                                      CupertinoIcons.xmark,
+                                      color: kOwnerPlanInk,
                                     ),
                                   ),
                                 ),
                               ),
-                            );
-                          }),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _OwnerFooterButton(
-                                label: 'Очистить день',
-                                isPrimary: false,
-                                onTap: () {
-                                  setState(() {
-                                    _selectedByDay.remove(date);
-                                  });
-                                  Navigator.of(dialogContext).pop();
-                                },
-                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Согласованные пожелания',
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w900,
+                              color: kOwnerPlanInk,
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _OwnerFooterButton(
-                                label: 'Сохранить',
-                                isPrimary: true,
-                                onTap: () {
-                                  final picked = approved.where((e) => selected.contains(e.requestId)).toList();
-                                  setState(() {
-                                    if (picked.isEmpty) {
-                                      _selectedByDay.remove(date);
-                                    } else {
-                                      _selectedByDay[date] = picked;
-                                    }
-                                  });
-                                  Navigator.of(dialogContext).pop();
-                                },
+                          ),
+                          const SizedBox(height: 10),
+                          if (approved.isEmpty)
+                            const _OwnerInfoCard(
+                              icon: CupertinoIcons.person_crop_circle_badge_xmark,
+                              title: 'Нет согласованных пожеланий',
+                              text:
+                                  'На этот день пока нет сотрудников с подтвержденными пожеланиями.',
+                            )
+                          else
+                            ...approved.map((item) {
+                              final assignment =
+                                  _PlannerAssignment.fromApprovedRequest(item);
+                              final isSelected =
+                                  selected.contains(assignment.uniqueKey);
+
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: Material(
+                                  color: isSelected
+                                      ? kOwnerPlanSuccess.withOpacity(0.12)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(18),
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(18),
+                                    onTap: () {
+                                      setLocalState(() {
+                                        if (isSelected) {
+                                          selected.remove(assignment.uniqueKey);
+                                        } else {
+                                          selected.add(assignment.uniqueKey);
+                                        }
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(14),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(18),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? kOwnerPlanSuccess
+                                              : const Color(0xFFE4F0F1),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 42,
+                                            height: 42,
+                                            decoration: BoxDecoration(
+                                              color: isSelected
+                                                  ? kOwnerPlanSuccess
+                                                      .withOpacity(0.14)
+                                                  : kOwnerPlanAccent
+                                                      .withOpacity(0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                assignment.badge,
+                                                style: TextStyle(
+                                                  color: isSelected
+                                                      ? kOwnerPlanSuccess
+                                                      : kOwnerPlanAccent,
+                                                  fontWeight: FontWeight.w900,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  item.employeeName,
+                                                  style: const TextStyle(
+                                                    fontSize: 15,
+                                                    fontWeight: FontWeight.w900,
+                                                    color: kOwnerPlanInk,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  'Пожелание на ${item.selectedDays.length} дн.',
+                                                  style: const TextStyle(
+                                                    fontSize: 12.5,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: kOwnerPlanInkSoft,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+                          const SizedBox(height: 10),
+                          const Text(
+                            'Ручное назначение',
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w900,
+                              color: kOwnerPlanInk,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: TextField(
+                                  controller: manualNameController,
+                                  decoration: _inputDecoration(
+                                    'Имя сотрудника',
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                flex: 2,
+                                child: TextField(
+                                  controller: manualCodeController,
+                                  maxLength: 3,
+                                  decoration: _inputDecoration(
+                                    'Метка',
+                                    counterText: '',
+                                  ),
+                                  textCapitalization:
+                                      TextCapitalization.characters,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: _OwnerFooterButton(
+                              label: 'Добавить вручную',
+                              isPrimary: false,
+                              onTap: addManualEmployee,
+                            ),
+                          ),
+                          if (manualItems.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            ...currentManualItems().map(
+                              (manual) => Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(16),
+                                  color: Colors.white,
+                                  border: Border.all(
+                                    color: const Color(0xFFE4F0F1),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 38,
+                                      height: 38,
+                                      decoration: BoxDecoration(
+                                        color: kOwnerPlanBlue.withOpacity(0.12),
+                                        borderRadius:
+                                            BorderRadius.circular(12),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          manual.badge,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w900,
+                                            color: kOwnerPlanBlue,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        manual.employeeName,
+                                        style: const TextStyle(
+                                          fontSize: 13.8,
+                                          fontWeight: FontWeight.w800,
+                                          color: kOwnerPlanInk,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      onPressed: () {
+                                        setLocalState(() {
+                                          manualItems.removeWhere(
+                                            (e) =>
+                                                e.uniqueKey == manual.uniqueKey,
+                                          );
+                                          selected.remove(manual.uniqueKey);
+                                        });
+                                      },
+                                      icon: const Icon(
+                                        CupertinoIcons.delete,
+                                        color: kOwnerPlanDanger,
+                                        size: 19,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _OwnerFooterButton(
+                                  label: 'Очистить день',
+                                  isPrimary: false,
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedByDay.remove(date);
+                                    });
+                                    Navigator.of(dialogContext).pop();
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _OwnerFooterButton(
+                                  label: 'Применить',
+                                  isPrimary: true,
+                                  onTap: () {
+                                    final picked = buildPickedAssignments();
+                                    setState(() {
+                                      if (picked.isEmpty) {
+                                        _selectedByDay.remove(date);
+                                      } else {
+                                        _selectedByDay[date] = picked;
+                                      }
+                                    });
+                                    Navigator.of(dialogContext).pop();
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -345,6 +580,41 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
           },
         );
       },
+    );
+  }
+
+  InputDecoration _inputDecoration(
+    String hint, {
+    String? counterText,
+  }) {
+    return InputDecoration(
+      hintText: hint,
+      counterText: counterText,
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 14,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(
+          color: Color(0xFFE4F0F1),
+        ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(
+          color: Color(0xFFE4F0F1),
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(
+          color: kOwnerPlanBlue,
+          width: 1.3,
+        ),
+      ),
     );
   }
 
@@ -357,7 +627,10 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
           .map(
             (e) => OwnerScheduleSaveDay(
               date: e.key,
-              items: e.value,
+              items: e.value
+                  .where((x) => x.sourceRequest != null)
+                  .map((x) => x.sourceRequest!)
+                  .toList(),
             ),
           )
           .toList();
@@ -371,8 +644,10 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('График месяца сохранен'),
+        SnackBar(
+          content: Text(
+            'График на ${_monthLabel(_targetMonth).toLowerCase()} опубликован',
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -380,7 +655,7 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Не удалось сохранить график: $e'),
+          content: Text('Не удалось опубликовать график: $e'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -487,7 +762,7 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
           ),
           const SizedBox(height: 6),
           Text(
-            'Заполнение графика на ${_monthNames[_targetMonth.month - 1].toLowerCase()} ${_targetMonth.year}',
+            'Публикация графика на ${_monthNames[_targetMonth.month - 1].toLowerCase()} ${_targetMonth.year}',
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w800,
@@ -514,6 +789,16 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
                   label: 'Назначений',
                   colorA: kOwnerPlanAccent,
                   colorB: kOwnerPlanPink,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _OwnerMetricCard(
+                  icon: CupertinoIcons.square_grid_2x2_fill,
+                  value: '$_filledDaysCount',
+                  label: 'Дней',
+                  colorA: kOwnerPlanBlue,
+                  colorB: kOwnerPlanViolet,
                 ),
               ),
             ],
@@ -560,17 +845,18 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
               crossAxisCount: 7,
               mainAxisSpacing: 8,
               crossAxisSpacing: 8,
-              childAspectRatio: 0.92,
+              childAspectRatio: 0.74,
             ),
             itemBuilder: (context, index) {
               final date = days[index];
               final isCurrentMonth = date.month == _targetMonth.month;
-              final assigned = _selectedByDay[date] ?? const <OwnerRequestItem>[];
+              final assigned =
+                  _selectedByDay[date] ?? const <_PlannerAssignment>[];
 
               return _OwnerDayTile(
                 date: date,
                 isCurrentMonth: isCurrentMonth,
-                count: assigned.length,
+                assignments: assigned,
                 onTap: () => _pickDay(date),
               );
             },
@@ -593,7 +879,7 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
         const SizedBox(width: 10),
         Expanded(
           child: _OwnerFooterButton(
-            label: _saving ? 'Сохранение...' : 'Сохранить график',
+            label: _saving ? 'Публикация...' : 'Опубликовать график',
             isPrimary: true,
             onTap: _saving ? () {} : _saveMonth,
           ),
@@ -610,7 +896,7 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          'Заполнить график',
+          'Планировщик графика',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w900,
@@ -641,14 +927,16 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
                     if (_loading)
                       const _OwnerGlassCard(
                         radius: 26,
-                        padding: EdgeInsets.symmetric(vertical: 34, horizontal: 20),
+                        padding:
+                            EdgeInsets.symmetric(vertical: 34, horizontal: 20),
                         child: Center(
                           child: SizedBox(
                             width: 42,
                             height: 42,
                             child: CircularProgressIndicator(
                               strokeWidth: 3,
-                              valueColor: AlwaysStoppedAnimation(kOwnerPlanViolet),
+                              valueColor:
+                                  AlwaysStoppedAnimation(kOwnerPlanViolet),
                             ),
                           ),
                         ),
@@ -679,6 +967,61 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
         ),
       ),
     );
+  }
+}
+
+class _PlannerAssignment {
+  final String employeeName;
+  final String badge;
+  final OwnerRequestItem? sourceRequest;
+  final bool isManual;
+  final String uniqueKey;
+
+  const _PlannerAssignment({
+    required this.employeeName,
+    required this.badge,
+    required this.sourceRequest,
+    required this.isManual,
+    required this.uniqueKey,
+  });
+
+  factory _PlannerAssignment.fromApprovedRequest(OwnerRequestItem request) {
+    return _PlannerAssignment(
+      employeeName: request.employeeName,
+      badge: _badgeFromName(request.employeeName),
+      sourceRequest: request,
+      isManual: false,
+      uniqueKey: 'request_${request.requestId}',
+    );
+  }
+
+  factory _PlannerAssignment.manual({
+    required String employeeName,
+    required String badge,
+  }) {
+    final cleanBadge = badge.trim().toUpperCase();
+    return _PlannerAssignment(
+      employeeName: employeeName,
+      badge: cleanBadge.isEmpty ? _badgeFromName(employeeName) : cleanBadge,
+      sourceRequest: null,
+      isManual: true,
+      uniqueKey: 'manual_${employeeName.trim().toLowerCase()}_${cleanBadge.trim().toLowerCase()}',
+    );
+  }
+
+  static String _badgeFromName(String name) {
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    if (parts.isEmpty) return '??';
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    final one = parts.first.toUpperCase();
+    return one.length >= 3 ? one.substring(0, 3) : one;
   }
 }
 
@@ -774,6 +1117,7 @@ class _OwnerMetricCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             label,
+            textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w800,
@@ -789,20 +1133,24 @@ class _OwnerMetricCard extends StatelessWidget {
 class _OwnerDayTile extends StatelessWidget {
   final DateTime date;
   final bool isCurrentMonth;
-  final int count;
+  final List<_PlannerAssignment> assignments;
   final VoidCallback onTap;
 
   const _OwnerDayTile({
     required this.date,
     required this.isCurrentMonth,
-    required this.count,
+    required this.assignments,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final opacity = isCurrentMonth ? 1.0 : 0.28;
-    final accent = count > 0 ? kOwnerPlanSuccess : const Color(0xFFDDE7EA);
+    final accent =
+        assignments.isNotEmpty ? kOwnerPlanSuccess : const Color(0xFFDDE7EA);
+
+    final labels = assignments.take(4).map((e) => e.badge).toList();
+    final extra = assignments.length > 4 ? assignments.length - 4 : 0;
 
     return Material(
       color: Colors.transparent,
@@ -856,7 +1204,7 @@ class _OwnerDayTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Expanded(
-                  child: count == 0
+                  child: assignments.isEmpty
                       ? Container(
                           width: double.infinity,
                           decoration: BoxDecoration(
@@ -864,21 +1212,43 @@ class _OwnerDayTile extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         )
-                      : Container(
-                          width: double.infinity,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: kOwnerPlanSuccess.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '$count',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                              color: kOwnerPlanSuccess,
+                      : Column(
+                          children: [
+                            ...labels.map(
+                              (label) => Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.only(bottom: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: kOwnerPlanSuccess.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  label,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 10.3,
+                                    fontWeight: FontWeight.w900,
+                                    color: kOwnerPlanSuccess,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
+                            if (extra > 0)
+                              Text(
+                                '+$extra',
+                                style: const TextStyle(
+                                  fontSize: 10.8,
+                                  fontWeight: FontWeight.w900,
+                                  color: kOwnerPlanInkSoft,
+                                ),
+                              ),
+                          ],
                         ),
                 ),
               ],

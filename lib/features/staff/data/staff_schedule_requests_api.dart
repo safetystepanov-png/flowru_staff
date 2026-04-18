@@ -92,9 +92,7 @@ class StaffScheduleRequestsApi {
         return MyScheduleRequestItem.fromJson(first);
       }
       if (first is Map) {
-        return MyScheduleRequestItem.fromJson(
-          Map<String, dynamic>.from(first),
-        );
+        return MyScheduleRequestItem.fromJson(Map<String, dynamic>.from(first));
       }
     }
 
@@ -106,9 +104,7 @@ class StaffScheduleRequestsApi {
           return MyScheduleRequestItem.fromJson(first);
         }
         if (first is Map) {
-          return MyScheduleRequestItem.fromJson(
-            Map<String, dynamic>.from(first),
-          );
+          return MyScheduleRequestItem.fromJson(Map<String, dynamic>.from(first));
         }
       }
     }
@@ -116,7 +112,7 @@ class StaffScheduleRequestsApi {
     return null;
   }
 
-  Future<void> submitScheduleRequest({
+  Future<MyScheduleRequestItem> submitScheduleRequest({
     required int establishmentId,
     required int year,
     required int month,
@@ -125,9 +121,7 @@ class StaffScheduleRequestsApi {
   }) async {
     final token = await _token();
 
-    final uri = Uri.parse(
-      '${AppConfig.baseUrl}/api/v1/staff/schedule/request',
-    );
+    final uri = Uri.parse('${AppConfig.baseUrl}/api/v1/staff/schedule/request');
 
     final response = await http.post(
       uri,
@@ -141,8 +135,7 @@ class StaffScheduleRequestsApi {
         'year': year,
         'month': month,
         'selected_days': selectedDays,
-        if (comment != null && comment.trim().isNotEmpty)
-          'comment': comment.trim(),
+        if (comment != null && comment.trim().isNotEmpty) 'comment': comment.trim(),
       }),
     );
 
@@ -151,18 +144,36 @@ class StaffScheduleRequestsApi {
         'submit schedule request failed: ${response.statusCode} body=${response.body}',
       );
     }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is Map<String, dynamic>) {
+      return MyScheduleRequestItem.fromJson(decoded);
+    }
+    if (decoded is Map) {
+      return MyScheduleRequestItem.fromJson(Map<String, dynamic>.from(decoded));
+    }
+
+    return MyScheduleRequestItem(
+      requestId: 0,
+      establishmentId: establishmentId,
+      year: year,
+      month: month,
+      selectedDays: List<int>.from(selectedDays)..sort(),
+      status: 'pending',
+      comment: comment,
+      createdAt: null,
+      updatedAt: null,
+    );
   }
 
-  Future<void> submitSwapRequest({
+  Future<void> requestSwap({
     required int establishmentId,
     required String shiftDate,
     String? reason,
   }) async {
     final token = await _token();
 
-    final uri = Uri.parse(
-      '${AppConfig.baseUrl}/api/v1/staff/swap/request',
-    );
+    final uri = Uri.parse('${AppConfig.baseUrl}/api/v1/staff/swap/request');
 
     final response = await http.post(
       uri,
@@ -180,8 +191,20 @@ class StaffScheduleRequestsApi {
 
     if (response.statusCode != 200) {
       throw Exception(
-        'submit swap request failed: ${response.statusCode} body=${response.body}',
+        'request swap failed: ${response.statusCode} body=${response.body}',
       );
     }
+  }
+
+  Future<void> submitSwapRequest({
+    required int establishmentId,
+    required String shiftDate,
+    String? reason,
+  }) async {
+    await requestSwap(
+      establishmentId: establishmentId,
+      shiftDate: shiftDate,
+      reason: reason,
+    );
   }
 }

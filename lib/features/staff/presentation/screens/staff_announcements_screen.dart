@@ -29,6 +29,7 @@ const Color kAnnShadow = Color(0x22062E36);
 const Color kAnnBlue = Color(0xFF4E7CFF);
 const Color kAnnPink = Color(0xFFFF5F8F);
 const Color kAnnViolet = Color(0xFF7A63FF);
+const Color kAnnDanger = Color(0xFFE35D5B);
 
 class StaffAnnouncementsScreen extends StatefulWidget {
   final int establishmentId;
@@ -51,6 +52,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
     with TickerProviderStateMixin {
   bool _loading = true;
   bool _saving = false;
+  bool _deleteLoading = false;
   String? _error;
   List<_AnnouncementItem> _items = [];
 
@@ -259,7 +261,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(18),
                                     gradient: const LinearGradient(
-                                      colors: [kAnnBlue, kAnnPink],
+                                      colors: [kAnnAccent, kAnnAccentSoft],
                                     ),
                                   ),
                                   child: ElevatedButton(
@@ -401,6 +403,98 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
     }
   }
 
+  Future<void> _acknowledgeAnnouncement(_AnnouncementItem item) async {
+    try {
+      final token = await _token();
+
+      final response = await http.post(
+        Uri.parse(
+          '${AppConfig.baseUrl}/api/v1/staff/announcements/${item.id}/acknowledge',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'establishment_id': widget.establishmentId,
+        }),
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw Exception(
+          'acknowledge failed: ${response.statusCode} ${response.body}',
+        );
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        final idx = _items.indexWhere((e) => e.id == item.id);
+        if (idx >= 0) {
+          _items[idx] = _items[idx].copyWith(
+            acknowledged: true,
+            acknowledgedCount: _items[idx].acknowledgedCount + 1,
+          );
+        }
+      });
+    } catch (_) {
+      rethrow;
+    }
+  }
+
+  Future<void> _deleteAnnouncement(_AnnouncementItem item) async {
+    setState(() {
+      _deleteLoading = true;
+    });
+
+    try {
+      final token = await _token();
+
+      final response = await http.delete(
+        Uri.parse(
+          '${AppConfig.baseUrl}/api/v1/staff/announcements/${item.id}?establishment_id=${widget.establishmentId}',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(
+          'delete announcement failed: ${response.statusCode} ${response.body}',
+        );
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _items.removeWhere((e) => e.id == item.id);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Объявление удалено'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Не удалось удалить объявление'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _deleteLoading = false;
+      });
+    }
+  }
+
   String _formatDate(String value) {
     if (value.isEmpty) return '';
     try {
@@ -415,8 +509,94 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
     }
   }
 
+  Widget _ownerStatsStrip(_AnnouncementItem item) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: kAnnAccent.withOpacity(0.10),
+        border: Border.all(color: kAnnAccent.withOpacity(0.14)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            CupertinoIcons.person_2_fill,
+            size: 18,
+            color: kAnnInk,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Ознакомились: ${item.acknowledgedCount}/${item.totalStaffCount}',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                color: kAnnInk,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _ackUserTile(_AnnouncementAckUser user) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withOpacity(0.90),
+        border: Border.all(color: const Color(0xFFE7EEF0)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: kAnnBlue.withOpacity(0.10),
+            ),
+            child: Center(
+              child: Text(
+                user.shortLabel,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w900,
+                  color: kAnnBlue,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              user.name,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w800,
+                color: kAnnInk,
+              ),
+            ),
+          ),
+          if (user.acknowledgedAt.isNotEmpty)
+            Text(
+              _formatDate(user.acknowledgedAt),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: kAnnInkSoft,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _openDetails(_AnnouncementItem item) async {
     bool acknowledged = item.acknowledged;
+    bool actionLoading = false;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -440,121 +620,228 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                     ),
                     child: SafeArea(
                       top: false,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              if (item.isPinned)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(999),
-                                    color: kAnnPink.withOpacity(0.14),
-                                  ),
-                                  child: const Text(
-                                    'Закреплено',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      color: kAnnInk,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                if (item.isPinned)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(999),
+                                      color: kAnnPink.withOpacity(0.14),
+                                    ),
+                                    child: const Text(
+                                      'Закреплено',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        color: kAnnInk,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              const Spacer(),
-                              IconButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                icon: const Icon(
-                                  CupertinoIcons.xmark,
-                                  color: kAnnInk,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            item.title,
-                            style: const TextStyle(
-                              fontSize: 24,
-                              height: 1.12,
-                              fontWeight: FontWeight.w900,
-                              color: kAnnInk,
-                              letterSpacing: -0.6,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _formatDate(item.createdAt),
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: kAnnInkSoft,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            item.body,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              height: 1.5,
-                              color: kAnnInk,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-                          if (!widget.isOwner)
-                            DecoratedBox(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(18),
-                                gradient: LinearGradient(
-                                  colors: acknowledged
-                                      ? const [
-                                          Color(0xFF7B8BA3),
-                                          Color(0xFF8C9AB1),
-                                        ]
-                                      : const [kAnnBlue, kAnnViolet],
-                                ),
-                              ),
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  setLocalState(() {
-                                    acknowledged = true;
-                                  });
-                                  setState(() {
-                                    final idx =
-                                        _items.indexWhere((e) => e.id == item.id);
-                                    if (idx >= 0) {
-                                      _items[idx] = _items[idx].copyWith(
-                                        acknowledged: true,
-                                      );
-                                    }
-                                  });
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.transparent,
-                                  shadowColor: Colors.transparent,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 16,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(18),
+                                const Spacer(),
+                                IconButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  icon: const Icon(
+                                    CupertinoIcons.xmark,
+                                    color: kAnnInk,
                                   ),
                                 ),
-                                child: Text(
-                                  acknowledged
-                                      ? 'Ознакомлен'
-                                      : 'Отметить как ознакомлен',
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              item.title,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                height: 1.12,
+                                fontWeight: FontWeight.w900,
+                                color: kAnnInk,
+                                letterSpacing: -0.6,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _formatDate(item.createdAt),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: kAnnInkSoft,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              item.body,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                height: 1.5,
+                                color: kAnnInk,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            if (widget.isOwner) ...[
+                              _ownerStatsStrip(item),
+                              if (item.ackUsers.isNotEmpty) ...[
+                                const SizedBox(height: 14),
+                                const Text(
+                                  'Ознакомились',
+                                  style: TextStyle(
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w900,
+                                    color: kAnnInk,
                                   ),
                                 ),
+                                const SizedBox(height: 10),
+                                ...item.ackUsers.map(_ackUserTile),
+                              ],
+                              const SizedBox(height: 18),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(18),
+                                        gradient: const LinearGradient(
+                                          colors: [kAnnAccent, kAnnAccentSoft],
+                                        ),
+                                      ),
+                                      child: ElevatedButton(
+                                        onPressed: _deleteLoading
+                                            ? null
+                                            : () async {
+                                                Navigator.of(context).pop();
+                                                await _deleteAnnouncement(item);
+                                              },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.transparent,
+                                          shadowColor: Colors.transparent,
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 16,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(18),
+                                          ),
+                                        ),
+                                        child: _deleteLoading
+                                            ? const SizedBox(
+                                                width: 18,
+                                                height: 18,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2.2,
+                                                  color: Colors.white,
+                                                ),
+                                              )
+                                            : const Text(
+                                                'Удалить',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                        ],
+                            ] else
+                              DecoratedBox(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(18),
+                                  gradient: LinearGradient(
+                                    colors: acknowledged
+                                        ? const [
+                                            Color(0xFF7B8BA3),
+                                            Color(0xFF8C9AB1),
+                                          ]
+                                        : const [kAnnBlue, kAnnViolet],
+                                  ),
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: actionLoading || acknowledged
+                                      ? null
+                                      : () async {
+                                          setLocalState(() {
+                                            actionLoading = true;
+                                          });
+
+                                          try {
+                                            await _acknowledgeAnnouncement(item);
+
+                                            setLocalState(() {
+                                              acknowledged = true;
+                                            });
+
+                                            if (!mounted) return;
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                content:
+                                                    Text('Ознакомление отмечено'),
+                                                behavior:
+                                                    SnackBarBehavior.floating,
+                                              ),
+                                            );
+                                          } catch (_) {
+                                            if (!mounted) return;
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Не удалось отметить ознакомление',
+                                                ),
+                                                behavior:
+                                                    SnackBarBehavior.floating,
+                                              ),
+                                            );
+                                          } finally {
+                                            if (mounted) {
+                                              setLocalState(() {
+                                                actionLoading = false;
+                                              });
+                                            }
+                                          }
+                                        },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    shadowColor: Colors.transparent,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                  ),
+                                  child: actionLoading
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : Text(
+                                          acknowledged
+                                              ? 'Ознакомлен'
+                                              : 'Отметить как ознакомлен',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -718,11 +1005,11 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
         gradient: const LinearGradient(
-          colors: [kAnnBlue, kAnnPink],
+          colors: [kAnnAccent, kAnnAccentSoft],
         ),
         boxShadow: [
           BoxShadow(
-            color: kAnnBlue.withOpacity(0.22),
+            color: kAnnAccent.withOpacity(0.24),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -898,7 +1185,16 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                   ),
                 ),
                 const Spacer(),
-                if (!widget.isOwner)
+                if (widget.isOwner)
+                  Text(
+                    '${item.acknowledgedCount}/${item.totalStaffCount}',
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w900,
+                      color: kAnnAccent,
+                    ),
+                  )
+                else
                   Text(
                     item.acknowledged ? 'Ознакомлен' : 'Не ознакомлен',
                     style: TextStyle(
@@ -1154,6 +1450,41 @@ class _PressableState extends State<_Pressable> {
   }
 }
 
+class _AnnouncementAckUser {
+  final String name;
+  final String acknowledgedAt;
+
+  const _AnnouncementAckUser({
+    required this.name,
+    required this.acknowledgedAt,
+  });
+
+  factory _AnnouncementAckUser.fromJson(Map<String, dynamic> json) {
+    return _AnnouncementAckUser(
+      name: json['name']?.toString() ??
+          json['user_name']?.toString() ??
+          json['full_name']?.toString() ??
+          'Сотрудник',
+      acknowledgedAt: json['acknowledged_at']?.toString() ?? '',
+    );
+  }
+
+  String get shortLabel {
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    if (parts.isEmpty) return '—';
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    final single = parts.first.toUpperCase();
+    return single.length >= 2 ? single.substring(0, 2) : single;
+  }
+}
+
 class _AnnouncementItem {
   final String id;
   final String title;
@@ -1161,6 +1492,10 @@ class _AnnouncementItem {
   final bool isPinned;
   final bool acknowledged;
   final String createdAt;
+  final int acknowledgedCount;
+  final int totalStaffCount;
+  final bool canDelete;
+  final List<_AnnouncementAckUser> ackUsers;
 
   _AnnouncementItem({
     required this.id,
@@ -1169,6 +1504,10 @@ class _AnnouncementItem {
     required this.isPinned,
     required this.acknowledged,
     required this.createdAt,
+    required this.acknowledgedCount,
+    required this.totalStaffCount,
+    required this.canDelete,
+    required this.ackUsers,
   });
 
   factory _AnnouncementItem.fromJson(Map<String, dynamic> json) {
@@ -1179,20 +1518,39 @@ class _AnnouncementItem {
       return s == 'true' || s == '1' || s == 'yes';
     }
 
+    final rawUsers = (json['ack_users'] is List)
+        ? json['ack_users'] as List<dynamic>
+        : (json['acknowledged_users'] is List)
+            ? json['acknowledged_users'] as List<dynamic>
+            : const <dynamic>[];
+
     return _AnnouncementItem(
       id: json['announcement_id']?.toString() ?? json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? 'Объявление',
       body: json['body']?.toString() ?? '',
       isPinned: parseBool(json['is_pinned']),
       acknowledged: parseBool(
-        json['acknowledged'] ?? json['is_read'] ?? json['seen'],
+        json['acknowledged'] ??
+            json['is_acknowledged'] ??
+            json['is_read'] ??
+            json['seen'],
       ),
       createdAt: json['created_at']?.toString() ?? '',
+      acknowledgedCount: (json['acknowledged_count'] as num?)?.toInt() ?? 0,
+      totalStaffCount: (json['total_staff_count'] as num?)?.toInt() ?? 0,
+      canDelete: parseBool(json['can_delete']),
+      ackUsers: rawUsers
+          .whereType<Map>()
+          .map((e) => _AnnouncementAckUser.fromJson(
+                Map<String, dynamic>.from(e as Map),
+              ))
+          .toList(),
     );
   }
 
   _AnnouncementItem copyWith({
     bool? acknowledged,
+    int? acknowledgedCount,
   }) {
     return _AnnouncementItem(
       id: id,
@@ -1201,6 +1559,10 @@ class _AnnouncementItem {
       isPinned: isPinned,
       acknowledged: acknowledged ?? this.acknowledged,
       createdAt: createdAt,
+      acknowledgedCount: acknowledgedCount ?? this.acknowledgedCount,
+      totalStaffCount: totalStaffCount,
+      canDelete: canDelete,
+      ackUsers: ackUsers,
     );
   }
 

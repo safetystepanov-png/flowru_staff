@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -12,7 +13,6 @@ import '../../../auth/data/auth_storage.dart';
 import '../../../../core/config/app_config.dart';
 import '../widgets/staff_glass_ui.dart';
 import 'owner_requests_screen.dart';
-import 'owner_schedule_planner_screen.dart';
 import 'staff_announcements_screen.dart';
 import 'staff_chat_screen.dart';
 import 'staff_client_search_screen.dart';
@@ -68,6 +68,11 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   late final AnimationController _introController;
   late final AnimationController _ambientController;
 
+  List<_PinnedAnnouncement> _pinnedAnnouncements = <_PinnedAnnouncement>[];
+  int _pinnedIndex = 0;
+  Timer? _pinnedTimer;
+  bool _pinActionLoading = false;
+
   bool get _isOwner {
     final role = widget.role.trim().toLowerCase();
     return role == 'owner' || role == 'admin';
@@ -99,6 +104,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
 
   @override
   void dispose() {
+    _pinnedTimer?.cancel();
     _introController.dispose();
     _ambientController.dispose();
     super.dispose();
@@ -110,6 +116,19 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       throw Exception('Access token not found');
     }
     return token;
+  }
+
+  void _restartPinnedTimer() {
+    _pinnedTimer?.cancel();
+
+    if (_pinnedAnnouncements.length <= 1) return;
+
+    _pinnedTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted || _pinnedAnnouncements.length <= 1) return;
+      setState(() {
+        _pinnedIndex = (_pinnedIndex + 1) % _pinnedAnnouncements.length;
+      });
+    });
   }
 
   Future<void> _loadDashboard() async {
@@ -129,6 +148,10 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         '${AppConfig.baseUrl}/api/v1/staff/announcements?establishment_id=${widget.establishmentId}',
       );
 
+      final pinnedUri = Uri.parse(
+        '${AppConfig.baseUrl}/api/v1/staff/announcements/pinned?establishment_id=${widget.establishmentId}',
+      );
+
       final responses = await Future.wait([
         http.get(
           chatUri,
@@ -144,10 +167,18 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
             'Accept': 'application/json',
           },
         ),
+        http.get(
+          pinnedUri,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
       ]);
 
       final chatResponse = responses[0];
       final annResponse = responses[1];
+      final pinnedResponse = responses[2];
 
       if (chatResponse.statusCode != 200) {
         throw Exception(
@@ -159,9 +190,15 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           'ann count failed: ${annResponse.statusCode} body=${annResponse.body}',
         );
       }
+      if (pinnedResponse.statusCode != 200) {
+        throw Exception(
+          'pinned announcements failed: ${pinnedResponse.statusCode} body=${pinnedResponse.body}',
+        );
+      }
 
       final chatDecoded = jsonDecode(chatResponse.body);
       final annDecoded = jsonDecode(annResponse.body);
+      final pinnedDecoded = jsonDecode(pinnedResponse.body);
 
       List<dynamic> chatItems;
       if (chatDecoded is List) {
@@ -183,14 +220,36 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         annItems = [];
       }
 
+      List<dynamic> pinnedItems;
+      if (pinnedDecoded is List) {
+        pinnedItems = pinnedDecoded;
+      } else if (pinnedDecoded is Map<String, dynamic> &&
+          pinnedDecoded['items'] is List) {
+        pinnedItems = pinnedDecoded['items'] as List<dynamic>;
+      } else {
+        pinnedItems = [];
+      }
+
+      final pinned = pinnedItems
+          .whereType<Map>()
+          .map((e) => _PinnedAnnouncement.fromJson(
+                Map<String, dynamic>.from(e as Map),
+              ))
+          .toList();
+
       if (!mounted) return;
 
       setState(() {
         _chatCount = chatItems.length;
         _announcementCount = annItems.length;
+        _pinnedAnnouncements = pinned;
+        if (_pinnedIndex >= _pinnedAnnouncements.length) {
+          _pinnedIndex = 0;
+        }
         _loading = false;
       });
 
+      _restartPinnedTimer();
       _introController.forward(from: 0);
     } catch (e, st) {
       debugPrint('HOME LOAD ERROR: $e');
@@ -202,6 +261,72 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         _error = 'Не удалось загрузить главную: $e';
       });
       _introController.forward(from: 0);
+    }
+  }
+
+  Future<void> _acknowledgePinned(_PinnedAnnouncement item) async {
+    if (_pinActionLoading || _isOwner || item.isAcknowledged) return;
+
+    setState(() {
+      _pinActionLoading = true;
+    });
+
+    try {
+      final token = await _token();
+
+      final uri = Uri.parse(
+        '${AppConfig.baseUrl}/api/v1/staff/announcements/${item.announcementId}/acknowledge',
+      );
+
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'establishment_id': widget.establishmentId,
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(
+          'ack failed: ${response.statusCode} body=${response.body}',
+        );
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _pinnedAnnouncements = _pinnedAnnouncements.map((e) {
+          if (e.announcementId != item.announcementId) return e;
+          return e.copyWith(
+            isAcknowledged: true,
+            acknowledgedCount: e.acknowledgedCount + 1,
+          );
+        }).toList();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ознакомление отмечено'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Не удалось отметить ознакомление: $e'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _pinActionLoading = false;
+      });
     }
   }
 
@@ -289,20 +414,6 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         .push(
           MaterialPageRoute(
             builder: (_) => OwnerRequestsScreen(
-              establishmentId: widget.establishmentId,
-              establishmentName: widget.establishmentName,
-              role: widget.role,
-            ),
-          ),
-        )
-        .then((_) => _loadDashboard());
-  }
-
-  void _openOwnerPlanner() {
-    Navigator.of(context)
-        .push(
-          MaterialPageRoute(
-            builder: (_) => OwnerSchedulePlannerScreen(
               establishmentId: widget.establishmentId,
               establishmentName: widget.establishmentName,
               role: widget.role,
@@ -488,26 +599,6 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   height: 1.0,
                 ),
               ),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(999),
-                  color: Colors.white.withOpacity(0.12),
-                  border: Border.all(color: Colors.white.withOpacity(0.18)),
-                ),
-                child: Text(
-                  _roleLabel,
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -575,7 +666,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  _isOwner ? 'Управление\nзаведением' : 'Быстрая работа\nс клиентами',
+                  _isOwner
+                      ? 'Быстрая работа\nс клиентами'
+                      : 'Быстрая работа\nс клиентами',
                   style: const TextStyle(
                     fontSize: 29,
                     height: 1.02,
@@ -587,7 +680,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 const SizedBox(height: 8),
                 Text(
                   _isOwner
-                      ? 'Согласования, график, объявления, история и контроль команды.'
+                      ? 'Поиск, начисления, списания, награды и ключевые действия по заведению.'
                       : 'Поиск, чат, объявления и история — всё под рукой.',
                   style: TextStyle(
                     fontSize: 14,
@@ -602,6 +695,145 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           const SizedBox(width: 14),
           const _DecorPercent(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPinnedAnnouncementBanner() {
+    if (_pinnedAnnouncements.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final item = _pinnedAnnouncements[_pinnedIndex];
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 350),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      child: Container(
+        key: ValueKey('${item.announcementId}_$_pinnedIndex'),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+          gradient: const LinearGradient(
+            colors: [kHomeAccent, kHomeAccentSoft],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: kHomeAccent.withOpacity(0.32),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    color: Colors.white.withOpacity(0.18),
+                    border: Border.all(color: Colors.white.withOpacity(0.20)),
+                  ),
+                  child: const Text(
+                    'ЗАКРЕПЛЕНО',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                if (_pinnedAnnouncements.length > 1)
+                  Text(
+                    '${_pinnedIndex + 1}/${_pinnedAnnouncements.length}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white.withOpacity(0.92),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              item.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 25,
+                height: 1.02,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.8,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              item.body,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.35,
+                fontWeight: FontWeight.w700,
+                color: Colors.white.withOpacity(0.94),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                if (_isOwner)
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        color: Colors.white.withOpacity(0.16),
+                        border: Border.all(color: Colors.white.withOpacity(0.18)),
+                      ),
+                      child: Text(
+                        'Ознакомлены: ${item.acknowledgedCount}/${item.totalStaffCount}',
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  _PinnedActionButton(
+                    text: item.isAcknowledged ? 'Ознакомлен' : 'Ознакомлен',
+                    isLoading: _pinActionLoading,
+                    isDone: item.isAcknowledged,
+                    onTap: item.isAcknowledged
+                        ? null
+                        : () => _acknowledgePinned(item),
+                  ),
+                const SizedBox(width: 10),
+                _PinnedActionButton(
+                  text: 'Открыть',
+                  onTap: _openAnnouncements,
+                  isSecondary: true,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -734,10 +966,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                               borderRadius: BorderRadius.circular(18),
                               color: kHomeInk.withOpacity(0.06),
                             ),
-                            child: Icon(
-                              _isOwner
-                                  ? CupertinoIcons.person_2_fill
-                                  : CupertinoIcons.search,
+                            child: const Icon(
+                              CupertinoIcons.search,
                               size: 26,
                               color: kHomeInk,
                             ),
@@ -745,9 +975,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                         ],
                       ),
                       const SizedBox(height: 20),
-                      Text(
-                        _isOwner ? 'Клиенты и команда' : 'Найти клиента',
-                        style: const TextStyle(
+                      const Text(
+                        'Найти клиента',
+                        style: TextStyle(
                           fontSize: 31,
                           height: 1.02,
                           fontWeight: FontWeight.w900,
@@ -758,7 +988,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                       const SizedBox(height: 10),
                       Text(
                         _isOwner
-                            ? 'Главная быстрая точка входа владельца: работа с клиентами и контроль процессов.'
+                            ? 'Главное действие владельца на экране. Быстрый вход в работу с клиентом.'
                             : 'Главное действие на экране.\nБыстрый поиск по телефону, имени или номеру клиента.',
                         style: const TextStyle(
                           fontSize: 14.5,
@@ -785,30 +1015,26 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                             ),
                           ],
                         ),
-                        child: Row(
+                        child: const Row(
                           children: [
                             Icon(
-                              _isOwner
-                                  ? CupertinoIcons.person_2_fill
-                                  : CupertinoIcons.search,
+                              CupertinoIcons.search,
                               color: kHomeInkSoft,
                               size: 20,
                             ),
-                            const SizedBox(width: 10),
+                            SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                _isOwner
-                                    ? 'Клиенты, начисления, списания, награды'
-                                    : 'Телефон, имя, номер клиента',
-                                style: const TextStyle(
+                                'Телефон, имя, номер клиента',
+                                style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
                                   color: kHomeInkSoft,
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            const _MiniActionPill(),
+                            SizedBox(width: 8),
+                            _MiniActionPill(),
                           ],
                         ),
                       ),
@@ -829,7 +1055,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         Expanded(
           child: _ModuleCard(
             title: 'Чат',
-            subtitle: _chatCount > 0 ? 'Есть новые сообщения' : 'Все просмотрено',
+            subtitle: '',
             icon: CupertinoIcons.chat_bubble_2,
             glowColor: kHomeBlue,
             onTap: _openChat,
@@ -840,8 +1066,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         Expanded(
           child: _ModuleCard(
             title: 'Объявления',
-            subtitle:
-                _announcementCount > 0 ? 'Есть новые' : 'Все просмотрено',
+            subtitle: '',
             icon: CupertinoIcons.bell,
             glowColor: kHomePink,
             onTap: _openAnnouncements,
@@ -1000,7 +1225,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Согласования',
+                    'График и согласования',
                     style: TextStyle(
                       fontSize: 18.5,
                       fontWeight: FontWeight.w900,
@@ -1009,7 +1234,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Графики, замены и запросы сотрудников',
+                    'Запросы сотрудников, замены и публикация графика',
                     style: TextStyle(
                       fontSize: 13.5,
                       height: 1.35,
@@ -1037,116 +1262,6 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildOwnerPlannerCard() {
-    return _Pressable(
-      onTap: _openOwnerPlanner,
-      borderRadius: 30,
-      child: _GlassCard(
-        padding: const EdgeInsets.all(18),
-        radius: 30,
-        child: Row(
-          children: [
-            const _FloatingGlyph(
-              icon: CupertinoIcons.calendar_badge_plus,
-              mainColor: kHomeBlue,
-              secondaryColor: kHomeViolet,
-              size: 68,
-              iconSize: 30,
-            ),
-            const SizedBox(width: 15),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Заполнить график',
-                    style: TextStyle(
-                      fontSize: 18.5,
-                      fontWeight: FontWeight.w900,
-                      color: kHomeInk,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Сформировать и сохранить график месяца',
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      height: 1.35,
-                      fontWeight: FontWeight.w700,
-                      color: kHomeInkSoft,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: Colors.white.withOpacity(0.72),
-                border: Border.all(color: Colors.white.withOpacity(0.72)),
-              ),
-              child: const Icon(
-                CupertinoIcons.chevron_right,
-                size: 18,
-                color: kHomeInk,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTipCard() {
-    return _GlassCard(
-      padding: const EdgeInsets.all(18),
-      radius: 30,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _FloatingGlyph(
-            icon: CupertinoIcons.lightbulb_fill,
-            mainColor: kHomeAccent,
-            secondaryColor: kHomePink,
-            size: 68,
-            iconSize: 30,
-          ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _isOwner ? 'Режим владельца' : 'Подсказка',
-                  style: const TextStyle(
-                    fontSize: 18.5,
-                    fontWeight: FontWeight.w900,
-                    color: kHomeInk,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _isOwner
-                      ? 'Сначала согласуйте пожелания, затем откройте «Заполнить график» и сохраните итоговый месяц.'
-                      : 'Если появились новые сообщения или объявления, справа будет зелёная пульсация.',
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    height: 1.35,
-                    fontWeight: FontWeight.w700,
-                    color: kHomeInkSoft,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1237,7 +1352,13 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                           const SizedBox(height: 18),
                           _stagger(index: 1, child: _buildPromoBanner()),
                           const SizedBox(height: 14),
-                          _stagger(index: 2, child: _buildSearchHeroCard()),
+                          if (_pinnedAnnouncements.isNotEmpty) ...[
+                            _stagger(index: 2, child: _buildPinnedAnnouncementBanner()),
+                            const SizedBox(height: 14),
+                            _stagger(index: 3, child: _buildSearchHeroCard()),
+                          ] else ...[
+                            _stagger(index: 2, child: _buildSearchHeroCard()),
+                          ],
                           const SizedBox(height: 14),
                           _stagger(index: 3, child: _buildTopModulesRow()),
                           const SizedBox(height: 16),
@@ -1263,19 +1384,120 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                           if (_isOwner) ...[
                             staggered(_buildOwnerRequestsCard()),
                             const SizedBox(height: 12),
-                            staggered(_buildOwnerPlannerCard()),
-                            const SizedBox(height: 12),
                           ],
                           staggered(_buildHistoryCard()),
                           const SizedBox(height: 12),
                           staggered(_buildWorkScheduleCard()),
-                          const SizedBox(height: 12),
-                          staggered(_buildTipCard()),
                         ],
                       ),
                     ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PinnedAnnouncement {
+  final String announcementId;
+  final String title;
+  final String body;
+  final bool isAcknowledged;
+  final int acknowledgedCount;
+  final int totalStaffCount;
+
+  const _PinnedAnnouncement({
+    required this.announcementId,
+    required this.title,
+    required this.body,
+    required this.isAcknowledged,
+    required this.acknowledgedCount,
+    required this.totalStaffCount,
+  });
+
+  factory _PinnedAnnouncement.fromJson(Map<String, dynamic> json) {
+    return _PinnedAnnouncement(
+      announcementId: json['announcement_id']?.toString() ?? '',
+      title: json['title']?.toString() ?? 'Объявление',
+      body: json['body']?.toString() ?? '',
+      isAcknowledged: json['is_acknowledged'] == true,
+      acknowledgedCount: (json['acknowledged_count'] as num?)?.toInt() ?? 0,
+      totalStaffCount: (json['total_staff_count'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  _PinnedAnnouncement copyWith({
+    String? announcementId,
+    String? title,
+    String? body,
+    bool? isAcknowledged,
+    int? acknowledgedCount,
+    int? totalStaffCount,
+  }) {
+    return _PinnedAnnouncement(
+      announcementId: announcementId ?? this.announcementId,
+      title: title ?? this.title,
+      body: body ?? this.body,
+      isAcknowledged: isAcknowledged ?? this.isAcknowledged,
+      acknowledgedCount: acknowledgedCount ?? this.acknowledgedCount,
+      totalStaffCount: totalStaffCount ?? this.totalStaffCount,
+    );
+  }
+}
+
+class _PinnedActionButton extends StatelessWidget {
+  final String text;
+  final VoidCallback? onTap;
+  final bool isSecondary;
+  final bool isLoading;
+  final bool isDone;
+
+  const _PinnedActionButton({
+    required this.text,
+    this.onTap,
+    this.isSecondary = false,
+    this.isLoading = false,
+    this.isDone = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: isSecondary
+          ? Colors.white.withOpacity(0.16)
+          : (isDone ? Colors.white.withOpacity(0.26) : Colors.white),
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: Colors.white.withOpacity(isSecondary ? 0.20 : 0.0),
+            ),
+          ),
+          child: isLoading
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation(
+                      isSecondary ? Colors.white : kHomeAccent,
+                    ),
+                  ),
+                )
+              : Text(
+                  text,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w900,
+                    color: isSecondary ? Colors.white : kHomeAccent,
+                  ),
+                ),
         ),
       ),
     );
@@ -1588,16 +1810,18 @@ class _ModuleCard extends StatelessWidget {
                 letterSpacing: -0.4,
               ),
             ),
-            const SizedBox(height: 5),
-            Text(
-              subtitle,
-              style: const TextStyle(
-                fontSize: 13.5,
-                height: 1.34,
-                fontWeight: FontWeight.w700,
-                color: kHomeInkSoft,
+            if (subtitle.isNotEmpty) ...[
+              const SizedBox(height: 5),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  height: 1.34,
+                  fontWeight: FontWeight.w700,
+                  color: kHomeInkSoft,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

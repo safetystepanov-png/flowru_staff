@@ -42,7 +42,6 @@ class PublishedScheduleDay {
   factory PublishedScheduleDay.fromJson(Map<String, dynamic> json) {
     final rawDate = json['date']?.toString() ?? '';
     final parsed = DateTime.tryParse(rawDate);
-
     return PublishedScheduleDay(
       date: parsed == null
           ? DateTime.now()
@@ -101,7 +100,6 @@ class StaffPublishedScheduleApi {
     required int month,
   }) async {
     final token = await _token();
-
     final uri = Uri.parse(
       '${AppConfig.baseUrl}/api/v1/staff/schedule/month?establishment_id=$establishmentId&year=$year&month=$month',
     );

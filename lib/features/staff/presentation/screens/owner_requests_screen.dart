@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import '../../data/staff_owner_requests_api.dart';
 import '../widgets/staff_glass_ui.dart';
+import 'owner_schedule_planner_screen.dart';
 
 const Color kOwnerReqMintTop = Color(0xFF0CB7B3);
 const Color kOwnerReqMintMid = Color(0xFF08A9AB);
@@ -81,6 +82,7 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
 
   int get _scheduleCount => _items.where((e) => e.isSchedule).length;
   int get _swapCount => _items.where((e) => e.isSwap).length;
+  int get _pendingCount => _items.where((e) => e.status == 'pending').length;
 
   Future<void> _load() async {
     setState(() {
@@ -124,13 +126,19 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Запрос согласован')),
+        const SnackBar(
+          content: Text('Запрос согласован'),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       await _load();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка согласования: $e')),
+        SnackBar(
+          content: Text('Ошибка согласования: $e'),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } finally {
       if (mounted) {
@@ -152,19 +160,39 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Запрос отклонен')),
+        const SnackBar(
+          content: Text('Запрос отклонен'),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       await _load();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка отклонения: $e')),
+        SnackBar(
+          content: Text('Ошибка отклонения: $e'),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } finally {
       if (mounted) {
         setState(() => _busy = false);
       }
     }
+  }
+
+  void _openPlanner() {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => OwnerSchedulePlannerScreen(
+              establishmentId: widget.establishmentId,
+              establishmentName: widget.establishmentName,
+              role: widget.role,
+            ),
+          ),
+        )
+        .then((_) => _load());
   }
 
   Widget _stagger({
@@ -404,7 +432,7 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
                 ),
                 const SizedBox(height: 14),
                 const Text(
-                  'Запросы и\nсогласования',
+                  'График и\nсогласования',
                   style: TextStyle(
                     fontSize: 29,
                     height: 1.02,
@@ -415,7 +443,7 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Все входящие графики и запросы команды в одном месте.',
+                  'Обрабатывай входящие запросы и переходи к публикации графика месяца.',
                   style: TextStyle(
                     fontSize: 14,
                     height: 1.4,
@@ -449,9 +477,11 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Согласования владельца',
-            style: TextStyle(
+          Text(
+            _pendingCount > 0
+                ? 'Ожидают решения: $_pendingCount'
+                : 'Нет запросов, ожидающих решения',
+            style: const TextStyle(
               fontSize: 14.5,
               fontWeight: FontWeight.w800,
               color: kOwnerReqInkSoft,
@@ -486,11 +516,157 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
     );
   }
 
+  Widget _plannerEntryCard() {
+    return _Pressable(
+      onTap: _openPlanner,
+      borderRadius: 30,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: kOwnerReqAccent.withOpacity(0.24),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(30),
+                gradient: const LinearGradient(
+                  colors: [kOwnerReqAccent, kOwnerReqAccentSoft],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(22),
+                      color: Colors.white.withOpacity(0.18),
+                      border: Border.all(color: Colors.white.withOpacity(0.20)),
+                    ),
+                    child: const Icon(
+                      CupertinoIcons.calendar_badge_plus,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Открыть планировщик графика',
+                          style: TextStyle(
+                            fontSize: 18.5,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Назначение смен, ручная расстановка сотрудников и публикация месяца',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            height: 1.35,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      color: Colors.white.withOpacity(0.20),
+                    ),
+                    child: const Icon(
+                      CupertinoIcons.chevron_right,
+                      size: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _requestDaysBlock(OwnerRequestItem item) {
+    if (item.selectedDays.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.white.withOpacity(0.76),
+          border: Border.all(color: Colors.white.withOpacity(0.86)),
+        ),
+        child: const Text(
+          'Дни не указаны',
+          style: TextStyle(
+            fontSize: 13.2,
+            fontWeight: FontWeight.w700,
+            color: kOwnerReqInkSoft,
+          ),
+        ),
+      );
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: item.selectedDays
+          .map(
+            (day) => Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 11,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                color: kOwnerReqBlue.withOpacity(0.10),
+                border: Border.all(color: kOwnerReqBlue.withOpacity(0.14)),
+              ),
+              child: Text(
+                '$day',
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w900,
+                  color: kOwnerReqInk,
+                ),
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+
   Widget _requestCard(OwnerRequestItem item) {
     final isSwap = item.isSwap;
     final details = isSwap
-        ? (item.reason?.trim().isNotEmpty == true ? item.reason!.trim() : 'Без комментария')
-        : (item.selectedDays.isEmpty ? 'Дни не указаны' : 'Дни: ${item.selectedDays.join(', ')}');
+        ? (item.reason?.trim().isNotEmpty == true
+            ? item.reason!.trim()
+            : 'Без комментария')
+        : null;
 
     return _Pressable(
       onTap: () {
@@ -526,7 +702,8 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(999),
                     color: Colors.white.withOpacity(0.86),
@@ -552,17 +729,29 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
                 color: kOwnerReqInkSoft,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              details,
-              style: const TextStyle(
-                fontSize: 13.2,
-                height: 1.35,
-                fontWeight: FontWeight.w700,
-                color: kOwnerReqInkSoft,
-              ),
-            ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
+            if (isSwap)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(13),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  color: Colors.white.withOpacity(0.80),
+                  border: Border.all(color: Colors.white.withOpacity(0.90)),
+                ),
+                child: Text(
+                  details!,
+                  style: const TextStyle(
+                    fontSize: 13.2,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                    color: kOwnerReqInkSoft,
+                  ),
+                ),
+              )
+            else
+              _requestDaysBlock(item),
+            const SizedBox(height: 10),
             Text(
               _statusLabel(item.status),
               style: TextStyle(
@@ -616,7 +805,8 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
                       onPressed: _busy ? null : () => _reject(item),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: BorderSide(color: Colors.white.withOpacity(0.90)),
+                        side:
+                            BorderSide(color: Colors.white.withOpacity(0.90)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(18),
                         ),
@@ -642,7 +832,9 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
                 ),
                 child: Center(
                   child: Text(
-                    item.status == 'approved' ? 'Уже согласовано' : 'Уже отклонено',
+                    item.status == 'approved'
+                        ? 'Уже согласовано'
+                        : 'Уже отклонено',
                     style: TextStyle(
                       fontWeight: FontWeight.w900,
                       color: _statusColor(item.status),
@@ -652,51 +844,6 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
               ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _tipCard() {
-    return _GlassCard(
-      radius: 30,
-      padding: const EdgeInsets.all(18),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _FloatingGlyph(
-            icon: CupertinoIcons.lightbulb_fill,
-            mainColor: kOwnerReqAccent,
-            secondaryColor: kOwnerReqPink,
-            size: 68,
-            iconSize: 30,
-          ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Подсказка',
-                  style: TextStyle(
-                    fontSize: 18.5,
-                    fontWeight: FontWeight.w900,
-                    color: kOwnerReqInk,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Теперь кнопки работают с реальным backend. Следующим шагом подключим сюда живую отправку графика и замен со стороны сотрудника.',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    height: 1.35,
-                    fontWeight: FontWeight.w700,
-                    color: kOwnerReqInkSoft,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -858,7 +1005,7 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
 
   @override
   Widget build(BuildContext context) {
-    int nextIndex = 3;
+    int nextIndex = 4;
 
     Widget staggered(Widget child) {
       final current = nextIndex;
@@ -911,6 +1058,8 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
                     const SizedBox(height: 16),
                     _stagger(index: 2, child: _topCard()),
                     const SizedBox(height: 16),
+                    _stagger(index: 3, child: _plannerEntryCard()),
+                    const SizedBox(height: 16),
                     if (_loading)
                       _loadingCard()
                     else if (_error != null)
@@ -923,8 +1072,6 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
                         const SizedBox(height: 12),
                       ],
                     ],
-                    const SizedBox(height: 12),
-                    staggered(_tipCard()),
                   ],
                 ),
               ),
