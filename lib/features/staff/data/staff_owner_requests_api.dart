@@ -20,6 +20,8 @@ class OwnerRequestItem {
   final String? shiftDate;
   final String? comment;
   final String? reason;
+  final String? employeeRole;
+  final String? employeePhone;
 
   const OwnerRequestItem({
     required this.requestId,
@@ -36,6 +38,8 @@ class OwnerRequestItem {
     required this.shiftDate,
     required this.comment,
     required this.reason,
+    required this.employeeRole,
+    required this.employeePhone,
   });
 
   bool get isSchedule => requestType == 'schedule';
@@ -50,8 +54,15 @@ class OwnerRequestItem {
     return buildBaseLabel(employeeName);
   }
 
+  String get effectiveRole {
+    final role = employeeRole?.trim();
+    if (role != null && role.isNotEmpty) return role;
+    return isSwap ? 'Смена' : 'Сотрудник';
+  }
+
   factory OwnerRequestItem.fromScheduleJson(Map<String, dynamic> json) {
-    final employeeName = json['employee_name']?.toString().trim().isNotEmpty == true
+    final employeeName = json['employee_name']?.toString().trim().isNotEmpty ==
+            true
         ? json['employee_name']!.toString().trim()
         : 'Сотрудник';
 
@@ -84,11 +95,14 @@ class OwnerRequestItem {
       shiftDate: null,
       comment: json['comment']?.toString(),
       reason: null,
+      employeeRole: json['employee_role']?.toString(),
+      employeePhone: json['employee_phone']?.toString(),
     );
   }
 
   factory OwnerRequestItem.fromSwapJson(Map<String, dynamic> json) {
-    final employeeName = json['requester_name']?.toString().trim().isNotEmpty == true
+    final employeeName = json['requester_name']?.toString().trim().isNotEmpty ==
+            true
         ? json['requester_name']!.toString().trim()
         : 'Сотрудник';
 
@@ -113,15 +127,24 @@ class OwnerRequestItem {
       shiftDate: shiftDate,
       comment: null,
       reason: json['reason']?.toString(),
+      employeeRole: json['employee_role']?.toString(),
+      employeePhone: json['employee_phone']?.toString(),
     );
   }
 
-
   static String buildBaseLabel(String rawName) {
     final name = rawName.trim();
-    if (name.isEmpty || name.toLowerCase() == 'сотрудник') return 'EM';
-    final parts = name.split(RegExp(r'\s+')).where((e) => e.trim().isNotEmpty).toList();
-    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    if (name.isEmpty || name.toLowerCase() == 'сотрудник') return 'EMP';
+
+    final parts = name
+        .split(RegExp(r'\s+'))
+        .where((e) => e.trim().isNotEmpty)
+        .toList();
+
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+
     final word = parts.first.toUpperCase();
     if (word.length >= 3) return word.substring(0, 3);
     if (word.length == 2) return word;

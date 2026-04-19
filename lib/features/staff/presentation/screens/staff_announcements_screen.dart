@@ -6,6 +6,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../auth/data/auth_storage.dart';
 import '../../../../core/config/app_config.dart';
@@ -30,6 +31,8 @@ const Color kAnnBlue = Color(0xFF4E7CFF);
 const Color kAnnPink = Color(0xFFFF5F8F);
 const Color kAnnViolet = Color(0xFF7A63FF);
 const Color kAnnDanger = Color(0xFFE35D5B);
+const Color kAnnSuccess = Color(0xFF22C55E);
+const Color kAnnSuccessSoft = Color(0xFF4ADE80);
 
 class StaffAnnouncementsScreen extends StatefulWidget {
   final int establishmentId;
@@ -82,12 +85,45 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
     super.dispose();
   }
 
+  String get _seenAnnouncementsKey =>
+      'staff_announcements_seen_marker_${widget.establishmentId}';
+
   Future<String> _token() async {
     final token = await AuthStorage.getAccessToken();
     if (token == null || token.isEmpty) {
       throw Exception('Access token not found');
     }
     return token;
+  }
+
+  String _buildLatestMarker(List<dynamic> raw) {
+    if (raw.isEmpty) return '';
+
+    String latestId = '';
+    String latestCreatedAt = '';
+
+    for (final item in raw) {
+      if (item is! Map) continue;
+      final map = Map<String, dynamic>.from(item as Map);
+      final id = map['announcement_id']?.toString() ?? map['id']?.toString() ?? '';
+      final createdAt = map['created_at']?.toString() ?? '';
+
+      if (createdAt.isEmpty && id.isEmpty) continue;
+
+      if (latestCreatedAt.isEmpty || createdAt.compareTo(latestCreatedAt) > 0) {
+        latestId = id;
+        latestCreatedAt = createdAt;
+      }
+    }
+
+    if (latestId.isEmpty && latestCreatedAt.isEmpty) return '';
+    return '$latestId|$latestCreatedAt';
+  }
+
+  Future<void> _markAnnouncementsSeenByMarker(String marker) async {
+    if (marker.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_seenAnnouncementsKey, marker);
   }
 
   Future<void> _load() async {
@@ -126,6 +162,9 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
       } else {
         raw = [];
       }
+
+      final latestMarker = _buildLatestMarker(raw);
+      await _markAnnouncementsSeenByMarker(latestMarker);
 
       if (!mounted) return;
 
@@ -212,7 +251,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                           Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(20),
-                              color: kAnnPink.withOpacity(0.08),
+                              color: kAnnAccent.withOpacity(0.08),
                             ),
                             child: SwitchListTile(
                               contentPadding: const EdgeInsets.symmetric(
@@ -224,7 +263,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                   pinned = v;
                                 });
                               },
-                              activeColor: kAnnViolet,
+                              activeColor: kAnnAccent,
                               title: const Text(
                                 'Закрепить',
                                 style: TextStyle(
@@ -347,7 +386,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
         borderSide: const BorderSide(
-          color: kAnnViolet,
+          color: kAnnAccent,
           width: 1.4,
         ),
       ),
@@ -515,7 +554,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
         color: kAnnAccent.withOpacity(0.10),
-        border: Border.all(color: kAnnAccent.withOpacity(0.14)),
+        border: Border.all(color: kAnnAccent.withOpacity(0.16)),
       ),
       child: Row(
         children: [
@@ -556,7 +595,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
             height: 34,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: kAnnBlue.withOpacity(0.10),
+              color: kAnnSuccess.withOpacity(0.12),
             ),
             child: Center(
               child: Text(
@@ -564,7 +603,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                 style: const TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w900,
-                  color: kAnnBlue,
+                  color: kAnnSuccess,
                 ),
               ),
             ),
@@ -590,6 +629,66 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPinnedBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        gradient: const LinearGradient(
+          colors: [kAnnAccent, kAnnAccentSoft],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: kAnnAccent.withOpacity(0.22),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: const Text(
+        'Закреплено',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNewBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        gradient: const LinearGradient(
+          colors: [kAnnSuccess, kAnnSuccessSoft],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: kAnnSuccess.withOpacity(0.26),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: const Text(
+        'Новое',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          color: Colors.white,
+        ),
       ),
     );
   }
@@ -627,24 +726,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                           children: [
                             Row(
                               children: [
-                                if (item.isPinned)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(999),
-                                      color: kAnnPink.withOpacity(0.14),
-                                    ),
-                                    child: const Text(
-                                      'Закреплено',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w900,
-                                        color: kAnnInk,
-                                      ),
-                                    ),
-                                  ),
+                                if (item.isPinned) _buildPinnedBadge(),
                                 const Spacer(),
                                 IconButton(
                                   onPressed: () => Navigator.of(context).pop(),
@@ -688,19 +770,38 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                             const SizedBox(height: 18),
                             if (widget.isOwner) ...[
                               _ownerStatsStrip(item),
-                              if (item.ackUsers.isNotEmpty) ...[
-                                const SizedBox(height: 14),
-                                const Text(
-                                  'Ознакомились',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w900,
-                                    color: kAnnInk,
+                              const SizedBox(height: 14),
+                              const Text(
+                                'Ознакомились',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: kAnnInk,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              if (item.ackUsers.isNotEmpty)
+                                ...item.ackUsers.map(_ackUserTile)
+                              else
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(18),
+                                    color: Colors.white.withOpacity(0.90),
+                                    border:
+                                        Border.all(color: const Color(0xFFE7EEF0)),
+                                  ),
+                                  child: const Text(
+                                    'Пока нет списка сотрудников, которые ознакомились.',
+                                    style: TextStyle(
+                                      fontSize: 13.5,
+                                      height: 1.4,
+                                      fontWeight: FontWeight.w700,
+                                      color: kAnnInkSoft,
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 10),
-                                ...item.ackUsers.map(_ackUserTile),
-                              ],
                               const SizedBox(height: 18),
                               Row(
                                 children: [
@@ -759,11 +860,24 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                   gradient: LinearGradient(
                                     colors: acknowledged
                                         ? const [
-                                            Color(0xFF7B8BA3),
-                                            Color(0xFF8C9AB1),
+                                            kAnnSuccess,
+                                            kAnnSuccessSoft,
                                           ]
-                                        : const [kAnnBlue, kAnnViolet],
+                                        : const [
+                                            kAnnAccent,
+                                            kAnnAccentSoft,
+                                          ],
                                   ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: (acknowledged
+                                              ? kAnnSuccess
+                                              : kAnnAccent)
+                                          .withOpacity(0.24),
+                                      blurRadius: 14,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                  ],
                                 ),
                                 child: ElevatedButton(
                                   onPressed: actionLoading || acknowledged
@@ -829,14 +943,29 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                             color: Colors.white,
                                           ),
                                         )
-                                      : Text(
-                                          acknowledged
-                                              ? 'Ознакомлен'
-                                              : 'Отметить как ознакомлен',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w900,
-                                          ),
+                                      : Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (acknowledged) ...[
+                                              const Icon(
+                                                CupertinoIcons.check_mark,
+                                                color: Colors.white,
+                                                size: 16,
+                                              ),
+                                              const SizedBox(width: 8),
+                                            ],
+                                            Text(
+                                              acknowledged
+                                                  ? 'Ознакомлен'
+                                                  : 'Отметить как ознакомлен',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w900,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                 ),
                               ),
@@ -1087,52 +1216,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
           children: [
             Row(
               children: [
-                if (item.isPinned)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(999),
-                      color: kAnnPink.withOpacity(0.14),
-                    ),
-                    child: const Text(
-                      'Закреплено',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: kAnnInk,
-                      ),
-                    ),
-                  ),
-                if (item.isPinned) const SizedBox(width: 8),
-                if (!item.acknowledged && !widget.isOwner)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(999),
-                      color: kAnnViolet,
-                      boxShadow: [
-                        BoxShadow(
-                          color: kAnnViolet.withOpacity(0.22),
-                          blurRadius: 10,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: const Text(
-                      'Новое',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
+                if (item.isPinned) _buildPinnedBadge(),
                 const Spacer(),
                 Container(
                   width: 42,
@@ -1199,8 +1283,8 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                     item.acknowledged ? 'Ознакомлен' : 'Не ознакомлен',
                     style: TextStyle(
                       fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                      color: item.acknowledged ? kAnnBlue : kAnnViolet,
+                      fontWeight: FontWeight.w900,
+                      color: item.acknowledged ? kAnnSuccess : kAnnDanger,
                     ),
                   ),
               ],

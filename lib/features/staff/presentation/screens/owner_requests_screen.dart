@@ -80,9 +80,12 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
     return 'Сотрудник';
   }
 
-  int get _scheduleCount => _items.where((e) => e.isSchedule).length;
-  int get _swapCount => _items.where((e) => e.isSwap).length;
-  int get _pendingCount => _items.where((e) => e.status == 'pending').length;
+  List<OwnerRequestItem> get _pendingItems =>
+      _items.where((e) => e.status == 'pending').toList();
+
+  int get _scheduleCount => _pendingItems.where((e) => e.isSchedule).length;
+  int get _swapCount => _pendingItems.where((e) => e.isSwap).length;
+  int get _pendingCount => _pendingItems.length;
 
   Future<void> _load() async {
     setState(() {
@@ -443,7 +446,7 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Обрабатывай входящие запросы и переходи к публикации графика месяца.',
+                  'Показываем только то, что реально требует решения прямо сейчас.',
                   style: TextStyle(
                     fontSize: 14,
                     height: 1.4,
@@ -576,7 +579,7 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'Назначение смен, ручная расстановка сотрудников и публикация месяца',
+                          'Назначение смен, выбор сотрудников и публикация месяца',
                           style: TextStyle(
                             fontSize: 13.5,
                             height: 1.35,
@@ -761,87 +764,64 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
               ),
             ),
             const SizedBox(height: 16),
-            if (item.status == 'pending')
-              Row(
-                children: [
-                  Expanded(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        gradient: const LinearGradient(
-                          colors: [kOwnerReqBlue, kOwnerReqViolet],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: kOwnerReqBlue.withOpacity(0.24),
-                            blurRadius: 16,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
+            Row(
+              children: [
+                Expanded(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      gradient: const LinearGradient(
+                        colors: [kOwnerReqBlue, kOwnerReqViolet],
                       ),
-                      child: FilledButton(
-                        onPressed: _busy ? null : () => _approve(item),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: kOwnerReqBlue.withOpacity(0.24),
+                          blurRadius: 16,
+                          offset: const Offset(0, 10),
                         ),
-                        child: const Text(
-                          'Согласовать',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _busy ? null : () => _reject(item),
-                      style: OutlinedButton.styleFrom(
+                    child: FilledButton(
+                      onPressed: _busy ? null : () => _approve(item),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        side:
-                            BorderSide(color: Colors.white.withOpacity(0.90)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(18),
                         ),
                       ),
                       child: const Text(
-                        'Отклонить',
+                        'Согласовать',
                         style: TextStyle(
+                          color: Colors.white,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
                     ),
                   ),
-                ],
-              )
-            else
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  color: Colors.white.withOpacity(0.78),
-                  border: Border.all(color: Colors.white.withOpacity(0.90)),
                 ),
-                child: Center(
-                  child: Text(
-                    item.status == 'approved'
-                        ? 'Уже согласовано'
-                        : 'Уже отклонено',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      color: _statusColor(item.status),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _busy ? null : () => _reject(item),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: BorderSide(color: Colors.white.withOpacity(0.90)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                    child: const Text(
+                      'Отклонить',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
+            ),
           ],
         ),
       ),
@@ -957,7 +937,7 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
           _EmptyOrb(),
           SizedBox(height: 16),
           Text(
-            'Пока нет входящих запросов',
+            'Нет активных запросов',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 19,
@@ -967,7 +947,7 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
           ),
           SizedBox(height: 8),
           Text(
-            'Когда сотрудники отправят графики или замены, они появятся здесь.',
+            'Согласованные и отклоненные больше не показываем. Здесь только то, что ждет решения.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
@@ -1012,6 +992,8 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
       nextIndex += 1;
       return _stagger(index: current, child: child);
     }
+
+    final visibleItems = _pendingItems;
 
     return Scaffold(
       backgroundColor: kOwnerReqMintTop,
@@ -1064,10 +1046,10 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
                       _loadingCard()
                     else if (_error != null)
                       _errorCard()
-                    else if (_items.isEmpty)
+                    else if (visibleItems.isEmpty)
                       _emptyCard()
                     else ...[
-                      for (final item in _items) ...[
+                      for (final item in visibleItems) ...[
                         staggered(_requestCard(item)),
                         const SizedBox(height: 12),
                       ],

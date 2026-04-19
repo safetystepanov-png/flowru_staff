@@ -53,6 +53,7 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
 
   late DateTime _targetMonth;
   List<OwnerRequestItem> _requests = const [];
+  List<OwnerScheduleEmployee> _employees = const [];
   final Map<DateTime, List<_PlannerAssignment>> _selectedByDay = {};
 
   static const List<String> _monthNames = [
@@ -104,9 +105,17 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
     });
 
     try {
-      final bundle = await _requestsApi.getOwnerRequests(
-        establishmentId: widget.establishmentId,
-      );
+      final results = await Future.wait([
+        _requestsApi.getOwnerRequests(
+          establishmentId: widget.establishmentId,
+        ),
+        _scheduleApi.getEmployees(
+          establishmentId: widget.establishmentId,
+        ),
+      ]);
+
+      final bundle = results[0] as OwnerRequestsBundle;
+      final employees = results[1] as List<OwnerScheduleEmployee>;
 
       final filtered = bundle.items.where((item) {
         if (!item.isSchedule) return false;
@@ -127,6 +136,7 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
       if (!mounted) return;
       setState(() {
         _requests = filtered;
+        _employees = employees;
         _loading = false;
       });
       _introController.forward(from: 0);
@@ -134,7 +144,7 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Не удалось загрузить согласованные пожелания';
+        _error = 'Не удалось загрузить данные планировщика';
       });
       _introController.forward(from: 0);
     }
@@ -163,29 +173,11 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
     return '${_monthNames[month.month - 1]} ${month.year}';
   }
 
-  String _shortEmployeeLabel(String name) {
-    final parts = name
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((e) => e.isNotEmpty)
-        .toList();
-
-    if (parts.isEmpty) return '??';
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    final single = parts.first.toUpperCase();
-    return single.length >= 3 ? single.substring(0, 3) : single;
-  }
-
   Future<void> _pickDay(DateTime date) async {
     if (date.month != _targetMonth.month) return;
 
     final approved =
         _requests.where((item) => item.selectedDays.contains(date.day)).toList();
-
-    final manualNameController = TextEditingController();
-    final manualCodeController = TextEditingController();
 
     await showDialog<void>(
       context: context,
@@ -200,14 +192,10 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
             .where((e) => e.isManual)
             .toList();
 
+        OwnerScheduleEmployee? selectedEmployee;
+
         return StatefulBuilder(
           builder: (context, setLocalState) {
-            List<_PlannerAssignment> currentManualItems() {
-              return [
-                ...manualItems,
-              ];
-            }
-
             void syncSelectedFromManual() {
               for (final manual in manualItems) {
                 selected.add(manual.uniqueKey);
@@ -217,18 +205,10 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
             syncSelectedFromManual();
 
             Future<void> addManualEmployee() async {
-              final name = manualNameController.text.trim();
-              final code = manualCodeController.text.trim();
+              final employee = selectedEmployee;
+              if (employee == null) return;
 
-              if (name.isEmpty) return;
-
-              final safeCode =
-                  code.isEmpty ? _shortEmployeeLabel(name) : code.toUpperCase();
-
-              final manual = _PlannerAssignment.manual(
-                employeeName: name,
-                badge: safeCode,
-              );
+              final manual = _PlannerAssignment.fromEmployee(employee);
 
               final exists =
                   manualItems.any((e) => e.uniqueKey == manual.uniqueKey);
@@ -238,8 +218,7 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
               setLocalState(() {
                 manualItems.add(manual);
                 selected.add(manual.uniqueKey);
-                manualNameController.clear();
-                manualCodeController.clear();
+                selectedEmployee = null;
               });
             }
 
@@ -426,7 +405,7 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
                             }),
                           const SizedBox(height: 10),
                           const Text(
-                            'Ручное назначение',
+                            'Ручное назначение сотрудника',
                             style: TextStyle(
                               fontSize: 14.5,
                               fontWeight: FontWeight.w900,
@@ -434,45 +413,55 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
                             ),
                           ),
                           const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: TextField(
-                                  controller: manualNameController,
-                                  decoration: _inputDecoration(
-                                    'Имя сотрудника',
+                          DropdownButtonFormField<String>(
+                            value: selectedEmployee?.employeeUserId,
+                            decoration: _inputDecoration('Выберите сотрудника'),
+                            items: _employees
+                                .map(
+                                  (employee) => DropdownMenuItem<String>(
+                                    value: employee.employeeUserId,
+                                    child: Text(
+                                      employee.employeePhone != null &&
+                                              employee.employeePhone!
+                                                  .trim()
+                                                  .isNotEmpty
+                                          ? '${employee.employeeName} · ${employee.employeePhone}'
+                                          : employee.employeeName,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                flex: 2,
-                                child: TextField(
-                                  controller: manualCodeController,
-                                  maxLength: 3,
-                                  decoration: _inputDecoration(
-                                    'Метка',
-                                    counterText: '',
+                                )
+                                .toList(),
+                            onChanged: (value) {
+                              setLocalState(() {
+                                selectedEmployee = _employees.firstWhere(
+                                  (e) => e.employeeUserId == value,
+                                  orElse: () => const OwnerScheduleEmployee(
+                                    employeeUserId: '',
+                                    employeeName: '',
+                                    employeePhone: null,
+                                    employeeRole: null,
+                                    employeeLabel: null,
                                   ),
-                                  textCapitalization:
-                                      TextCapitalization.characters,
-                                ),
-                              ),
-                            ],
+                                );
+                                if (selectedEmployee!.employeeUserId.isEmpty) {
+                                  selectedEmployee = null;
+                                }
+                              });
+                            },
                           ),
                           const SizedBox(height: 10),
                           SizedBox(
                             width: double.infinity,
                             child: _OwnerFooterButton(
-                              label: 'Добавить вручную',
+                              label: 'Добавить сотрудника',
                               isPrimary: false,
                               onTap: addManualEmployee,
                             ),
                           ),
                           if (manualItems.isNotEmpty) ...[
                             const SizedBox(height: 10),
-                            ...currentManualItems().map(
+                            ...manualItems.map(
                               (manual) => Container(
                                 margin: const EdgeInsets.only(bottom: 8),
                                 padding: const EdgeInsets.all(12),
@@ -505,13 +494,32 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
-                                      child: Text(
-                                        manual.employeeName,
-                                        style: const TextStyle(
-                                          fontSize: 13.8,
-                                          fontWeight: FontWeight.w800,
-                                          color: kOwnerPlanInk,
-                                        ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            manual.employeeName,
+                                            style: const TextStyle(
+                                              fontSize: 13.8,
+                                              fontWeight: FontWeight.w800,
+                                              color: kOwnerPlanInk,
+                                            ),
+                                          ),
+                                          if ((manual.employeeRole ?? '')
+                                              .trim()
+                                              .isNotEmpty) ...[
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              manual.employeeRole!,
+                                              style: const TextStyle(
+                                                fontSize: 12.2,
+                                                fontWeight: FontWeight.w700,
+                                                color: kOwnerPlanInkSoft,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                     ),
                                     IconButton(
@@ -628,8 +636,14 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
             (e) => OwnerScheduleSaveDay(
               date: e.key,
               items: e.value
-                  .where((x) => x.sourceRequest != null)
-                  .map((x) => x.sourceRequest!)
+                  .map(
+                    (x) => OwnerScheduleSaveItem(
+                      employeeUserId: x.employeeUserId,
+                      employeeName: x.employeeName,
+                      employeeRole: x.employeeRole,
+                      employeeLabel: x.badge,
+                    ),
+                  )
                   .toList(),
             ),
           )
@@ -784,9 +798,9 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
               const SizedBox(width: 10),
               Expanded(
                 child: _OwnerMetricCard(
-                  icon: CupertinoIcons.calendar,
-                  value: '$_assignedCount',
-                  label: 'Назначений',
+                  icon: CupertinoIcons.person_2_fill,
+                  value: '${_employees.length}',
+                  label: 'Сотрудники',
                   colorA: kOwnerPlanAccent,
                   colorB: kOwnerPlanPink,
                 ),
@@ -971,15 +985,19 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
 }
 
 class _PlannerAssignment {
+  final String employeeUserId;
   final String employeeName;
   final String badge;
+  final String? employeeRole;
   final OwnerRequestItem? sourceRequest;
   final bool isManual;
   final String uniqueKey;
 
   const _PlannerAssignment({
+    required this.employeeUserId,
     required this.employeeName,
     required this.badge,
+    required this.employeeRole,
     required this.sourceRequest,
     required this.isManual,
     required this.uniqueKey,
@@ -987,41 +1005,26 @@ class _PlannerAssignment {
 
   factory _PlannerAssignment.fromApprovedRequest(OwnerRequestItem request) {
     return _PlannerAssignment(
+      employeeUserId: request.employeeUserId,
       employeeName: request.employeeName,
-      badge: _badgeFromName(request.employeeName),
+      badge: request.effectiveCalendarLabel,
+      employeeRole: request.isSwap ? 'Смена' : 'Сотрудник',
       sourceRequest: request,
       isManual: false,
       uniqueKey: 'request_${request.requestId}',
     );
   }
 
-  factory _PlannerAssignment.manual({
-    required String employeeName,
-    required String badge,
-  }) {
-    final cleanBadge = badge.trim().toUpperCase();
+  factory _PlannerAssignment.fromEmployee(OwnerScheduleEmployee employee) {
     return _PlannerAssignment(
-      employeeName: employeeName,
-      badge: cleanBadge.isEmpty ? _badgeFromName(employeeName) : cleanBadge,
+      employeeUserId: employee.employeeUserId,
+      employeeName: employee.employeeName,
+      badge: employee.effectiveLabel,
+      employeeRole: employee.employeeRole,
       sourceRequest: null,
       isManual: true,
-      uniqueKey: 'manual_${employeeName.trim().toLowerCase()}_${cleanBadge.trim().toLowerCase()}',
+      uniqueKey: 'employee_${employee.employeeUserId}',
     );
-  }
-
-  static String _badgeFromName(String name) {
-    final parts = name
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((e) => e.isNotEmpty)
-        .toList();
-
-    if (parts.isEmpty) return '??';
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    final one = parts.first.toUpperCase();
-    return one.length >= 3 ? one.substring(0, 3) : one;
   }
 }
 

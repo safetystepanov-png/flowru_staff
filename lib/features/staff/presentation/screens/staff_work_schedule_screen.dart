@@ -45,8 +45,6 @@ class StaffWorkScheduleScreen extends StatefulWidget {
 
 class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
     with SingleTickerProviderStateMixin {
-  static const String _myEmployeeId = 'me';
-
   final StaffScheduleRequestsApi _requestsApi = const StaffScheduleRequestsApi();
   final StaffPublishedScheduleApi _publishedApi =
       const StaffPublishedScheduleApi();
@@ -143,12 +141,12 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
   List<_ShiftAssignment> _visibleAssignments(DateTime date) {
     final items = _allAssignments(date);
     if (!_showOnlyMine) return items;
-    return items.where((e) => e.employeeId == _myEmployeeId).toList();
+    return items.where((e) => e.isMine).toList();
   }
 
   int _myShiftsCountInMonth() {
     return _assignments.values
-        .where((items) => items.any((e) => e.employeeId == _myEmployeeId))
+        .where((items) => items.any((e) => e.isMine))
         .length;
   }
 
@@ -161,8 +159,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
 
     for (final day in monthDays) {
       if (day.isBefore(today)) continue;
-      final mine =
-          _allAssignments(day).where((item) => item.employeeId == _myEmployeeId);
+      final mine = _allAssignments(day).where((item) => item.isMine);
       if (mine.isNotEmpty) {
         return '${day.day} ${_monthNames[day.month - 1].toLowerCase()}';
       }
@@ -212,6 +209,23 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
     });
   }
 
+  String _normalizeDisplayName(String rawName, {required bool isMine}) {
+    final value = rawName.trim();
+    if (isMine) return 'Вы';
+    if (value.isEmpty) return 'Сотрудник';
+
+    final lower = value.toLowerCase();
+    if (lower == 'staff user' ||
+        lower == 'staff_user' ||
+        lower == 'user' ||
+        lower == 'employee' ||
+        lower == 'сотрудник') {
+      return 'Сотрудник';
+    }
+
+    return value;
+  }
+
   Future<void> _loadPublishedMonth() async {
     try {
       final month = await _publishedApi.getScheduleMonth(
@@ -223,9 +237,14 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
       final map = <DateTime, List<_ShiftAssignment>>{};
       for (final day in month.days) {
         map[_stripTime(day.date)] = day.items.map((person) {
+          final name = _normalizeDisplayName(
+            person.employeeName,
+            isMine: person.isMine,
+          );
+
           return _ShiftAssignment(
             employeeId: person.employeeUserId,
-            employeeName: person.isMine ? 'Вы' : person.employeeName,
+            employeeName: name,
             role: (person.employeeRole?.trim().isNotEmpty ?? false)
                 ? person.employeeRole!.trim()
                 : 'Сотрудник',
@@ -359,8 +378,10 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                               try {
                                 await _requestsApi.requestSwap(
                                   establishmentId: widget.establishmentId,
-                                  shiftDate:
-                                      _stripTime(date).toIso8601String().split('T').first,
+                                  shiftDate: _stripTime(date)
+                                      .toIso8601String()
+                                      .split('T')
+                                      .first,
                                   reason: controller.text.trim().isEmpty
                                       ? null
                                       : controller.text.trim(),
@@ -541,7 +562,8 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                             const SizedBox(width: 10),
                             Expanded(
                               child: _DialogFooterButton(
-                                label: _sendingDraft ? 'Отправка...' : 'Отправить',
+                                label:
+                                    _sendingDraft ? 'Отправка...' : 'Отправить',
                                 isPrimary: true,
                                 onTap: () async {
                                   final selectedDays = selected.toList()..sort();
@@ -603,7 +625,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
   Future<void> _showDayDetails(DateTime date) async {
     final rawItems = _allAssignments(date);
     final visibleItems = _visibleAssignments(date);
-    final hasMine = rawItems.any((e) => e.employeeId == _myEmployeeId);
+    final hasMine = rawItems.any((e) => e.isMine);
 
     await showGeneralDialog<void>(
       context: context,
@@ -876,6 +898,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                           : 'Составить график'),
                   onTap: _showComposeScheduleDialog,
                   needsAttention: needsAttention,
+                  isApproved: _draftState == _ScheduleApprovalState.approved,
                 ),
               ),
               const SizedBox(width: 10),
@@ -1079,8 +1102,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
               final visibleItems = _visibleAssignments(date);
               final isCurrentMonth = date.month == _visibleMonth.month;
               final isToday = _isToday(date);
-              final hasMine =
-                  allItems.any((item) => item.employeeId == _myEmployeeId);
+              final hasMine = allItems.any((item) => item.isMine);
 
               return _CalendarDayTile(
                 date: date,
@@ -1225,6 +1247,7 @@ class _ActionPill extends StatelessWidget {
   final VoidCallback onTap;
   final bool isActive;
   final bool needsAttention;
+  final bool isApproved;
 
   const _ActionPill({
     required this.icon,
@@ -1232,18 +1255,24 @@ class _ActionPill extends StatelessWidget {
     required this.onTap,
     this.isActive = false,
     this.needsAttention = false,
+    this.isApproved = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final fill = needsAttention
-        ? kScheduleAccent.withOpacity(0.14)
-        : (isActive
-            ? kScheduleBlue.withOpacity(0.12)
-            : Colors.white.withOpacity(0.76));
-    final iconColor = needsAttention
-        ? kScheduleAccent
-        : (isActive ? kScheduleBlue : kScheduleInk);
+    final fill = isApproved
+        ? kScheduleSuccess.withOpacity(0.14)
+        : needsAttention
+            ? kScheduleAccent.withOpacity(0.14)
+            : (isActive
+                ? kScheduleBlue.withOpacity(0.12)
+                : Colors.white.withOpacity(0.76));
+
+    final iconColor = isApproved
+        ? kScheduleSuccess
+        : needsAttention
+            ? kScheduleAccent
+            : (isActive ? kScheduleBlue : kScheduleInk);
 
     return Material(
       color: fill,
@@ -1801,6 +1830,8 @@ class _ShiftAssignment {
     if (badge != null && badge!.trim().isNotEmpty) {
       return badge!.trim().toUpperCase();
     }
+
+    if (isMine) return 'ВЫ';
 
     final parts = employeeName
         .trim()

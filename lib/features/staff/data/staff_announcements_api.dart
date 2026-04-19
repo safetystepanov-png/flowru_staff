@@ -5,29 +5,125 @@ import 'package:http/http.dart' as http;
 import '../../../core/config/app_config.dart';
 import '../../auth/data/auth_storage.dart';
 
+class StaffAnnouncementAudienceUser {
+  final String userId;
+  final String userName;
+  final String? role;
+  final String? acknowledgedAt;
+
+  const StaffAnnouncementAudienceUser({
+    required this.userId,
+    required this.userName,
+    required this.role,
+    required this.acknowledgedAt,
+  });
+
+  factory StaffAnnouncementAudienceUser.fromJson(Map<String, dynamic> json) {
+    return StaffAnnouncementAudienceUser(
+      userId: json['user_id']?.toString() ?? '',
+      userName: json['user_name']?.toString() ?? 'Сотрудник',
+      role: json['role']?.toString(),
+      acknowledgedAt: json['acknowledged_at']?.toString(),
+    );
+  }
+}
+
+class StaffAnnouncementAudience {
+  final String announcementId;
+  final String title;
+  final String body;
+  final bool isPinned;
+  final bool isActive;
+  final String createdAt;
+  final int acknowledgedCount;
+  final int pendingCount;
+  final int totalStaffCount;
+  final List<StaffAnnouncementAudienceUser> acknowledgedUsers;
+  final List<StaffAnnouncementAudienceUser> pendingUsers;
+
+  const StaffAnnouncementAudience({
+    required this.announcementId,
+    required this.title,
+    required this.body,
+    required this.isPinned,
+    required this.isActive,
+    required this.createdAt,
+    required this.acknowledgedCount,
+    required this.pendingCount,
+    required this.totalStaffCount,
+    required this.acknowledgedUsers,
+    required this.pendingUsers,
+  });
+
+  static bool _parseBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final s = value?.toString().trim().toLowerCase() ?? '';
+    return s == 'true' || s == '1' || s == 'yes' || s == 'y';
+  }
+
+  static int _parseInt(dynamic value, {int fallback = 0}) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
+  factory StaffAnnouncementAudience.fromJson(Map<String, dynamic> json) {
+    final ackRaw = (json['acknowledged_users'] as List?) ?? const [];
+    final pendingRaw = (json['pending_users'] as List?) ?? const [];
+
+    return StaffAnnouncementAudience(
+      announcementId:
+          json['announcement_id']?.toString() ?? json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      body: json['body']?.toString() ?? '',
+      isPinned: _parseBool(json['is_pinned']),
+      isActive: _parseBool(json['is_active'] ?? true),
+      createdAt: json['created_at']?.toString() ?? '',
+      acknowledgedCount: _parseInt(json['acknowledged_count']),
+      pendingCount: _parseInt(json['pending_count']),
+      totalStaffCount: _parseInt(json['total_staff_count']),
+      acknowledgedUsers: ackRaw
+          .map(
+            (e) => StaffAnnouncementAudienceUser.fromJson(
+              e as Map<String, dynamic>,
+            ),
+          )
+          .toList(),
+      pendingUsers: pendingRaw
+          .map(
+            (e) => StaffAnnouncementAudienceUser.fromJson(
+              e as Map<String, dynamic>,
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
 class StaffAnnouncementItem {
   final String announcementId;
   final String title;
   final String body;
   final bool isPinned;
   final bool isActive;
-  final bool acknowledged;
+  final bool isAcknowledged;
+  final String? acknowledgedAt;
   final int acknowledgedCount;
-  final List<String> acknowledgedUserIds;
-  final List<String> acknowledgedUsers;
+  final int totalStaffCount;
   final String createdAt;
   final String? createdByUserId;
 
-  StaffAnnouncementItem({
+  const StaffAnnouncementItem({
     required this.announcementId,
     required this.title,
     required this.body,
     required this.isPinned,
     required this.isActive,
-    required this.acknowledged,
+    required this.isAcknowledged,
+    required this.acknowledgedAt,
     required this.acknowledgedCount,
-    required this.acknowledgedUserIds,
-    required this.acknowledgedUsers,
+    required this.totalStaffCount,
     required this.createdAt,
     required this.createdByUserId,
   });
@@ -45,38 +141,7 @@ class StaffAnnouncementItem {
     return int.tryParse(value?.toString() ?? '') ?? fallback;
   }
 
-  static List<String> _parseStringList(dynamic value) {
-    if (value is List) {
-      return value
-          .map((e) => e?.toString().trim() ?? '')
-          .where((e) => e.isNotEmpty)
-          .toList();
-    }
-
-    if (value is String && value.trim().isNotEmpty) {
-      return value
-          .split(',')
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
-          .toList();
-    }
-
-    return <String>[];
-  }
-
   factory StaffAnnouncementItem.fromJson(Map<String, dynamic> json) {
-    final acknowledgedUsers = _parseStringList(
-      json['acknowledged_users'] ??
-          json['acknowledged_user_names'] ??
-          json['ack_users'],
-    );
-
-    final acknowledgedUserIds = _parseStringList(
-      json['acknowledged_user_ids'] ??
-          json['ack_user_ids'] ??
-          json['read_user_ids'],
-    );
-
     return StaffAnnouncementItem(
       announcementId:
           json['announcement_id']?.toString() ?? json['id']?.toString() ?? '',
@@ -84,51 +149,34 @@ class StaffAnnouncementItem {
       body: json['body']?.toString() ?? '',
       isPinned: _parseBool(json['is_pinned']),
       isActive: _parseBool(json['is_active'] ?? true),
-      acknowledged: _parseBool(
-        json['acknowledged'] ?? json['is_read'] ?? json['seen'],
+      isAcknowledged: _parseBool(
+        json['is_acknowledged'] ?? json['acknowledged'],
       ),
-      acknowledgedCount: _parseInt(
-        json['acknowledged_count'] ??
-            json['acks_count'] ??
-            json['read_count'] ??
-            acknowledgedUsers.length,
-      ),
-      acknowledgedUserIds: acknowledgedUserIds,
-      acknowledgedUsers: acknowledgedUsers,
+      acknowledgedAt: json['acknowledged_at']?.toString(),
+      acknowledgedCount: _parseInt(json['acknowledged_count']),
+      totalStaffCount: _parseInt(json['total_staff_count']),
       createdAt: json['created_at']?.toString() ?? '',
       createdByUserId: json['created_by_user_id']?.toString(),
     );
   }
 
-  String get previewBody => body.trim();
-
   StaffAnnouncementItem copyWith({
-    String? announcementId,
-    String? title,
-    String? body,
-    bool? isPinned,
-    bool? isActive,
-    bool? acknowledged,
+    bool? isAcknowledged,
+    String? acknowledgedAt,
     int? acknowledgedCount,
-    List<String>? acknowledgedUserIds,
-    List<String>? acknowledgedUsers,
-    String? createdAt,
-    String? createdByUserId,
   }) {
     return StaffAnnouncementItem(
-      announcementId: announcementId ?? this.announcementId,
-      title: title ?? this.title,
-      body: body ?? this.body,
-      isPinned: isPinned ?? this.isPinned,
-      isActive: isActive ?? this.isActive,
-      acknowledged: acknowledged ?? this.acknowledged,
+      announcementId: announcementId,
+      title: title,
+      body: body,
+      isPinned: isPinned,
+      isActive: isActive,
+      isAcknowledged: isAcknowledged ?? this.isAcknowledged,
+      acknowledgedAt: acknowledgedAt ?? this.acknowledgedAt,
       acknowledgedCount: acknowledgedCount ?? this.acknowledgedCount,
-      acknowledgedUserIds:
-          acknowledgedUserIds ?? List<String>.from(this.acknowledgedUserIds),
-      acknowledgedUsers:
-          acknowledgedUsers ?? List<String>.from(this.acknowledgedUsers),
-      createdAt: createdAt ?? this.createdAt,
-      createdByUserId: createdByUserId ?? this.createdByUserId,
+      totalStaffCount: totalStaffCount,
+      createdAt: createdAt,
+      createdByUserId: createdByUserId,
     );
   }
 }
@@ -138,15 +186,22 @@ class StaffAnnouncementCreateResult {
   final String message;
   final String? announcementId;
 
-  StaffAnnouncementCreateResult({
+  const StaffAnnouncementCreateResult({
     required this.ok,
     required this.message,
     required this.announcementId,
   });
 
+  static bool _parseBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final s = value?.toString().trim().toLowerCase() ?? '';
+    return s == 'true' || s == '1' || s == 'yes' || s == 'y';
+  }
+
   factory StaffAnnouncementCreateResult.fromJson(Map<String, dynamic> json) {
     return StaffAnnouncementCreateResult(
-      ok: _ResultParsers.parseBool(json['ok'] ?? true),
+      ok: _parseBool(json['ok'] ?? json['success'] ?? true),
       message: json['message']?.toString() ?? '',
       announcementId:
           json['announcement_id']?.toString() ?? json['id']?.toString(),
@@ -157,18 +212,28 @@ class StaffAnnouncementCreateResult {
 class StaffAnnouncementAcknowledgeResult {
   final bool ok;
   final String message;
+  final String? acknowledgedAt;
 
-  StaffAnnouncementAcknowledgeResult({
+  const StaffAnnouncementAcknowledgeResult({
     required this.ok,
     required this.message,
+    required this.acknowledgedAt,
   });
+
+  static bool _parseBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final s = value?.toString().trim().toLowerCase() ?? '';
+    return s == 'true' || s == '1' || s == 'yes' || s == 'y';
+  }
 
   factory StaffAnnouncementAcknowledgeResult.fromJson(
     Map<String, dynamic> json,
   ) {
     return StaffAnnouncementAcknowledgeResult(
-      ok: _ResultParsers.parseBool(json['ok'] ?? true),
+      ok: _parseBool(json['ok'] ?? json['success'] ?? true),
       message: json['message']?.toString() ?? '',
+      acknowledgedAt: json['acknowledged_at']?.toString(),
     );
   }
 }
@@ -177,20 +242,29 @@ class StaffAnnouncementDeleteResult {
   final bool ok;
   final String message;
 
-  StaffAnnouncementDeleteResult({
+  const StaffAnnouncementDeleteResult({
     required this.ok,
     required this.message,
   });
 
+  static bool _parseBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final s = value?.toString().trim().toLowerCase() ?? '';
+    return s == 'true' || s == '1' || s == 'yes' || s == 'y';
+  }
+
   factory StaffAnnouncementDeleteResult.fromJson(Map<String, dynamic> json) {
     return StaffAnnouncementDeleteResult(
-      ok: _ResultParsers.parseBool(json['ok'] ?? true),
+      ok: _parseBool(json['ok'] ?? json['success'] ?? true),
       message: json['message']?.toString() ?? '',
     );
   }
 }
 
 class StaffAnnouncementsApi {
+  const StaffAnnouncementsApi();
+
   Future<String> _token() async {
     final token = await AuthStorage.getAccessToken();
     if (token == null || token.isEmpty) {
@@ -237,21 +311,7 @@ class StaffAnnouncementsApi {
           .toList();
     }
 
-    return [];
-  }
-
-  Future<List<StaffAnnouncementItem>> getPinnedAnnouncements({
-    required int establishmentId,
-  }) async {
-    final items = await getAnnouncements(establishmentId: establishmentId);
-    return items.where((e) => e.isPinned && e.isActive).toList();
-  }
-
-  Future<List<StaffAnnouncementItem>> getActiveAnnouncements({
-    required int establishmentId,
-  }) async {
-    final items = await getAnnouncements(establishmentId: establishmentId);
-    return items.where((e) => e.isActive).toList();
+    return <StaffAnnouncementItem>[];
   }
 
   Future<StaffAnnouncementCreateResult> createAnnouncement({
@@ -262,9 +322,7 @@ class StaffAnnouncementsApi {
   }) async {
     final token = await _token();
 
-    final uri = Uri.parse(
-      '${AppConfig.baseUrl}/api/v1/staff/announcements',
-    );
+    final uri = Uri.parse('${AppConfig.baseUrl}/api/v1/staff/announcements');
 
     final response = await http.post(
       uri,
@@ -316,7 +374,7 @@ class StaffAnnouncementsApi {
 
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception(
-        'POST acknowledge announcement failed: ${response.statusCode} ${response.body}',
+        'POST acknowledge failed: ${response.statusCode} ${response.body}',
       );
     }
 
@@ -343,16 +401,9 @@ class StaffAnnouncementsApi {
       },
     );
 
-    if (response.statusCode != 200 && response.statusCode != 204) {
+    if (response.statusCode != 200) {
       throw Exception(
         'DELETE announcement failed: ${response.statusCode} ${response.body}',
-      );
-    }
-
-    if (response.statusCode == 204 || response.body.trim().isEmpty) {
-      return StaffAnnouncementDeleteResult(
-        ok: true,
-        message: 'Объявление удалено',
       );
     }
 
@@ -360,13 +411,33 @@ class StaffAnnouncementsApi {
       jsonDecode(response.body) as Map<String, dynamic>,
     );
   }
-}
 
-class _ResultParsers {
-  static bool parseBool(dynamic value) {
-    if (value is bool) return value;
-    if (value is num) return value != 0;
-    final s = value?.toString().trim().toLowerCase() ?? '';
-    return s == 'true' || s == '1' || s == 'yes' || s == 'y';
+  Future<StaffAnnouncementAudience> getAnnouncementAudience({
+    required int establishmentId,
+    required String announcementId,
+  }) async {
+    final token = await _token();
+
+    final uri = Uri.parse(
+      '${AppConfig.baseUrl}/api/v1/staff/announcements/$announcementId/audience?establishment_id=$establishmentId',
+    );
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'GET announcement audience failed: ${response.statusCode} ${response.body}',
+      );
+    }
+
+    return StaffAnnouncementAudience.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
   }
 }

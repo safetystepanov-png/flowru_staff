@@ -7,6 +7,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../auth/data/auth_session.dart';
 import '../../../auth/data/auth_storage.dart';
@@ -64,6 +65,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
 
   int _chatCount = 0;
   int _announcementCount = 0;
+  bool _announcementsHasNew = false;
 
   late final AnimationController _introController;
   late final AnimationController _ambientController;
@@ -72,6 +74,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   int _heroCarouselIndex = 0;
   Timer? _heroTimer;
   bool _pinActionLoading = false;
+
+  String _latestAnnouncementMarker = '';
 
   bool get _isOwner {
     final role = widget.role.trim().toLowerCase();
@@ -86,6 +90,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   }
 
   int get _heroSlidesCount => 1 + _pinnedAnnouncements.length;
+
+  String get _announcementsSeenKey =>
+      'staff_announcements_seen_marker_${widget.establishmentId}';
 
   @override
   void initState() {
@@ -118,6 +125,46 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       throw Exception('Access token not found');
     }
     return token;
+  }
+
+  Future<String?> _getSeenAnnouncementsMarker() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_announcementsSeenKey);
+  }
+
+  Future<void> _markAnnouncementsAsSeen() async {
+    if (_latestAnnouncementMarker.isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_announcementsSeenKey, _latestAnnouncementMarker);
+
+    if (!mounted) return;
+    setState(() {
+      _announcementsHasNew = false;
+    });
+  }
+
+  String _buildLatestAnnouncementMarker(List<dynamic> annItems) {
+    if (annItems.isEmpty) return '';
+
+    String latestId = '';
+    String latestCreatedAt = '';
+
+    for (final raw in annItems) {
+      if (raw is! Map) continue;
+      final map = Map<String, dynamic>.from(raw as Map);
+      final id = map['announcement_id']?.toString() ?? map['id']?.toString() ?? '';
+      final createdAt = map['created_at']?.toString() ?? '';
+      if (id.isEmpty && createdAt.isEmpty) continue;
+
+      if (latestCreatedAt.isEmpty || createdAt.compareTo(latestCreatedAt) > 0) {
+        latestId = id;
+        latestCreatedAt = createdAt;
+      }
+    }
+
+    if (latestId.isEmpty && latestCreatedAt.isEmpty) return '';
+    return '$latestId|$latestCreatedAt';
   }
 
   Route<T> _buildAnimatedRoute<T>(Widget page) {
@@ -275,11 +322,18 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
               ))
           .toList();
 
+      final latestMarker = _buildLatestAnnouncementMarker(annItems);
+      final seenMarker = await _getSeenAnnouncementsMarker();
+      final hasNewAnnouncements =
+          latestMarker.isNotEmpty && latestMarker != seenMarker;
+
       if (!mounted) return;
 
       setState(() {
         _chatCount = chatItems.length;
         _announcementCount = annItems.length;
+        _announcementsHasNew = hasNewAnnouncements;
+        _latestAnnouncementMarker = latestMarker;
         _pinnedAnnouncements = pinned;
         if (_heroCarouselIndex >= _heroSlidesCount) {
           _heroCarouselIndex = 0;
@@ -401,6 +455,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   }
 
   void _openAnnouncements() {
+    _markAnnouncementsAsSeen();
+
     Navigator.of(context)
         .push(
           _buildAnimatedRoute(
@@ -413,9 +469,6 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         )
         .then((_) {
       if (!mounted) return;
-      setState(() {
-        _announcementCount = 0;
-      });
       _loadDashboard();
     });
   }
@@ -621,18 +674,31 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           ),
         ),
         const SizedBox(width: 14),
-        Expanded(
+        const Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                widget.establishmentName,
+                'Система',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 27,
                   fontWeight: FontWeight.w900,
                   letterSpacing: -0.9,
+                  color: Colors.white,
+                  height: 1.0,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'лояльности',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
                   color: Colors.white,
                   height: 1.0,
                 ),
@@ -851,7 +917,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
             ),
           ),
           const SizedBox(width: 14),
-          const _DecorPercent(),
+          const _DecorAnnouncement(),
         ],
       ),
     );
@@ -1135,7 +1201,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
             icon: CupertinoIcons.bell,
             glowColor: kHomePink,
             onTap: _openAnnouncements,
-            showPulse: _announcementCount > 0,
+            showPulse: _announcementsHasNew,
           ),
         ),
       ],
@@ -1735,6 +1801,63 @@ class _DecorPercent extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                   color: kHomeAccent.withOpacity(0.97),
                   letterSpacing: -2,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DecorAnnouncement extends StatelessWidget {
+  const _DecorAnnouncement();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 88,
+      height: 108,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        color: Colors.white.withOpacity(0.14),
+        border: Border.all(color: Colors.white.withOpacity(0.22)),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: 14,
+            right: 12,
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.82),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          const Positioned.fill(
+            child: Center(
+              child: Icon(
+                CupertinoIcons.bell_fill,
+                size: 42,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 16,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                width: 34,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.75),
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
             ),

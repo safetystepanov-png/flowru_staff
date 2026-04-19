@@ -10,15 +10,22 @@ class PublishedSchedulePerson {
   final String employeeName;
   final String? employeeRole;
   final String? employeeLabel;
+  final bool isMine;
 
   const PublishedSchedulePerson({
     required this.employeeUserId,
     required this.employeeName,
     required this.employeeRole,
     required this.employeeLabel,
+    required this.isMine,
   });
 
-  bool get isMine => employeeUserId == 'me';
+  static bool _parseBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final s = value?.toString().trim().toLowerCase() ?? '';
+    return s == 'true' || s == '1' || s == 'yes' || s == 'y';
+  }
 
   factory PublishedSchedulePerson.fromJson(Map<String, dynamic> json) {
     return PublishedSchedulePerson(
@@ -26,6 +33,7 @@ class PublishedSchedulePerson {
       employeeName: json['employee_name']?.toString() ?? 'Сотрудник',
       employeeRole: json['employee_role']?.toString(),
       employeeLabel: json['employee_label']?.toString(),
+      isMine: _parseBool(json['is_mine']),
     );
   }
 }
@@ -42,6 +50,7 @@ class PublishedScheduleDay {
   factory PublishedScheduleDay.fromJson(Map<String, dynamic> json) {
     final rawDate = json['date']?.toString() ?? '';
     final parsed = DateTime.tryParse(rawDate);
+
     return PublishedScheduleDay(
       date: parsed == null
           ? DateTime.now()
@@ -100,6 +109,7 @@ class StaffPublishedScheduleApi {
     required int month,
   }) async {
     final token = await _token();
+
     final uri = Uri.parse(
       '${AppConfig.baseUrl}/api/v1/staff/schedule/month?establishment_id=$establishmentId&year=$year&month=$month',
     );

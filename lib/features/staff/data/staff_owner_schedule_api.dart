@@ -4,11 +4,80 @@ import 'package:http/http.dart' as http;
 
 import '../../../core/config/app_config.dart';
 import '../../auth/data/auth_storage.dart';
-import 'staff_owner_requests_api.dart';
+
+class OwnerScheduleEmployee {
+  final String employeeUserId;
+  final String employeeName;
+  final String? employeePhone;
+  final String? employeeRole;
+  final String? employeeLabel;
+
+  const OwnerScheduleEmployee({
+    required this.employeeUserId,
+    required this.employeeName,
+    required this.employeePhone,
+    required this.employeeRole,
+    required this.employeeLabel,
+  });
+
+  factory OwnerScheduleEmployee.fromJson(Map<String, dynamic> json) {
+    return OwnerScheduleEmployee(
+      employeeUserId: json['employee_user_id']?.toString() ?? '',
+      employeeName: json['employee_name']?.toString() ?? 'Сотрудник',
+      employeePhone: json['employee_phone']?.toString(),
+      employeeRole: json['employee_role']?.toString(),
+      employeeLabel: json['employee_label']?.toString(),
+    );
+  }
+
+  String get effectiveLabel {
+    final raw = employeeLabel?.trim() ?? '';
+    if (raw.isNotEmpty) return raw.toUpperCase();
+
+    final parts = employeeName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    if (parts.isEmpty) return 'EM';
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+
+    final word = parts.first.toUpperCase();
+    if (word.length >= 3) return word.substring(0, 3);
+    if (word.length == 2) return word;
+    return '${word}X';
+  }
+}
+
+class OwnerScheduleSaveItem {
+  final String employeeUserId;
+  final String employeeName;
+  final String? employeeRole;
+  final String? employeeLabel;
+
+  const OwnerScheduleSaveItem({
+    required this.employeeUserId,
+    required this.employeeName,
+    required this.employeeRole,
+    required this.employeeLabel,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'employee_user_id': employeeUserId,
+      'employee_name': employeeName,
+      'employee_role': employeeRole,
+      'employee_label': employeeLabel,
+    };
+  }
+}
 
 class OwnerScheduleSaveDay {
   final DateTime date;
-  final List<OwnerRequestItem> items;
+  final List<OwnerScheduleSaveItem> items;
 
   const OwnerScheduleSaveDay({
     required this.date,
@@ -27,6 +96,46 @@ class StaffOwnerScheduleApi {
     return token;
   }
 
+  Future<List<OwnerScheduleEmployee>> getEmployees({
+    required int establishmentId,
+  }) async {
+    final token = await _token();
+
+    final uri = Uri.parse(
+      '${AppConfig.baseUrl}/api/v1/staff/owner/schedule/employees?establishment_id=$establishmentId',
+    );
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'get employees failed: ${response.statusCode} body=${response.body}',
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is Map<String, dynamic>) {
+      final items = (decoded['items'] as List?) ?? const [];
+      return items
+          .whereType<Map>()
+          .map(
+            (e) => OwnerScheduleEmployee.fromJson(
+              Map<String, dynamic>.from(e),
+            ),
+          )
+          .toList();
+    }
+
+    return const <OwnerScheduleEmployee>[];
+  }
+
   Future<void> saveScheduleMonth({
     required int establishmentId,
     required int year,
@@ -39,8 +148,6 @@ class StaffOwnerScheduleApi {
       '${AppConfig.baseUrl}/api/v1/staff/owner/schedule/save',
     );
 
-    final uniqueLabels = _buildUniqueLabels(days);
-
     final payloadDays = days.map((day) {
       final y = day.date.year.toString().padLeft(4, '0');
       final m = day.date.month.toString().padLeft(2, '0');
@@ -48,21 +155,7 @@ class StaffOwnerScheduleApi {
 
       return {
         'date': '$y-$m-$d',
-        'items': day.items.map((item) {
-          final employeeUserId = item.employeeUserId.trim().isEmpty
-              ? (item.isSchedule
-                  ? 'employee_${item.requestId}'
-                  : 'swap_${item.requestId}')
-              : item.employeeUserId.trim();
-
-          return {
-            'employee_user_id': employeeUserId,
-            'employee_name': item.employeeName,
-            'employee_role': item.isSwap ? 'Смена' : 'Сотрудник',
-            'employee_label':
-                uniqueLabels[employeeUserId] ?? item.effectiveCalendarLabel,
-          };
-        }).toList(),
+        'items': day.items.map((item) => item.toJson()).toList(),
       };
     }).toList();
 
@@ -100,37 +193,5 @@ class StaffOwnerScheduleApi {
       month: month,
       days: days,
     );
-  }
-
-  Map<String, String> _buildUniqueLabels(List<OwnerScheduleSaveDay> days) {
-    final grouped = <String, List<String>>{};
-
-    for (final day in days) {
-      for (final item in day.items) {
-        final employeeUserId = item.employeeUserId.trim().isEmpty
-            ? (item.isSchedule
-                ? 'employee_${item.requestId}'
-                : 'swap_${item.requestId}')
-            : item.employeeUserId.trim();
-
-        final base = item.effectiveCalendarLabel.toUpperCase();
-
-        grouped.putIfAbsent(base, () => <String>[]);
-        if (!grouped[base]!.contains(employeeUserId)) {
-          grouped[base]!.add(employeeUserId);
-        }
-      }
-    }
-
-    final result = <String, String>{};
-
-    grouped.forEach((base, ids) {
-      ids.sort();
-      for (var i = 0; i < ids.length; i++) {
-        result[ids[i]] = i == 0 ? base : '$base${i + 1}';
-      }
-    });
-
-    return result;
   }
 }
