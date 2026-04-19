@@ -9,7 +9,6 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../auth/data/auth_session.dart' as auth_session;
 import '../../../auth/data/auth_storage.dart' as auth_storage;
 import '../../../../core/config/app_config.dart';
 import '../widgets/staff_glass_ui.dart';
@@ -740,7 +739,11 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         const SizedBox(width: 8),
         _TopIconButton(
           icon: Icons.logout_rounded,
-          onTap: () => auth_session.AuthSession.logout(context),
+          onTap: () async {
+            await auth_storage.AuthStorage.clearAll();
+            if (!context.mounted) return;
+            Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+          },
         ),
       ],
     );

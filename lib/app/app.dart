@@ -26,6 +26,9 @@ class FlowruStaffApp extends StatelessWidget {
           seedColor: const Color(0xFF7D63FF),
         ),
       ),
+      routes: {
+        '/login': (context) => const LoginPhoneScreen(),
+      },
       home: const _LaunchFlowruScreen(),
     );
   }

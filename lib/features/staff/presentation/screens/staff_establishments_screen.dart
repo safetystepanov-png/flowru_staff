@@ -8,7 +8,6 @@ import 'package:flutter/services.dart';
 import '../../data/staff_establishments_api.dart';
 import '../widgets/staff_glass_ui.dart';
 import 'staff_home_screen.dart';
-import '../../../auth/data/auth_session.dart' as auth_session;
 import '../../../auth/data/auth_storage.dart' as auth_storage;
 
 const Color kEstMintTop = Color(0xFF0CB7B3);
@@ -379,7 +378,11 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
             const Spacer(),
             _topIconButton(
               icon: Icons.logout_rounded,
-              onTap: () => auth_session.AuthSession.logout(context),
+              onTap: () async {
+                await auth_storage.AuthStorage.clearAll();
+                if (!context.mounted) return;
+                Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+              },
             ),
           ],
         ),
