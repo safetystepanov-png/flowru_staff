@@ -8,8 +8,8 @@ import 'package:flutter/services.dart';
 import '../../data/staff_establishments_api.dart';
 import '../widgets/staff_glass_ui.dart';
 import 'staff_home_screen.dart';
-import '../../../auth/data/auth_session.dart';
-import '../../../auth/data/auth_storage.dart';
+import '../../../auth/data/auth_session.dart' as auth_session;
+import '../../../auth/data/auth_storage.dart' as auth_storage;
 
 const Color kEstMintTop = Color(0xFF0CB7B3);
 const Color kEstMintMid = Color(0xFF08A9AB);
@@ -116,12 +116,12 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
   Future<void> _tryAutoOpenSaved(List<StaffEstablishmentItem> items) async {
     if (_autoNavigated) return;
 
-    final savedId = await AuthStorage.getSelectedEstablishmentId();
+    final savedId = await auth_storage.AuthStorage.getSelectedEstablishmentId();
     if (savedId == null) return;
 
     final matched = _findById(items, savedId);
     if (matched == null) {
-      await AuthStorage.clearSelectedEstablishment();
+      await auth_storage.AuthStorage.clearSelectedEstablishment();
       return;
     }
 
@@ -152,7 +152,7 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
   }
 
   Future<void> _openEstablishment(StaffEstablishmentItem item) async {
-    await AuthStorage.saveSelectedEstablishment(
+    await auth_storage.AuthStorage.saveSelectedEstablishment(
       establishmentId: item.id,
       establishmentName: item.name,
       role: item.role,
@@ -379,7 +379,7 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
             const Spacer(),
             _topIconButton(
               icon: Icons.logout_rounded,
-              onTap: () => AuthSession.logout(context),
+              onTap: () => auth_session.AuthSession.logout(context),
             ),
           ],
         ),

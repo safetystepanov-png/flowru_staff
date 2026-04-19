@@ -9,8 +9,8 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../auth/data/auth_session.dart';
-import '../../../auth/data/auth_storage.dart';
+import '../../../auth/data/auth_session.dart' as auth_session;
+import '../../../auth/data/auth_storage.dart' as auth_storage;
 import '../../../../core/config/app_config.dart';
 import '../widgets/staff_glass_ui.dart';
 import 'owner_requests_screen.dart';
@@ -117,7 +117,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   }
 
   Future<void> _persistCurrentEstablishment() async {
-    await AuthStorage.saveSelectedEstablishment(
+    await auth_storage.AuthStorage.saveSelectedEstablishment(
       establishmentId: widget.establishmentId,
       establishmentName: widget.establishmentName,
       role: widget.role,
@@ -133,7 +133,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   }
 
   Future<String> _token() async {
-    final token = await AuthStorage.getAccessToken();
+    final token = await auth_storage.AuthStorage.getAccessToken();
     if (token == null || token.isEmpty) {
       throw Exception('Access token not found');
     }
@@ -740,7 +740,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         const SizedBox(width: 8),
         _TopIconButton(
           icon: Icons.logout_rounded,
-          onTap: () => AuthSession.logout(context),
+          onTap: () => auth_session.AuthSession.logout(context),
         ),
       ],
     );
