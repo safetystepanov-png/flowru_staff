@@ -4,5 +4,5 @@ import 'app/app.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(FlowruStaffApp());
+  runApp(const FlowruStaffApp());
 }

@@ -18,6 +18,7 @@ import 'staff_announcements_screen.dart';
 import 'staff_chat_screen.dart';
 import 'staff_client_search_screen.dart';
 import 'staff_establishment_history_screen.dart';
+import 'staff_establishments_screen.dart';
 import 'staff_work_schedule_screen.dart';
 
 const Color kHomeMintTop = Color(0xFF0CB7B3);
@@ -108,7 +109,19 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       duration: const Duration(milliseconds: 7800),
     )..repeat();
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _persistCurrentEstablishment();
+    });
+
     _loadDashboard();
+  }
+
+  Future<void> _persistCurrentEstablishment() async {
+    await AuthStorage.saveSelectedEstablishment(
+      establishmentId: widget.establishmentId,
+      establishmentName: widget.establishmentName,
+      role: widget.role,
+    );
   }
 
   @override
@@ -153,7 +166,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     for (final raw in annItems) {
       if (raw is! Map) continue;
       final map = Map<String, dynamic>.from(raw as Map);
-      final id = map['announcement_id']?.toString() ?? map['id']?.toString() ?? '';
+      final id =
+          map['announcement_id']?.toString() ?? map['id']?.toString() ?? '';
       final createdAt = map['created_at']?.toString() ?? '';
       if (id.isEmpty && createdAt.isEmpty) continue;
 
@@ -422,6 +436,14 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     }
   }
 
+  void _openEstablishmentPicker() {
+    Navigator.of(context).pushReplacement(
+      _buildAnimatedRoute(
+        const StaffEstablishmentsScreen(forceChooser: true),
+      ),
+    );
+  }
+
   void _openClientSearch() {
     Navigator.of(context)
         .push(
@@ -674,11 +696,11 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           ),
         ),
         const SizedBox(width: 14),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'Система',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -690,22 +712,27 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   height: 1.0,
                 ),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
-                'лояльности',
+                widget.establishmentName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 19,
+                  fontSize: 15.5,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: -0.4,
-                  color: Colors.white,
+                  letterSpacing: -0.2,
+                  color: Colors.white.withOpacity(0.90),
                   height: 1.0,
                 ),
               ),
             ],
           ),
         ),
+        _TopIconButton(
+          icon: CupertinoIcons.building_2_fill,
+          onTap: _openEstablishmentPicker,
+        ),
+        const SizedBox(width: 8),
         _TopIconButton(
           icon: CupertinoIcons.refresh,
           onTap: _loadDashboard,
@@ -906,7 +933,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   )
                 else
                   _PinnedAccentPillButton(
-                    text: item.isAcknowledged ? 'Ознакомлен' : 'Ознакомлен',
+                    text: 'Ознакомлен',
                     isLoading: _pinActionLoading,
                     isDone: item.isAcknowledged,
                     onTap: item.isAcknowledged

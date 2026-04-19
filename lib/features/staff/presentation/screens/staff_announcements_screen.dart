@@ -33,6 +33,8 @@ const Color kAnnViolet = Color(0xFF7A63FF);
 const Color kAnnDanger = Color(0xFFE35D5B);
 const Color kAnnSuccess = Color(0xFF22C55E);
 const Color kAnnSuccessSoft = Color(0xFF4ADE80);
+const Color kAnnWarn = Color(0xFFF97316);
+const Color kAnnWarnSoft = Color(0xFFFB923C);
 
 class StaffAnnouncementsScreen extends StatefulWidget {
   final int establishmentId;
@@ -105,7 +107,8 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
     for (final item in raw) {
       if (item is! Map) continue;
       final map = Map<String, dynamic>.from(item as Map);
-      final id = map['announcement_id']?.toString() ?? map['id']?.toString() ?? '';
+      final id =
+          map['announcement_id']?.toString() ?? map['id']?.toString() ?? '';
       final createdAt = map['created_at']?.toString() ?? '';
 
       if (createdAt.isEmpty && id.isEmpty) continue;
@@ -534,6 +537,39 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
     }
   }
 
+  Future<_AnnouncementAudienceData?> _loadAudience(String announcementId) async {
+    try {
+      final token = await _token();
+
+      final response = await http.get(
+        Uri.parse(
+          '${AppConfig.baseUrl}/api/v1/staff/announcements/$announcementId/audience?establishment_id=${widget.establishmentId}',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        return null;
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return _AnnouncementAudienceData.fromJson(decoded);
+      }
+      if (decoded is Map) {
+        return _AnnouncementAudienceData.fromJson(
+          Map<String, dynamic>.from(decoded),
+        );
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   String _formatDate(String value) {
     if (value.isEmpty) return '';
     try {
@@ -633,6 +669,66 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
     );
   }
 
+  Widget _pendingUserTile(_AnnouncementPendingUser user) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withOpacity(0.90),
+        border: Border.all(color: const Color(0xFFE7EEF0)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: kAnnWarn.withOpacity(0.12),
+            ),
+            child: Center(
+              child: Text(
+                user.shortLabel,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w900,
+                  color: kAnnWarn,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              user.name,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w800,
+                color: kAnnInk,
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              color: kAnnWarn.withOpacity(0.10),
+            ),
+            child: const Text(
+              'Не ознакомлен',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                color: kAnnWarn,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPinnedBadge() {
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -663,39 +759,16 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
     );
   }
 
-  Widget _buildNewBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 6,
-      ),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        gradient: const LinearGradient(
-          colors: [kAnnSuccess, kAnnSuccessSoft],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: kAnnSuccess.withOpacity(0.26),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: const Text(
-        'Новое',
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-          color: Colors.white,
-        ),
-      ),
-    );
-  }
-
   Future<void> _openDetails(_AnnouncementItem item) async {
     bool acknowledged = item.acknowledged;
     bool actionLoading = false;
+    bool audienceLoading = widget.isOwner;
+    _AnnouncementAudienceData? audienceData;
+
+    if (widget.isOwner) {
+      audienceData = await _loadAudience(item.id);
+      audienceLoading = false;
+    }
 
     await showModalBottomSheet<void>(
       context: context,
@@ -704,6 +777,19 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setLocalState) {
+            Future<void> reloadAudience() async {
+              if (!widget.isOwner) return;
+              setLocalState(() {
+                audienceLoading = true;
+              });
+              final loaded = await _loadAudience(item.id);
+              if (!mounted) return;
+              setLocalState(() {
+                audienceData = loaded;
+                audienceLoading = false;
+              });
+            }
+
             return Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               child: ClipRRect(
@@ -769,42 +855,153 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                             ),
                             const SizedBox(height: 18),
                             if (widget.isOwner) ...[
-                              _ownerStatsStrip(item),
-                              const SizedBox(height: 14),
-                              const Text(
-                                'Ознакомились',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                  color: kAnnInk,
-                                ),
+                              _ownerStatsStrip(
+                                audienceData == null
+                                    ? item
+                                    : item.copyWith(
+                                        acknowledgedCount:
+                                            audienceData!.acknowledgedCount,
+                                        totalStaffCount:
+                                            audienceData!.totalStaffCount,
+                                      ),
                               ),
-                              const SizedBox(height: 10),
-                              if (item.ackUsers.isNotEmpty)
-                                ...item.ackUsers.map(_ackUserTile)
-                              else
+                              const SizedBox(height: 14),
+                              if (audienceLoading)
                                 Container(
                                   width: double.infinity,
-                                  padding: const EdgeInsets.all(14),
+                                  padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(18),
-                                    color: Colors.white.withOpacity(0.90),
-                                    border:
-                                        Border.all(color: const Color(0xFFE7EEF0)),
-                                  ),
-                                  child: const Text(
-                                    'Пока нет списка сотрудников, которые ознакомились.',
-                                    style: TextStyle(
-                                      fontSize: 13.5,
-                                      height: 1.4,
-                                      fontWeight: FontWeight.w700,
-                                      color: kAnnInkSoft,
+                                    color: Colors.white.withOpacity(0.92),
+                                    border: Border.all(
+                                      color: const Color(0xFFE7EEF0),
                                     ),
                                   ),
+                                  child: const Row(
+                                    children: [
+                                      SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation(kAnnViolet),
+                                        ),
+                                      ),
+                                      SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          'Загружаем список сотрудников...',
+                                          style: TextStyle(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: kAnnInkSoft,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              else ...[
+                                const Text(
+                                  'Ознакомились',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    color: kAnnInk,
+                                  ),
                                 ),
+                                const SizedBox(height: 10),
+                                if ((audienceData?.acknowledgedUsers.length ?? 0) >
+                                    0)
+                                  ...audienceData!.acknowledgedUsers
+                                      .map(_ackUserTile)
+                                else if (item.ackUsers.isNotEmpty)
+                                  ...item.ackUsers.map(_ackUserTile)
+                                else
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(18),
+                                      color: Colors.white.withOpacity(0.90),
+                                      border:
+                                          Border.all(color: const Color(0xFFE7EEF0)),
+                                    ),
+                                    child: const Text(
+                                      'Пока никто не ознакомился.',
+                                      style: TextStyle(
+                                        fontSize: 13.5,
+                                        height: 1.4,
+                                        fontWeight: FontWeight.w700,
+                                        color: kAnnInkSoft,
+                                      ),
+                                    ),
+                                  ),
+                                const SizedBox(height: 14),
+                                const Text(
+                                  'Не ознакомились',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    color: kAnnInk,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                if ((audienceData?.pendingUsers.length ?? 0) > 0)
+                                  ...audienceData!.pendingUsers
+                                      .map(_pendingUserTile)
+                                else
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(18),
+                                      color: Colors.white.withOpacity(0.90),
+                                      border:
+                                          Border.all(color: const Color(0xFFE7EEF0)),
+                                    ),
+                                    child: const Text(
+                                      'Все сотрудники уже ознакомились.',
+                                      style: TextStyle(
+                                        fontSize: 13.5,
+                                        height: 1.4,
+                                        fontWeight: FontWeight.w700,
+                                        color: kAnnInkSoft,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                               const SizedBox(height: 18),
                               Row(
                                 children: [
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: audienceLoading
+                                          ? null
+                                          : () => reloadAudience(),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        side: BorderSide(
+                                          color: kAnnAccent.withOpacity(0.24),
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(18),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'Обновить список',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          color: kAnnInk,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
                                   Expanded(
                                     child: DecoratedBox(
                                       decoration: BoxDecoration(
@@ -856,7 +1053,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                             ] else
                               DecoratedBox(
                                 decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(18),
+                                  borderRadius: BorderRadius.circular(20),
                                   gradient: LinearGradient(
                                     colors: acknowledged
                                         ? const [
@@ -927,19 +1124,22 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.transparent,
                                     shadowColor: Colors.transparent,
+                                    minimumSize:
+                                        const Size(double.infinity, 60),
                                     padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
+                                      horizontal: 18,
+                                      vertical: 18,
                                     ),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(18),
+                                      borderRadius: BorderRadius.circular(20),
                                     ),
                                   ),
                                   child: actionLoading
                                       ? const SizedBox(
-                                          width: 18,
-                                          height: 18,
+                                          width: 20,
+                                          height: 20,
                                           child: CircularProgressIndicator(
-                                            strokeWidth: 2.2,
+                                            strokeWidth: 2.4,
                                             color: Colors.white,
                                           ),
                                         )
@@ -952,17 +1152,22 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                               const Icon(
                                                 CupertinoIcons.check_mark,
                                                 color: Colors.white,
-                                                size: 16,
+                                                size: 18,
                                               ),
                                               const SizedBox(width: 8),
                                             ],
-                                            Text(
-                                              acknowledged
-                                                  ? 'Ознакомлен'
-                                                  : 'Отметить как ознакомлен',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w900,
+                                            Flexible(
+                                              child: Text(
+                                                acknowledged
+                                                    ? 'Ознакомлен'
+                                                    : 'Отметить как ознакомлен',
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w900,
+                                                  fontSize: 14.5,
+                                                  height: 1.15,
+                                                ),
                                               ),
                                             ),
                                           ],
@@ -1569,6 +1774,81 @@ class _AnnouncementAckUser {
   }
 }
 
+class _AnnouncementPendingUser {
+  final String name;
+
+  const _AnnouncementPendingUser({
+    required this.name,
+  });
+
+  factory _AnnouncementPendingUser.fromJson(Map<String, dynamic> json) {
+    return _AnnouncementPendingUser(
+      name: json['name']?.toString() ??
+          json['user_name']?.toString() ??
+          json['full_name']?.toString() ??
+          'Сотрудник',
+    );
+  }
+
+  String get shortLabel {
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    if (parts.isEmpty) return '—';
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    final single = parts.first.toUpperCase();
+    return single.length >= 2 ? single.substring(0, 2) : single;
+  }
+}
+
+class _AnnouncementAudienceData {
+  final int acknowledgedCount;
+  final int pendingCount;
+  final int totalStaffCount;
+  final List<_AnnouncementAckUser> acknowledgedUsers;
+  final List<_AnnouncementPendingUser> pendingUsers;
+
+  const _AnnouncementAudienceData({
+    required this.acknowledgedCount,
+    required this.pendingCount,
+    required this.totalStaffCount,
+    required this.acknowledgedUsers,
+    required this.pendingUsers,
+  });
+
+  factory _AnnouncementAudienceData.fromJson(Map<String, dynamic> json) {
+    final ackRaw = (json['acknowledged_users'] as List?) ?? const [];
+    final pendingRaw = (json['pending_users'] as List?) ?? const [];
+
+    return _AnnouncementAudienceData(
+      acknowledgedCount: (json['acknowledged_count'] as num?)?.toInt() ?? 0,
+      pendingCount: (json['pending_count'] as num?)?.toInt() ?? 0,
+      totalStaffCount: (json['total_staff_count'] as num?)?.toInt() ?? 0,
+      acknowledgedUsers: ackRaw
+          .whereType<Map>()
+          .map(
+            (e) => _AnnouncementAckUser.fromJson(
+              Map<String, dynamic>.from(e as Map),
+            ),
+          )
+          .toList(),
+      pendingUsers: pendingRaw
+          .whereType<Map>()
+          .map(
+            (e) => _AnnouncementPendingUser.fromJson(
+              Map<String, dynamic>.from(e as Map),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
 class _AnnouncementItem {
   final String id;
   final String title;
@@ -1635,6 +1915,7 @@ class _AnnouncementItem {
   _AnnouncementItem copyWith({
     bool? acknowledged,
     int? acknowledgedCount,
+    int? totalStaffCount,
   }) {
     return _AnnouncementItem(
       id: id,
@@ -1644,7 +1925,7 @@ class _AnnouncementItem {
       acknowledged: acknowledged ?? this.acknowledged,
       createdAt: createdAt,
       acknowledgedCount: acknowledgedCount ?? this.acknowledgedCount,
-      totalStaffCount: totalStaffCount,
+      totalStaffCount: totalStaffCount ?? this.totalStaffCount,
       canDelete: canDelete,
       ackUsers: ackUsers,
     );

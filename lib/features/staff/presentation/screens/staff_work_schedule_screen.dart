@@ -170,6 +170,17 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
         : 'График на месяц еще не опубликован';
   }
 
+  String _draftActionLabel() {
+    switch (_draftState) {
+      case _ScheduleApprovalState.approved:
+        return 'График согласован';
+      case _ScheduleApprovalState.pending:
+        return 'На согласовании';
+      case _ScheduleApprovalState.none:
+        return 'Составить график';
+    }
+  }
+
   Future<void> _loadAll() async {
     setState(() => _loading = true);
 
@@ -887,15 +898,12 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
           ),
           const SizedBox(height: 10),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
                 child: _ActionPill(
                   icon: CupertinoIcons.calendar_badge_plus,
-                  label: _draftState == _ScheduleApprovalState.approved
-                      ? 'График согласован'
-                      : (_draftState == _ScheduleApprovalState.pending
-                          ? 'На согласовании'
-                          : 'Составить график'),
+                  label: _draftActionLabel(),
                   onTap: _showComposeScheduleDialog,
                   needsAttention: needsAttention,
                   isApproved: _draftState == _ScheduleApprovalState.approved,
@@ -1280,29 +1288,29 @@ class _ActionPill extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
-        child: SizedBox(
-          height: 58,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-            child: Row(
-              children: [
-                Icon(icon, size: 18, color: iconColor),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11.8,
-                      fontWeight: FontWeight.w900,
-                      color: iconColor,
-                    ),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 66),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: iconColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11.8,
+                    height: 1.15,
+                    fontWeight: FontWeight.w900,
+                    color: iconColor,
                   ),
                 ),
-                if (needsAttention) const _PulseDot(),
-              ],
-            ),
+              ),
+              if (needsAttention) const _PulseDot(),
+            ],
           ),
         ),
       ),

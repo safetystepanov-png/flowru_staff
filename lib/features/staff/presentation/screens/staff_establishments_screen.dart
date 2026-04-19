@@ -9,6 +9,7 @@ import '../../data/staff_establishments_api.dart';
 import '../widgets/staff_glass_ui.dart';
 import 'staff_home_screen.dart';
 import '../../../auth/data/auth_session.dart';
+import '../../../auth/data/auth_storage.dart';
 
 const Color kEstMintTop = Color(0xFF0CB7B3);
 const Color kEstMintMid = Color(0xFF08A9AB);
@@ -29,9 +30,15 @@ const Color kEstShadow = Color(0x22062E36);
 const Color kEstBlue = Color(0xFF4E7CFF);
 const Color kEstPink = Color(0xFFFF5F8F);
 const Color kEstViolet = Color(0xFF7A63FF);
+const Color kEstSuccess = Color(0xFF22C55E);
 
 class StaffEstablishmentsScreen extends StatefulWidget {
-  const StaffEstablishmentsScreen({super.key});
+  final bool forceChooser;
+
+  const StaffEstablishmentsScreen({
+    super.key,
+    this.forceChooser = false,
+  });
 
   @override
   State<StaffEstablishmentsScreen> createState() =>
@@ -45,6 +52,7 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
   bool _loading = true;
   String? _error;
   List<StaffEstablishmentItem> _items = [];
+  bool _autoNavigated = false;
 
   late final AnimationController _bgController;
   late final AnimationController _introController;
@@ -89,6 +97,10 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
       });
 
       _introController.forward(from: 0);
+
+      if (!widget.forceChooser) {
+        await _tryAutoOpenSaved(items);
+      }
     } catch (_) {
       if (!mounted) return;
 
@@ -101,7 +113,53 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
     }
   }
 
-  void _openEstablishment(StaffEstablishmentItem item) {
+  Future<void> _tryAutoOpenSaved(List<StaffEstablishmentItem> items) async {
+    if (_autoNavigated) return;
+
+    final savedId = await AuthStorage.getSelectedEstablishmentId();
+    if (savedId == null) return;
+
+    final matched = _findById(items, savedId);
+    if (matched == null) {
+      await AuthStorage.clearSelectedEstablishment();
+      return;
+    }
+
+    _autoNavigated = true;
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => StaffHomeScreen(
+          establishmentId: matched.id,
+          establishmentName: matched.name,
+          role: matched.role,
+        ),
+      ),
+    );
+  }
+
+  StaffEstablishmentItem? _findById(
+    List<StaffEstablishmentItem> items,
+    int id,
+  ) {
+    try {
+      return items.firstWhere((e) => e.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _openEstablishment(StaffEstablishmentItem item) async {
+    await AuthStorage.saveSelectedEstablishment(
+      establishmentId: item.id,
+      establishmentName: item.name,
+      role: item.role,
+    );
+
+    if (!mounted) return;
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => StaffHomeScreen(
@@ -327,17 +385,17 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
         ),
         const SizedBox(height: 12),
         const SizedBox(
-          width: 78,
-          height: 78,
+          width: 82,
+          height: 82,
           child: Center(
-            child: StaffLogoBadge(size: 58),
+            child: StaffLogoBadge(size: 60),
           ),
         ),
         const SizedBox(height: 18),
-        const Text(
-          'Выбор заведения',
+        Text(
+          widget.forceChooser ? 'Смена заведения' : 'Выбор заведения',
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.w900,
             color: Colors.white,
@@ -347,7 +405,9 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
         ),
         const SizedBox(height: 8),
         Text(
-          'Выберите точку, с которой сейчас работаете',
+          widget.forceChooser
+              ? 'Выберите другую точку для продолжения работы'
+              : 'Первый выбор сохранится и в следующий раз откроется автоматически',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 14.5,
@@ -366,11 +426,13 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
             ? 'Ваши заведения\nвладельца'
             : 'Ваши рабочие\nзаведения';
 
-    final bannerText = _hasOwnerRoles && _hasStaffRoles
-        ? 'У вас есть доступ и как владельца, и как сотрудника. Выберите нужную точку входа.'
-        : _hasOwnerRoles
-            ? 'Откройте заведение и управляйте графиком, согласованиями и командой.'
-            : 'Откройте нужную точку и продолжайте работу в едином интерфейсе.';
+    final bannerText = widget.forceChooser
+        ? 'Эта точка будет сохранена как основная и в следующий запуск откроется сразу.'
+        : _hasOwnerRoles && _hasStaffRoles
+            ? 'У вас есть доступ и как владельца, и как сотрудника. Выберите нужную точку входа.'
+            : _hasOwnerRoles
+                ? 'Откройте заведение и управляйте графиком, согласованиями и командой.'
+                : 'Откройте нужную точку и продолжайте работу в едином интерфейсе.';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
@@ -411,7 +473,9 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
                     ],
                   ),
                   child: Text(
-                    _hasOwnerRoles ? 'FLOWRU OWNER / STAFF' : 'FLOWRU STAFF',
+                    widget.forceChooser
+                        ? 'ОСНОВНОЕ ЗАВЕДЕНИЕ'
+                        : (_hasOwnerRoles ? 'FLOWRU OWNER / STAFF' : 'FLOWRU STAFF'),
                     style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w900,
@@ -446,6 +510,58 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
           ),
           const SizedBox(width: 14),
           const _DecorBuildingCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _quickInfoCard() {
+    return _GlassCard(
+      radius: 26,
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        children: [
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              gradient: const LinearGradient(
+                colors: [kEstSuccess, kEstBlue],
+              ),
+            ),
+            child: const Icon(
+              CupertinoIcons.check_mark_circled_solid,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Выбор запоминается',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    color: kEstInk,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'После первого выбора приложение будет сразу открывать главное заведение.',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                    color: kEstInkSoft,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -628,26 +744,32 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(999),
-                      color: (isOwner ? kEstAccent : kEstBlue).withOpacity(0.10),
-                      border: Border.all(
-                        color: (isOwner ? kEstAccent : kEstBlue).withOpacity(0.12),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(999),
+                          color:
+                              (isOwner ? kEstAccent : kEstBlue).withOpacity(0.10),
+                          border: Border.all(
+                            color: (isOwner ? kEstAccent : kEstBlue)
+                                .withOpacity(0.12),
+                          ),
+                        ),
+                        child: Text(
+                          _roleLabel(item.role),
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: kEstInk,
+                          ),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      _roleLabel(item.role),
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w800,
-                        color: kEstInk,
-                      ),
-                    ),
+                    ],
                   ),
                 ],
               ),
@@ -688,8 +810,10 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
 
     return Column(
       children: [
+        _stagger(index: 2, child: _quickInfoCard()),
+        const SizedBox(height: 12),
         for (int i = 0; i < _items.length; i++) ...[
-          _stagger(index: i + 2, child: _itemCard(_items[i])),
+          _stagger(index: i + 3, child: _itemCard(_items[i])),
           if (i != _items.length - 1) const SizedBox(height: 12),
         ],
       ],
