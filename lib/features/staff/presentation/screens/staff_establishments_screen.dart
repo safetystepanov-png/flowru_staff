@@ -518,58 +518,6 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
     );
   }
 
-  Widget _quickInfoCard() {
-    return _GlassCard(
-      radius: 26,
-      padding: const EdgeInsets.all(18),
-      child: Row(
-        children: [
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              gradient: const LinearGradient(
-                colors: [kEstSuccess, kEstBlue],
-              ),
-            ),
-            child: const Icon(
-              CupertinoIcons.check_mark_circled_solid,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 14),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Выбор запоминается',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    color: kEstInk,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'После первого выбора приложение будет сразу открывать главное заведение.',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    height: 1.35,
-                    fontWeight: FontWeight.w700,
-                    color: kEstInkSoft,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _loadingCard() {
     return const _GlassCard(
       radius: 30,
@@ -705,10 +653,19 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
 
   String _roleLabel(String role) {
     final value = role.trim().toLowerCase();
+
     if (value == 'owner') return 'Владелец';
     if (value == 'admin') return 'Администратор';
-    if (value.isEmpty) return 'Сотрудник';
-    return role;
+
+    if (value == 'cashier' ||
+        value == 'staff' ||
+        value == 'employee' ||
+        value == 'worker' ||
+        value.isEmpty) {
+      return 'Сотрудник';
+    }
+
+    return 'Сотрудник';
   }
 
   Widget _itemCard(StaffEstablishmentItem item) {
@@ -813,10 +770,8 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
 
     return Column(
       children: [
-        _stagger(index: 2, child: _quickInfoCard()),
-        const SizedBox(height: 12),
         for (int i = 0; i < _items.length; i++) ...[
-          _stagger(index: i + 3, child: _itemCard(_items[i])),
+          _stagger(index: i + 2, child: _itemCard(_items[i])),
           if (i != _items.length - 1) const SizedBox(height: 12),
         ],
       ],
@@ -1094,12 +1049,35 @@ class _Pressable extends StatefulWidget {
   State<_Pressable> createState() => _PressableState();
 }
 
-class _PressableState extends State<_Pressable> {
+class _PressableState extends State<_Pressable>
+    with SingleTickerProviderStateMixin {
   bool _pressed = false;
+  late final AnimationController _glowController;
+
+  @override
+  void initState() {
+    super.initState();
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+      value: 0,
+    );
+  }
+
+  @override
+  void dispose() {
+    _glowController.dispose();
+    super.dispose();
+  }
 
   void _setPressed(bool value) {
     if (_pressed == value) return;
     setState(() => _pressed = value);
+    if (value) {
+      _glowController.forward();
+    } else {
+      _glowController.reverse();
+    }
   }
 
   void _tap() {
@@ -1109,33 +1087,44 @@ class _PressableState extends State<_Pressable> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => _setPressed(true),
-      onTapUp: (_) => _setPressed(false),
-      onTapCancel: () => _setPressed(false),
-      onTap: _tap,
-      child: AnimatedScale(
-        scale: _pressed ? 0.982 : 1,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOutCubic,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          curve: Curves.easeOutCubic,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            boxShadow: _pressed
-                ? [
+    return AnimatedBuilder(
+      animation: _glowController,
+      builder: (context, child) {
+        final glow = _glowController.value;
+
+        return GestureDetector(
+          onTapDown: (_) => _setPressed(true),
+          onTapUp: (_) => _setPressed(false),
+          onTapCancel: () => _setPressed(false),
+          onTap: _tap,
+          child: AnimatedScale(
+            scale: _pressed ? 0.968 : 1,
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            child: AnimatedRotation(
+              turns: _pressed ? -0.003 : 0,
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(widget.borderRadius),
+                  boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
+                      color: Colors.black.withOpacity(0.03 + (0.03 * glow)),
+                      blurRadius: 8 + (10 * glow),
+                      offset: Offset(0, 3 + (4 * glow)),
                     ),
-                  ]
-                : null,
+                  ],
+                ),
+                child: child,
+              ),
+            ),
           ),
-          child: widget.child,
-        ),
-      ),
+        );
+      },
+      child: widget.child,
     );
   }
 }

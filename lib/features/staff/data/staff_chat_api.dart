@@ -13,6 +13,12 @@ class StaffChatMessageItem {
   final String messageText;
   final String createdAt;
   final String? imageUrl;
+  final String? replyToMessageId;
+  final String? replySenderName;
+  final String? replyText;
+  final bool isPinned;
+  final bool isEdited;
+  final bool isDeleted;
 
   StaffChatMessageItem({
     required this.messageId,
@@ -22,17 +28,44 @@ class StaffChatMessageItem {
     required this.messageText,
     required this.createdAt,
     required this.imageUrl,
+    required this.replyToMessageId,
+    required this.replySenderName,
+    required this.replyText,
+    required this.isPinned,
+    required this.isEdited,
+    required this.isDeleted,
   });
 
   factory StaffChatMessageItem.fromJson(Map<String, dynamic> json) {
+    bool parseBool(dynamic value) {
+      if (value is bool) return value;
+      if (value is num) return value != 0;
+      final s = value?.toString().toLowerCase() ?? '';
+      return s == 'true' || s == '1' || s == 'yes';
+    }
+
     return StaffChatMessageItem(
-      messageId: json['message_id']?.toString() ?? '',
+      messageId: json['message_id']?.toString() ?? json['id']?.toString() ?? '',
       establishmentId: (json['establishment_id'] as num?)?.toInt() ?? 0,
-      senderUserId: json['sender_user_id']?.toString() ?? '',
+      senderUserId: json['sender_user_id']?.toString() ??
+          json['user_id']?.toString() ??
+          '',
       senderName: json['sender_name']?.toString() ?? 'Сотрудник',
-      messageText: json['message_text']?.toString() ?? '',
+      messageText:
+          json['message_text']?.toString() ?? json['text']?.toString() ?? '',
       createdAt: json['created_at']?.toString() ?? '',
-      imageUrl: json['image_url']?.toString(),
+      imageUrl: json['image_url']?.toString() ??
+          json['media_url']?.toString() ??
+          json['file_url']?.toString() ??
+          json['attachment_url']?.toString(),
+      replyToMessageId: json['reply_to_message_id']?.toString(),
+      replySenderName: json['reply_sender_name']?.toString() ??
+          json['reply_to_sender_name']?.toString(),
+      replyText: json['reply_text']?.toString() ??
+          json['reply_to_message_text']?.toString(),
+      isPinned: parseBool(json['is_pinned']),
+      isEdited: parseBool(json['is_edited'] ?? json['edited']),
+      isDeleted: parseBool(json['is_deleted'] ?? json['deleted']),
     );
   }
 }
@@ -86,7 +119,16 @@ class StaffChatApi {
       );
     }
 
-    final data = jsonDecode(response.body) as List<dynamic>;
+    final decoded = jsonDecode(response.body);
+
+    final List<dynamic> data;
+    if (decoded is List) {
+      data = decoded;
+    } else if (decoded is Map<String, dynamic> && decoded['items'] is List) {
+      data = decoded['items'] as List<dynamic>;
+    } else {
+      data = <dynamic>[];
+    }
 
     return data
         .map((e) => StaffChatMessageItem.fromJson(e as Map<String, dynamic>))
@@ -96,6 +138,7 @@ class StaffChatApi {
   Future<StaffChatSendResult> sendMessage({
     required int establishmentId,
     required String text,
+    String? replyToMessageId,
   }) async {
     final token = await _token();
 
@@ -113,10 +156,11 @@ class StaffChatApi {
       body: jsonEncode({
         'establishment_id': establishmentId,
         'message_text': text,
+        if (replyToMessageId != null) 'reply_to_message_id': replyToMessageId,
       }),
     );
 
-    if (response.statusCode != 200) {
+    if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception(
         'POST chat/messages failed: ${response.statusCode} ${response.body}',
       );
@@ -132,6 +176,7 @@ class StaffChatApi {
     required List<int> bytes,
     required String filename,
     String? caption,
+    String? replyToMessageId,
   }) async {
     final token = await _token();
 
@@ -143,6 +188,9 @@ class StaffChatApi {
     request.headers['Authorization'] = 'Bearer $token';
     request.fields['establishment_id'] = establishmentId.toString();
     request.fields['message_text'] = caption ?? '';
+    if (replyToMessageId != null) {
+      request.fields['reply_to_message_id'] = replyToMessageId;
+    }
 
     request.files.add(
       http.MultipartFile.fromBytes(
@@ -155,7 +203,7 @@ class StaffChatApi {
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
 
-    if (response.statusCode != 200) {
+    if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception(
         'POST chat/messages/image failed: ${response.statusCode} ${response.body}',
       );

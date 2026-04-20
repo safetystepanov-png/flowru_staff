@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -13,9 +14,8 @@ const Color kScheduleMintMid = Color(0xFF08A9AB);
 const Color kScheduleMintBottom = Color(0xFF067D87);
 const Color kScheduleMintDeep = Color(0xFF055E66);
 
-const Color kScheduleCard = Color(0xCCFFFFFF);
-const Color kScheduleCardStrong = Color(0xE8FFFFFF);
-const Color kScheduleStroke = Color(0xA6FFFFFF);
+const Color kScheduleCard = Color(0xF7FFFFFF);
+const Color kScheduleStroke = Color(0xFFE2EFEF);
 
 const Color kScheduleInk = Color(0xFF103238);
 const Color kScheduleInkSoft = Color(0xFF58767D);
@@ -91,6 +91,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
   @override
   void initState() {
     super.initState();
+
     final now = DateTime.now();
     _visibleMonth = DateTime(now.year, now.month);
 
@@ -145,8 +146,11 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
   }
 
   int _myShiftsCountInMonth() {
-    return _assignments.values
-        .where((items) => items.any((e) => e.isMine))
+    return _assignments.entries
+        .where((entry) =>
+            entry.key.year == _visibleMonth.year &&
+            entry.key.month == _visibleMonth.month &&
+            entry.value.any((e) => e.isMine))
         .length;
   }
 
@@ -167,22 +171,23 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
 
     return _monthPublished
         ? 'На этот месяц смен больше нет'
-        : 'График на месяц еще не опубликован';
+        : 'График на месяц ещё не опубликован';
   }
 
   String _draftActionLabel() {
-    switch (_draftState) {
-      case _ScheduleApprovalState.approved:
-        return 'График согласован';
-      case _ScheduleApprovalState.pending:
-        return 'На согласовании';
-      case _ScheduleApprovalState.none:
-        return 'Составить график';
+    if (_monthPublished) {
+      return 'График согласован';
     }
+
+    return 'Заполнить график';
   }
 
   Future<void> _loadAll() async {
-    setState(() => _loading = true);
+    if (!mounted) return;
+
+    setState(() {
+      _loading = true;
+    });
 
     try {
       await Future.wait(<Future<void>>[
@@ -191,33 +196,43 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
       ]);
     } finally {
       if (!mounted) return;
-      setState(() => _loading = false);
+      setState(() {
+        _loading = false;
+      });
     }
   }
 
   Future<void> _loadDraftState() async {
-    final request = await _requestsApi.getLatestMyRequest(
-      establishmentId: widget.establishmentId,
-      year: _visibleMonth.year,
-      month: _visibleMonth.month,
-    );
+    try {
+      final request = await _requestsApi.getLatestMyRequest(
+        establishmentId: widget.establishmentId,
+        year: _visibleMonth.year,
+        month: _visibleMonth.month,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (request == null) {
+      if (request == null) {
+        setState(() {
+          _requestedDays = <int>[];
+          _draftState = _ScheduleApprovalState.none;
+        });
+        return;
+      }
+
+      setState(() {
+        _requestedDays = List<int>.from(request.selectedDays)..sort();
+        _draftState = request.status == 'approved'
+            ? _ScheduleApprovalState.approved
+            : _ScheduleApprovalState.pending;
+      });
+    } catch (_) {
+      if (!mounted) return;
       setState(() {
         _requestedDays = <int>[];
         _draftState = _ScheduleApprovalState.none;
       });
-      return;
     }
-
-    setState(() {
-      _requestedDays = List<int>.from(request.selectedDays)..sort();
-      _draftState = request.status == 'approved'
-          ? _ScheduleApprovalState.approved
-          : _ScheduleApprovalState.pending;
-    });
   }
 
   String _normalizeDisplayName(String rawName, {required bool isMine}) {
@@ -230,6 +245,24 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
         lower == 'staff_user' ||
         lower == 'user' ||
         lower == 'employee' ||
+        lower == 'сотрудник' ||
+        lower == 'cashier') {
+      return 'Сотрудник';
+    }
+
+    return value;
+  }
+
+  String _normalizeRole(String rawRole) {
+    final value = rawRole.trim();
+    if (value.isEmpty) return 'Сотрудник';
+
+    final lower = value.toLowerCase();
+    if (lower == 'cashier' ||
+        lower == 'staff' ||
+        lower == 'employee' ||
+        lower == 'user' ||
+        lower == 'staff_user' ||
         lower == 'сотрудник') {
       return 'Сотрудник';
     }
@@ -246,25 +279,33 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
       );
 
       final map = <DateTime, List<_ShiftAssignment>>{};
+
       for (final day in month.days) {
-        map[_stripTime(day.date)] = day.items.map((person) {
-          final name = _normalizeDisplayName(
-            person.employeeName,
+        final safeDate = _stripTime(day.date);
+
+        final safeItems = day.items.map((person) {
+          final safeName = _normalizeDisplayName(
+            person.employeeName.trim(),
             isMine: person.isMine,
           );
 
+          final rawRole = person.employeeRole?.trim() ?? '';
+          final safeRole =
+              rawRole.isNotEmpty ? _normalizeRole(rawRole) : 'Сотрудник';
+
+          final rawBadge = person.employeeLabel?.trim() ?? '';
+          final safeBadge = rawBadge.isNotEmpty ? rawBadge.toUpperCase() : null;
+
           return _ShiftAssignment(
-            employeeId: person.employeeUserId,
-            employeeName: name,
-            role: (person.employeeRole?.trim().isNotEmpty ?? false)
-                ? person.employeeRole!.trim()
-                : 'Сотрудник',
-            badge: (person.employeeLabel?.trim().isNotEmpty ?? false)
-                ? person.employeeLabel!.trim().toUpperCase()
-                : null,
+            employeeId: person.employeeUserId.trim(),
+            employeeName: safeName,
+            role: safeRole,
+            badge: safeBadge,
             isMine: person.isMine,
           );
         }).toList();
+
+        map[safeDate] = safeItems;
       }
 
       if (!mounted) return;
@@ -272,7 +313,10 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
         _assignments = map;
         _monthPublished = month.published;
       });
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('WORK_SCHEDULE _loadPublishedMonth ERROR: $e');
+      debugPrint('$st');
+
       if (!mounted) return;
       setState(() {
         _assignments = <DateTime, List<_ShiftAssignment>>{};
@@ -319,102 +363,100 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
         return Dialog(
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(30),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FCFC),
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: const Color(0xFFE3F0F0)),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FCFC),
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: const Color(0xFFE3F0F0)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Попросить замену · ${_dateTitle(date)}',
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: kScheduleInk,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(),
-                          icon: const Icon(CupertinoIcons.xmark),
-                        ),
-                      ],
-                    ),
-                    TextField(
-                      controller: controller,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        hintText: 'Причина (необязательно)',
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: Color(0xFFE2EFEF)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: Color(0xFFE2EFEF)),
+                    Expanded(
+                      child: Text(
+                        'Попросить замену · ${_dateTitle(date)}',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: kScheduleInk,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _DialogFooterButton(
-                            label: 'Отмена',
-                            isPrimary: false,
-                            onTap: () => Navigator.of(dialogContext).pop(),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _DialogFooterButton(
-                            label: _sendingSwap ? 'Отправка...' : 'Отправить',
-                            isPrimary: true,
-                            onTap: () async {
-                              setState(() => _sendingSwap = true);
-
-                              try {
-                                await _requestsApi.requestSwap(
-                                  establishmentId: widget.establishmentId,
-                                  shiftDate: _stripTime(date)
-                                      .toIso8601String()
-                                      .split('T')
-                                      .first,
-                                  reason: controller.text.trim().isEmpty
-                                      ? null
-                                      : controller.text.trim(),
-                                );
-
-                                if (!mounted) return;
-                                Navigator.of(dialogContext).pop();
-                                _showSnack('Запрос на замену отправлен.');
-                              } catch (e) {
-                                _showSnack('Ошибка отправки: $e');
-                              } finally {
-                                if (!mounted) return;
-                                setState(() => _sendingSwap = false);
-                              }
-                            },
-                          ),
-                        ),
-                      ],
+                    IconButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      icon: const Icon(CupertinoIcons.xmark),
                     ),
                   ],
                 ),
-              ),
+                TextField(
+                  controller: controller,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Причина (необязательно)',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: Color(0xFFE2EFEF)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: Color(0xFFE2EFEF)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _DialogFooterButton(
+                        label: 'Отмена',
+                        isPrimary: false,
+                        onTap: () => Navigator.of(dialogContext).pop(),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _DialogFooterButton(
+                        label: _sendingSwap ? 'Отправка...' : 'Отправить',
+                        isPrimary: true,
+                        onTap: () async {
+                          setState(() {
+                            _sendingSwap = true;
+                          });
+
+                          try {
+                            await _requestsApi.requestSwap(
+                              establishmentId: widget.establishmentId,
+                              shiftDate: _stripTime(date)
+                                  .toIso8601String()
+                                  .split('T')
+                                  .first,
+                              reason: controller.text.trim().isEmpty
+                                  ? null
+                                  : controller.text.trim(),
+                            );
+
+                            if (!mounted) return;
+                            Navigator.of(dialogContext).pop();
+                            _showSnack('Запрос на замену отправлен.');
+                          } catch (e) {
+                            _showSnack('Ошибка отправки: $e');
+                          } finally {
+                            if (!mounted) return;
+                            setState(() {
+                              _sendingSwap = false;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         );
@@ -442,188 +484,180 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
               backgroundColor: Colors.transparent,
               insetPadding:
                   const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(30),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FCFC),
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: const Color(0xFFE3F0F0)),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FCFC),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: const Color(0xFFE3F0F0)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Составить график · ${_monthNames[_visibleMonth.month - 1]} ${_visibleMonth.year}',
-                                style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w900,
-                                  color: kScheduleInk,
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: () => Navigator.of(dialogContext).pop(),
-                              icon: const Icon(CupertinoIcons.xmark),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _monthPublished
-                              ? 'Можно выбрать только свободные дни без уже назначенных смен.'
-                              : 'Выберите дни, в которые готовы работать в этом месяце.',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: kScheduleInkSoft,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 320),
-                          child: SingleChildScrollView(
-                            child: Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: List<Widget>.generate(
-                                daysInMonth,
-                                (index) {
-                                  final day = index + 1;
-                                  final isBusy =
-                                      _monthPublished && busyDays.contains(day);
-                                  final isSelected = selected.contains(day);
-
-                                  return Opacity(
-                                    opacity: isBusy ? 0.42 : 1,
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(14),
-                                      onTap: isBusy
-                                          ? null
-                                          : () {
-                                              setLocalState(() {
-                                                if (isSelected) {
-                                                  selected.remove(day);
-                                                } else {
-                                                  selected.add(day);
-                                                }
-                                              });
-                                            },
-                                      child: Container(
-                                        width: 44,
-                                        height: 44,
-                                        alignment: Alignment.center,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(14),
-                                          color: isSelected
-                                              ? kScheduleSuccess.withOpacity(0.15)
-                                              : (isBusy
-                                                  ? const Color(0xFFF0ECE5)
-                                                  : Colors.white),
-                                          border: Border.all(
-                                            color: isSelected
-                                                ? kScheduleSuccess
-                                                : (isBusy
-                                                    ? const Color(0xFFD7CFC0)
-                                                    : const Color(0xFFE2EFEF)),
-                                            width: isSelected ? 1.5 : 1.0,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          '$day',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w900,
-                                            color: isSelected
-                                                ? kScheduleSuccess
-                                                : (isBusy
-                                                    ? kScheduleInkSoft
-                                                    : kScheduleInk),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
+                        Expanded(
+                          child: Text(
+                            'Составить график · ${_monthNames[_visibleMonth.month - 1]} ${_visibleMonth.year}',
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              color: kScheduleInk,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _DialogFooterButton(
-                                label: 'Сбросить',
-                                isPrimary: false,
-                                onTap: () {
-                                  setLocalState(() {
-                                    selected.clear();
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _DialogFooterButton(
-                                label:
-                                    _sendingDraft ? 'Отправка...' : 'Отправить',
-                                isPrimary: true,
-                                onTap: () async {
-                                  final selectedDays = selected.toList()..sort();
-
-                                  if (selectedDays.isEmpty) {
-                                    _showSnack(
-                                      'Выберите хотя бы один доступный день.',
-                                    );
-                                    return;
-                                  }
-
-                                  setState(() => _sendingDraft = true);
-
-                                  try {
-                                    final result =
-                                        await _requestsApi.submitScheduleRequest(
-                                      establishmentId: widget.establishmentId,
-                                      year: _visibleMonth.year,
-                                      month: _visibleMonth.month,
-                                      selectedDays: selectedDays,
-                                    );
-
-                                    if (!mounted) return;
-
-                                    setState(() {
-                                      _requestedDays =
-                                          List<int>.from(result.selectedDays)
-                                            ..sort();
-                                      _draftState = result.status == 'approved'
-                                          ? _ScheduleApprovalState.approved
-                                          : _ScheduleApprovalState.pending;
-                                    });
-
-                                    Navigator.of(dialogContext).pop();
-                                    _showSnack('Запрос отправлен владельцу.');
-                                  } catch (e) {
-                                    _showSnack('Ошибка отправки: $e');
-                                  } finally {
-                                    if (!mounted) return;
-                                    setState(() => _sendingDraft = false);
-                                  }
-                                },
-                              ),
-                            ),
-                          ],
+                        IconButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          icon: const Icon(CupertinoIcons.xmark),
                         ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _monthPublished
+                          ? 'Можно выбрать только свободные дни без уже назначенных смен.'
+                          : 'Выберите дни, в которые готовы работать в этом месяце.',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: kScheduleInkSoft,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 320),
+                      child: SingleChildScrollView(
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: List<Widget>.generate(daysInMonth, (index) {
+                            final day = index + 1;
+                            final isBusy =
+                                _monthPublished && busyDays.contains(day);
+                            final isSelected = selected.contains(day);
+
+                            return Opacity(
+                              opacity: isBusy ? 0.42 : 1,
+                              child: GestureDetector(
+                                onTap: isBusy
+                                    ? null
+                                    : () {
+                                        setLocalState(() {
+                                          if (isSelected) {
+                                            selected.remove(day);
+                                          } else {
+                                            selected.add(day);
+                                          }
+                                        });
+                                      },
+                                child: Container(
+                                  width: 44,
+                                  height: 44,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(14),
+                                    color: isSelected
+                                        ? kScheduleSuccess.withOpacity(0.15)
+                                        : (isBusy
+                                            ? const Color(0xFFF0ECE5)
+                                            : Colors.white),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? kScheduleSuccess
+                                          : (isBusy
+                                              ? const Color(0xFFD7CFC0)
+                                              : const Color(0xFFE2EFEF)),
+                                      width: isSelected ? 1.5 : 1.0,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '$day',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      color: isSelected
+                                          ? kScheduleSuccess
+                                          : (isBusy
+                                              ? kScheduleInkSoft
+                                              : kScheduleInk),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _DialogFooterButton(
+                            label: 'Сбросить',
+                            isPrimary: false,
+                            onTap: () {
+                              setLocalState(() {
+                                selected.clear();
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _DialogFooterButton(
+                            label: _sendingDraft ? 'Отправка...' : 'Отправить',
+                            isPrimary: true,
+                            onTap: () async {
+                              final selectedDays = selected.toList()..sort();
+
+                              if (selectedDays.isEmpty) {
+                                _showSnack(
+                                  'Выберите хотя бы один доступный день.',
+                                );
+                                return;
+                              }
+
+                              setState(() {
+                                _sendingDraft = true;
+                              });
+
+                              try {
+                                final result =
+                                    await _requestsApi.submitScheduleRequest(
+                                  establishmentId: widget.establishmentId,
+                                  year: _visibleMonth.year,
+                                  month: _visibleMonth.month,
+                                  selectedDays: selectedDays,
+                                );
+
+                                if (!mounted) return;
+
+                                setState(() {
+                                  _requestedDays =
+                                      List<int>.from(result.selectedDays)..sort();
+                                  _draftState = result.status == 'approved'
+                                      ? _ScheduleApprovalState.approved
+                                      : _ScheduleApprovalState.pending;
+                                });
+
+                                Navigator.of(dialogContext).pop();
+                                _showSnack('Запрос отправлен владельцу.');
+                              } catch (e) {
+                                _showSnack('Ошибка отправки: $e');
+                              } finally {
+                                if (!mounted) return;
+                                setState(() {
+                                  _sendingDraft = false;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             );
@@ -638,131 +672,122 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
     final visibleItems = _visibleAssignments(date);
     final hasMine = rawItems.any((e) => e.isMine);
 
-    await showGeneralDialog<void>(
+    await showDialog<void>(
       context: context,
       barrierDismissible: true,
-      barrierLabel: 'day-details',
-      barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 220),
-      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
-      transitionBuilder: (context, animation, _, __) {
-        final curved =
-            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
-
-        return Transform.scale(
-          scale: 0.95 + (0.05 * curved.value),
-          child: Opacity(
-            opacity: curved.value,
-            child: Center(
-              child: Material(
-                color: Colors.transparent,
-                child: Container(
-                  width: MediaQuery.of(context).size.width - 32,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FCFC),
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: const Color(0xFFE3F0F0)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.16),
-                        blurRadius: 24,
-                        offset: const Offset(0, 14),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              _dateTitle(date),
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
-                                color: kScheduleInk,
-                              ),
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Container(
+            width: MediaQuery.of(context).size.width - 32,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FCFC),
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: const Color(0xFFE3F0F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.16),
+                  blurRadius: 24,
+                  offset: const Offset(0, 14),
+                ),
+              ],
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 560),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _dateTitle(date),
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: kScheduleInk,
                             ),
                           ),
-                          IconButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            icon: const Icon(CupertinoIcons.xmark),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      _StatusBanner(
-                        color: !_monthPublished
-                            ? kScheduleDanger
-                            : hasMine
-                                ? kScheduleSuccess
-                                : kScheduleAccent,
-                        title: !_monthPublished
-                            ? 'График не опубликован'
-                            : hasMine
-                                ? 'У вас есть смена'
-                                : (rawItems.isEmpty
-                                    ? 'Свободный день'
-                                    : 'Не моя смена'),
-                        subtitle: !_monthPublished
-                            ? 'Владелец еще не опубликовал график на этот месяц.'
-                            : hasMine
-                                ? 'Для изменения опубликованной смены используйте запрос замены.'
-                                : (rawItems.isEmpty
-                                    ? 'На этот день нет назначений. Его можно запросить.'
-                                    : 'На этот день уже назначены другие сотрудники.'),
-                      ),
-                      const SizedBox(height: 14),
-                      if (!_monthPublished)
-                        const _InfoMessageCard(
-                          icon: CupertinoIcons.calendar,
-                          title: 'График еще не опубликован',
-                          text:
-                              'Когда владелец опубликует график, здесь появятся сотрудники и рабочие дни.',
-                        )
-                      else if (visibleItems.isEmpty)
-                        _InfoMessageCard(
-                          icon: rawItems.isEmpty
-                              ? CupertinoIcons.plus_circle_fill
-                              : CupertinoIcons.person_2_fill,
-                          title: rawItems.isEmpty
-                              ? 'День пока свободен'
-                              : (_showOnlyMine
-                                  ? 'У вас нет смены на этот день'
-                                  : 'На день уже есть назначения'),
-                          text: rawItems.isEmpty
-                              ? 'Этот день можно запросить через кнопку «Составить график».'
-                              : (_showOnlyMine
-                                  ? 'Отключите фильтр «Только мои», чтобы посмотреть всю команду.'
-                                  : 'Для уже назначенных смен используйте запрос замены.'),
-                        )
-                      else
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 340),
-                          child: ListView.separated(
-                            shrinkWrap: true,
-                            itemCount: visibleItems.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 10),
-                            itemBuilder: (context, index) =>
-                                _ShiftTile(item: visibleItems[index]),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          icon: const Icon(CupertinoIcons.xmark),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _StatusBanner(
+                      color: !_monthPublished
+                          ? kScheduleDanger
+                          : hasMine
+                              ? kScheduleSuccess
+                              : kScheduleAccent,
+                      title: !_monthPublished
+                          ? 'График не опубликован'
+                          : hasMine
+                              ? 'У вас есть смена'
+                              : (rawItems.isEmpty
+                                  ? 'Свободный день'
+                                  : 'Не моя смена'),
+                      subtitle: !_monthPublished
+                          ? 'Владелец ещё не опубликовал график на этот месяц.'
+                          : hasMine
+                              ? 'Для изменения опубликованной смены используйте запрос замены.'
+                              : (rawItems.isEmpty
+                                  ? 'На этот день нет назначений. Его можно запросить.'
+                                  : 'На этот день уже назначены другие сотрудники.'),
+                    ),
+                    const SizedBox(height: 14),
+                    if (!_monthPublished)
+                      const _InfoMessageCard(
+                        icon: CupertinoIcons.calendar,
+                        title: 'График ещё не опубликован',
+                        text:
+                            'Когда владелец опубликует график, здесь появятся сотрудники и рабочие дни.',
+                      )
+                    else if (visibleItems.isEmpty)
+                      _InfoMessageCard(
+                        icon: rawItems.isEmpty
+                            ? CupertinoIcons.plus_circle_fill
+                            : CupertinoIcons.person_2_fill,
+                        title: rawItems.isEmpty
+                            ? 'День пока свободен'
+                            : (_showOnlyMine
+                                ? 'У вас нет смены на этот день'
+                                : 'На день уже есть назначения'),
+                        text: rawItems.isEmpty
+                            ? 'Этот день можно запросить через кнопку «Составить график».'
+                            : (_showOnlyMine
+                                ? 'Отключите фильтр «Только мои», чтобы посмотреть всю команду.'
+                                : 'Для уже назначенных смен используйте запрос замены.'),
+                      )
+                    else
+                      Column(
+                        children: List.generate(
+                          visibleItems.length,
+                          (index) => Padding(
+                            padding: EdgeInsets.only(
+                              bottom: index == visibleItems.length - 1 ? 0 : 10,
+                            ),
+                            child: _ShiftTile(item: visibleItems[index]),
                           ),
                         ),
-                      const SizedBox(height: 14),
-                      if (_monthPublished && hasMine)
-                        _DialogFooterButton(
-                          label: 'Попросить замену',
-                          isPrimary: true,
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            _showSwapRequestDialog(date);
-                          },
-                        ),
-                    ],
-                  ),
+                      ),
+                    const SizedBox(height: 14),
+                    if (_monthPublished && hasMine)
+                      _DialogFooterButton(
+                        label: 'Попросить замену',
+                        isPrimary: true,
+                        onTap: () {
+                          Navigator.of(dialogContext).pop();
+                          _showSwapRequestDialog(date);
+                        },
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -852,11 +877,9 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
   }
 
   Widget _buildHeaderControls() {
-    final needsAttention = _draftState == _ScheduleApprovalState.none;
+    final bool needsAttention = !_monthPublished;
 
-    return _GlassCard(
-      radius: 24,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+    return _SimpleCard(
       child: Column(
         children: [
           Row(
@@ -898,7 +921,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
           ),
           const SizedBox(height: 10),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: _ActionPill(
@@ -906,7 +929,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                   label: _draftActionLabel(),
                   onTap: _showComposeScheduleDialog,
                   needsAttention: needsAttention,
-                  isApproved: _draftState == _ScheduleApprovalState.approved,
+                  isApproved: _monthPublished,
                 ),
               ),
               const SizedBox(width: 10),
@@ -916,7 +939,11 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                       ? CupertinoIcons.person_crop_circle_fill
                       : CupertinoIcons.person_2,
                   label: _showOnlyMine ? 'Только мои' : 'Вся команда',
-                  onTap: () => setState(() => _showOnlyMine = !_showOnlyMine),
+                  onTap: () {
+                    setState(() {
+                      _showOnlyMine = !_showOnlyMine;
+                    });
+                  },
                   isActive: _showOnlyMine,
                 ),
               ),
@@ -928,139 +955,188 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
   }
 
   Widget _buildTopInfoRow() {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    final width = MediaQuery.of(context).size.width;
+
+    if (width < 680) {
+      return Column(
         children: [
-          Expanded(child: _buildMySummary()),
-          const SizedBox(width: 12),
-          Expanded(child: _buildLegend()),
+          _buildMySummary(),
+          const SizedBox(height: 12),
+          _buildLegend(),
         ],
-      ),
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: _buildMySummary()),
+        const SizedBox(width: 12),
+        Expanded(child: _buildLegend()),
+      ],
     );
   }
 
   Widget _buildMySummary() {
-    return _GlassCard(
-      radius: 24,
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  gradient: const LinearGradient(
-                    colors: [kScheduleSuccess, kScheduleBlue],
+    return _SimpleCard(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 132),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: const LinearGradient(
+                      colors: [kScheduleSuccess, kScheduleBlue],
+                    ),
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.briefcase_fill,
+                    color: Colors.white,
+                    size: 20,
                   ),
                 ),
-                child: const Icon(
-                  CupertinoIcons.briefcase_fill,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Мои смены',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: kScheduleInk,
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Мои смены',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: kScheduleInk,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            '${_myShiftsCountInMonth()} смен в этом месяце',
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              color: kScheduleInk,
+              ],
             ),
-          ),
-          const SizedBox(height: 4),
-          Expanded(
-            child: Align(
-              alignment: Alignment.topLeft,
-              child: Text(
-                _nextMyShiftLabel(),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
-                  color: kScheduleInkSoft,
-                  height: 1.35,
-                ),
+            const SizedBox(height: 10),
+            Text(
+              '${_myShiftsCountInMonth()} смен в этом месяце',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                color: kScheduleInk,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 6),
+            Text(
+              _nextMyShiftLabel(),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+                color: kScheduleInkSoft,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildLegend() {
-    return _GlassCard(
-      radius: 24,
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
-            'Инфо',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              color: kScheduleInk,
-            ),
-          ),
-          SizedBox(height: 12),
-          _LegendRow(color: kScheduleSuccess, label: 'Моя смена'),
-          SizedBox(height: 8),
-          _LegendRow(color: kScheduleAccent, label: 'Свободно / не моя'),
-          SizedBox(height: 8),
-          _LegendRow(color: kScheduleDanger, label: 'Не опубликовано'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusCard() {
-    final color = _monthPublished ? kScheduleSuccess : kScheduleDanger;
-    final icon = _monthPublished
-        ? CupertinoIcons.check_mark_circled_solid
-        : CupertinoIcons.exclamationmark_circle_fill;
-    final text = _monthPublished
-        ? 'График подтвержден и опубликован'
-        : 'График еще не подтвержден и не опубликован';
-
-    return _GlassCard(
-      radius: 24,
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Icon(icon, color: color),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 13.5,
+    return _SimpleCard(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 132),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'Инфо',
+              style: TextStyle(
+                fontSize: 18,
                 fontWeight: FontWeight.w900,
                 color: kScheduleInk,
               ),
             ),
-          ),
-        ],
+            SizedBox(height: 12),
+            _LegendRow(color: kScheduleSuccess, label: 'Моя смена'),
+            SizedBox(height: 8),
+            _LegendRow(color: kScheduleAccent, label: 'Свободно / не моя'),
+            SizedBox(height: 8),
+            _LegendRow(color: kScheduleDanger, label: 'Не опубликовано'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyMonthHint() {
+    final hasAssignments = _assignments.values.any((items) => items.isNotEmpty);
+
+    if (_monthPublished || hasAssignments) {
+      return const SizedBox.shrink();
+    }
+
+    final bool isApproved = _draftState == _ScheduleApprovalState.approved;
+    final bool isPending = _draftState == _ScheduleApprovalState.pending;
+
+    final String title;
+    final String text;
+    final IconData icon;
+
+    if (isApproved) {
+      title = 'График ещё не опубликован';
+      text =
+          'Ваши дни уже согласованы. После публикации владельцем здесь появятся смены.';
+      icon = CupertinoIcons.calendar;
+    } else if (isPending) {
+      title = 'Заявка на график отправлена';
+      text =
+          'Дождитесь согласования владельцем. После этого график появится в календаре.';
+      icon = CupertinoIcons.time;
+    } else {
+      title = 'Нет данных по графику';
+      text =
+          'На этот месяц вы ещё не отправляли доступные дни. Нажмите «Заполнить график».';
+      icon = CupertinoIcons.calendar_badge_plus;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: _SimpleCard(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Icon(icon, color: kScheduleBlue),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w900,
+                      color: kScheduleInk,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      height: 1.4,
+                      fontWeight: FontWeight.w700,
+                      color: kScheduleInkSoft,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1068,9 +1144,8 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
   Widget _buildCalendar() {
     final days = _calendarDays();
 
-    return _GlassCard(
-      radius: 28,
-      padding: const EdgeInsets.fromLTRB(6, 14, 6, 12),
+    return _SimpleCard(
+      padding: const EdgeInsets.fromLTRB(8, 14, 8, 12),
       child: Column(
         children: [
           Row(
@@ -1096,13 +1171,14 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
           ),
           GridView.builder(
             shrinkWrap: true,
+            primary: false,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: days.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
               mainAxisSpacing: 6,
               crossAxisSpacing: 6,
-              childAspectRatio: 0.62,
+              childAspectRatio: 0.70,
             ),
             itemBuilder: (context, index) {
               final date = days[index];
@@ -1118,8 +1194,9 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                 isToday: isToday,
                 published: _monthPublished,
                 hasMine: hasMine,
-                labels: visibleItems.take(4).map((e) => e.shortLabel).toList(),
-                extraCount: visibleItems.length > 4 ? visibleItems.length - 4 : 0,
+                labels: visibleItems.take(3).map((e) => e.shortLabel).toList(),
+                extraCount:
+                    visibleItems.length > 3 ? visibleItems.length - 3 : 0,
                 allCount: allItems.length,
                 onTap: () => _showDayDetails(date),
               );
@@ -1167,8 +1244,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                         const SizedBox(height: 12),
                         _buildTopInfoRow(),
                         const SizedBox(height: 12),
-                        _buildStatusCard(),
-                        const SizedBox(height: 12),
+                        _buildEmptyMonthHint(),
                         _buildCalendar(),
                       ],
                     ),
@@ -1180,44 +1256,33 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
   }
 }
 
-class _GlassCard extends StatelessWidget {
+class _SimpleCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
-  final double radius;
 
-  const _GlassCard({
+  const _SimpleCard({
     required this.child,
-    required this.padding,
-    required this.radius,
+    this.padding = const EdgeInsets.all(14),
   });
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(radius),
-            gradient: const LinearGradient(
-              colors: [kScheduleCardStrong, kScheduleCard],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            border: Border.all(color: kScheduleStroke),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 24,
-                offset: const Offset(0, 14),
-              ),
-            ],
+    return Container(
+      width: double.infinity,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: kScheduleCard,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: kScheduleStroke),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
           ),
-          child: child,
-        ),
+        ],
       ),
+      child: child,
     );
   }
 }
@@ -1233,17 +1298,16 @@ class _CircleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white.withOpacity(0.78),
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: SizedBox(
-          width: 40,
-          height: 40,
-          child: Icon(icon, color: kScheduleInk, size: 20),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: const BoxDecoration(
+          color: Color(0xEBFFFFFF),
+          shape: BoxShape.circle,
         ),
+        child: Icon(icon, color: kScheduleInk, size: 20),
       ),
     );
   }
@@ -1274,7 +1338,7 @@ class _ActionPill extends StatelessWidget {
             ? kScheduleAccent.withOpacity(0.14)
             : (isActive
                 ? kScheduleBlue.withOpacity(0.12)
-                : Colors.white.withOpacity(0.76));
+                : Colors.white.withOpacity(0.92));
 
     final iconColor = isApproved
         ? kScheduleSuccess
@@ -1282,36 +1346,34 @@ class _ActionPill extends StatelessWidget {
             ? kScheduleAccent
             : (isActive ? kScheduleBlue : kScheduleInk);
 
-    return Material(
-      color: fill,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 66),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Icon(icon, size: 18, color: iconColor),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11.8,
-                    height: 1.15,
-                    fontWeight: FontWeight.w900,
-                    color: iconColor,
-                  ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 66),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          color: fill,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: iconColor),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11.8,
+                  height: 1.15,
+                  fontWeight: FontWeight.w900,
+                  color: iconColor,
                 ),
               ),
-              if (needsAttention) const _PulseDot(),
-            ],
-          ),
+            ),
+            if (needsAttention) const _PulseDot(),
+          ],
         ),
       ),
     );
@@ -1432,126 +1494,125 @@ class _CalendarDayTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final opacity = isCurrentMonth ? 1.0 : 0.28;
+    final double contentOpacity = isCurrentMonth ? 1.0 : 0.30;
     final accent = !published
         ? kScheduleDanger
         : (hasMine ? kScheduleSuccess : kScheduleAccent);
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.86),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isToday ? kScheduleBlue : const Color(0xFFE1ECEC),
-              width: isToday ? 1.8 : 1.0,
-            ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(isCurrentMonth ? 0.95 : 0.84),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isToday ? kScheduleBlue : const Color(0xFFE1ECEC),
+            width: isToday ? 1.8 : 1.0,
           ),
-          child: Opacity(
-            opacity: opacity,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        padding: const EdgeInsets.all(5),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${date.day}',
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w900,
-                          color: kScheduleInk,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: accent,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
                 Expanded(
-                  child: !published
-                      ? Container(
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: kScheduleDanger.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        )
-                      : allCount == 0
-                          ? Container(
-                              width: double.infinity,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: kScheduleAccent.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Text(
-                                '—',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w900,
-                                  color: kScheduleAccent,
-                                ),
-                              ),
-                            )
-                          : Column(
-                              children: [
-                                ...labels.map(
-                                  (label) => Container(
-                                    width: double.infinity,
-                                    margin: const EdgeInsets.only(bottom: 3),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 2,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: hasMine
-                                          ? kScheduleSuccess.withOpacity(0.14)
-                                          : kScheduleAccent.withOpacity(0.12),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      label,
-                                      textAlign: TextAlign.center,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 8.6,
-                                        fontWeight: FontWeight.w900,
-                                        color: hasMine
-                                            ? kScheduleSuccess
-                                            : kScheduleAccent,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                if (extraCount > 0)
-                                  Text(
-                                    '+$extraCount',
-                                    style: const TextStyle(
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.w900,
-                                      color: kScheduleInkSoft,
-                                    ),
-                                  ),
-                              ],
-                            ),
+                  child: Text(
+                    '${date.day}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w900,
+                      color: kScheduleInk.withOpacity(contentOpacity),
+                    ),
+                  ),
+                ),
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: accent.withOpacity(contentOpacity),
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 4),
+            Expanded(
+              child: !published
+                  ? Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: kScheduleDanger.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    )
+                  : allCount == 0
+                      ? Container(
+                          width: double.infinity,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: kScheduleAccent.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '—',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                              color:
+                                  kScheduleAccent.withOpacity(contentOpacity),
+                            ),
+                          ),
+                        )
+                      : Column(
+                          children: [
+                            for (final label in labels)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 3),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 2,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: hasMine
+                                        ? kScheduleSuccess.withOpacity(0.14)
+                                        : kScheduleAccent.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    label,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 8.6,
+                                      fontWeight: FontWeight.w900,
+                                      color: hasMine
+                                          ? kScheduleSuccess
+                                          : kScheduleAccent,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            if (extraCount > 0)
+                              Text(
+                                '+$extraCount',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: kScheduleInkSoft.withOpacity(
+                                    contentOpacity,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+            ),
+          ],
         ),
       ),
     );
@@ -1736,22 +1797,21 @@ class _DialogFooterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: isPrimary ? kScheduleBlue : Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 13),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w900,
-                color: isPrimary ? Colors.white : kScheduleInk,
-              ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        decoration: BoxDecoration(
+          color: isPrimary ? kScheduleBlue : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w900,
+              color: isPrimary ? Colors.white : kScheduleInk,
             ),
           ),
         ),
@@ -1835,24 +1895,36 @@ class _ShiftAssignment {
   });
 
   String get shortLabel {
-    if (badge != null && badge!.trim().isNotEmpty) {
-      return badge!.trim().toUpperCase();
+    final safeBadge = badge?.trim() ?? '';
+    if (safeBadge.isNotEmpty) {
+      return safeBadge.toUpperCase();
     }
 
     if (isMine) return 'ВЫ';
 
-    final parts = employeeName
-        .trim()
+    final safeName = employeeName.trim();
+    if (safeName.isEmpty) return '—';
+
+    final parts = safeName
         .split(RegExp(r'\s+'))
-        .where((e) => e.isNotEmpty)
+        .where((e) => e.trim().isNotEmpty)
         .toList();
 
     if (parts.isEmpty) return '—';
+
     if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+      final first = parts[0].trim();
+      final second = parts[1].trim();
+
+      final firstLetter = first.isNotEmpty ? first.substring(0, 1) : '';
+      final secondLetter = second.isNotEmpty ? second.substring(0, 1) : '';
+
+      final result = '$firstLetter$secondLetter'.trim();
+      if (result.isNotEmpty) return result.toUpperCase();
     }
 
-    final word = parts.first.toUpperCase();
+    final word = parts.first.trim().toUpperCase();
+    if (word.isEmpty) return '—';
     if (word.length >= 3) return word.substring(0, 3);
     return word;
   }

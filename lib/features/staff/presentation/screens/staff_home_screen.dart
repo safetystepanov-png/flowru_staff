@@ -456,7 +456,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         .then((_) => _loadDashboard());
   }
 
-  void _openChat() {
+  void _openMessenger() {
     Navigator.of(context)
         .push(
           _buildAnimatedRoute(
@@ -695,36 +695,18 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           ),
         ),
         const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Система',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 27,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.9,
-                  color: Colors.white,
-                  height: 1.0,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                widget.establishmentName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 15.5,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.2,
-                  color: Colors.white.withOpacity(0.90),
-                  height: 1.0,
-                ),
-              ),
-            ],
+        const Expanded(
+          child: Text(
+            'Flowru',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 29,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.9,
+              color: Colors.white,
+              height: 1.0,
+            ),
           ),
         ),
         _TopIconButton(
@@ -1215,11 +1197,11 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       children: [
         Expanded(
           child: _ModuleCard(
-            title: 'Чат',
+            title: 'Месседжер',
             subtitle: '',
-            icon: CupertinoIcons.chat_bubble_2,
+            icon: CupertinoIcons.chat_bubble_2_fill,
             glowColor: kHomeBlue,
-            onTap: _openChat,
+            onTap: _openMessenger,
             showPulse: _chatCount > 0,
           ),
         ),

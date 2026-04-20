@@ -10,6 +10,10 @@ class AuthStorage {
   static const String _selectedEstablishmentRoleKey =
       'selected_establishment_role';
 
+  static const String _savedPhoneKey = 'saved_phone';
+  static const String _savedPasswordKey = 'saved_password';
+  static const String _biometricEnabledKey = 'biometric_enabled';
+
   static Future<void> saveAccessToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_accessTokenKey, token);
@@ -63,10 +67,47 @@ class AuthStorage {
     await prefs.remove(_selectedEstablishmentRoleKey);
   }
 
+  static Future<void> saveLoginCredentials({
+    required String phone,
+    required String password,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_savedPhoneKey, phone);
+    await prefs.setString(_savedPasswordKey, password);
+  }
+
+  static Future<String?> getSavedPhone() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_savedPhoneKey);
+  }
+
+  static Future<String?> getSavedPassword() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_savedPasswordKey);
+  }
+
+  static Future<void> clearSavedLoginCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_savedPhoneKey);
+    await prefs.remove(_savedPasswordKey);
+  }
+
+  static Future<void> setBiometricEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_biometricEnabledKey, enabled);
+  }
+
+  static Future<bool> isBiometricEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_biometricEnabledKey) ?? false;
+  }
+
   static Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_accessTokenKey);
     await prefs.remove(_refreshTokenKey);
     await clearSelectedEstablishment();
+    await clearSavedLoginCredentials();
+    await prefs.remove(_biometricEnabledKey);
   }
 }

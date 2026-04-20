@@ -2,15 +2,17 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../data/auth_storage.dart';
-import '../../data/user_api.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../staff/presentation/screens/staff_establishments_screen.dart';
+import '../../data/auth_storage.dart';
+import '../../data/user_api.dart';
 import 'register_screen.dart';
 
 const Color kLoginMintTop = Color(0xFF0CB7B3);
@@ -45,10 +47,16 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final UserApi _userApi = UserApi();
+  final LocalAuthentication _localAuth = LocalAuthentication();
 
   bool _loading = false;
   bool _showPassword = false;
   String? _error;
+
+  bool _biometricAvailable = false;
+  bool _biometricEnabled = false;
+  bool _biometricChecking = true;
+  bool _biometricLoading = false;
 
   late final AnimationController _introController;
   late final AnimationController _ambientController;
@@ -85,6 +93,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
     );
 
     _introController.forward();
+    _initSavedLoginAndBiometric();
   }
 
   @override
@@ -94,6 +103,200 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
     _introController.dispose();
     _ambientController.dispose();
     super.dispose();
+  }
+
+  Future<void> _initSavedLoginAndBiometric() async {
+    final savedPhone = await AuthStorage.getSavedPhone();
+    final savedPassword = await AuthStorage.getSavedPassword();
+    final biometricEnabled = await AuthStorage.isBiometricEnabled();
+
+    if (!mounted) return;
+
+    if (savedPhone != null && savedPhone.trim().isNotEmpty) {
+      _phoneController.text = savedPhone.trim();
+    }
+
+    if (savedPassword != null && savedPassword.isNotEmpty) {
+      _passwordController.text = savedPassword;
+    }
+
+    bool available = false;
+
+    if (!kIsWeb) {
+      try {
+        final canCheck = await _localAuth.canCheckBiometrics;
+        final isSupported = await _localAuth.isDeviceSupported();
+        available = canCheck || isSupported;
+      } catch (_) {
+        available = false;
+      }
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _biometricAvailable = available;
+      _biometricEnabled = biometricEnabled;
+      _biometricChecking = false;
+    });
+  }
+
+  Future<void> _enableBiometricIfPossible() async {
+    if (kIsWeb) return;
+    if (!_biometricAvailable) return;
+
+    await AuthStorage.setBiometricEnabled(true);
+
+    if (!mounted) return;
+    setState(() {
+      _biometricEnabled = true;
+    });
+  }
+
+  Future<void> _submitWithCredentials({
+    required String phone,
+    required String password,
+    bool saveCredentials = true,
+  }) async {
+    if (phone.isEmpty) {
+      setState(() => _error = 'Введите номер телефона');
+      return;
+    }
+
+    if (password.isEmpty) {
+      setState(() => _error = 'Введите пароль');
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    final result = await _userApi.login(
+      phone: phone,
+      password: password,
+      deviceId: kIsWeb ? 'staff-web' : 'staff-mobile',
+      platform: kIsWeb ? 'web' : 'mobile',
+    );
+
+    if (!mounted) return;
+
+    if (!result.ok) {
+      setState(() {
+        _loading = false;
+        _error = result.message;
+      });
+      return;
+    }
+
+    await AuthStorage.saveAccessToken(result.accessToken);
+    await AuthStorage.saveRefreshToken(result.refreshToken);
+
+    if (saveCredentials) {
+      await AuthStorage.saveLoginCredentials(
+        phone: phone,
+        password: password,
+      );
+      await _enableBiometricIfPossible();
+    }
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const StaffEstablishmentsScreen()),
+      (route) => false,
+    );
+  }
+
+  Future<void> _submit() async {
+    final phone = _phoneController.text.trim();
+    final password = _passwordController.text;
+
+    await _submitWithCredentials(
+      phone: phone,
+      password: password,
+      saveCredentials: true,
+    );
+  }
+
+  Future<void> _loginWithBiometric() async {
+    if (kIsWeb) {
+      setState(() {
+        _error = 'Биометрия в web-версии не поддерживается';
+      });
+      return;
+    }
+
+    if (_loading || _biometricLoading) return;
+
+    final savedPhone = await AuthStorage.getSavedPhone();
+    final savedPassword = await AuthStorage.getSavedPassword();
+
+    if (savedPhone == null ||
+        savedPhone.trim().isEmpty ||
+        savedPassword == null ||
+        savedPassword.isEmpty) {
+      setState(() {
+        _error = 'Нет сохранённых данных для входа';
+      });
+      return;
+    }
+
+    setState(() {
+      _biometricLoading = true;
+      _error = null;
+    });
+
+    try {
+      final authenticated = await _localAuth.authenticate(
+        localizedReason: 'Войдите в Flowru Staff',
+        biometricOnly: true,
+        persistAcrossBackgrounding: true,
+      );
+
+      if (!authenticated) {
+        if (!mounted) return;
+        setState(() {
+          _biometricLoading = false;
+        });
+        return;
+      }
+
+      await _submitWithCredentials(
+        phone: savedPhone.trim(),
+        password: savedPassword,
+        saveCredentials: false,
+      );
+    } on PlatformException catch (e) {
+      final code = e.code.toLowerCase();
+
+      String message = 'Не удалось выполнить вход по биометрии';
+
+      if (code.contains('notavailable') || code.contains('not_available')) {
+        message = 'Биометрия недоступна на этом устройстве';
+      } else if (code.contains('notenrolled') ||
+          code.contains('not_enrolled')) {
+        message = 'В устройстве не настроен Face ID / Touch ID';
+      } else if (code.contains('lockedout') || code.contains('locked_out')) {
+        message = 'Биометрия временно заблокирована';
+      } else if (code.contains('permanentlylockedout') ||
+          code.contains('permanently_locked_out')) {
+        message = 'Биометрия заблокирована. Разблокируйте её в системе';
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _biometricLoading = false;
+        _error = message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _biometricLoading = false;
+        _error = 'Не удалось выполнить вход по Face ID / Touch ID';
+      });
+    }
   }
 
   InputDecoration _inputDecoration(
@@ -148,53 +351,6 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
           width: 1.4,
         ),
       ),
-    );
-  }
-
-  Future<void> _submit() async {
-    final phone = _phoneController.text.trim();
-    final password = _passwordController.text;
-
-    if (phone.isEmpty) {
-      setState(() => _error = 'Введите номер телефона');
-      return;
-    }
-
-    if (password.isEmpty) {
-      setState(() => _error = 'Введите пароль');
-      return;
-    }
-
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    final result = await _userApi.login(
-      phone: phone,
-      password: password,
-      deviceId: 'staff-web',
-      platform: 'web',
-    );
-
-    if (!mounted) return;
-
-    if (!result.ok) {
-      setState(() {
-        _loading = false;
-        _error = result.message;
-      });
-      return;
-    }
-
-    await AuthStorage.saveAccessToken(result.accessToken);
-    await AuthStorage.saveRefreshToken(result.refreshToken);
-
-    if (!mounted) return;
-
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const StaffEstablishmentsScreen()),
-      (route) => false,
     );
   }
 
@@ -460,6 +616,55 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
     );
   }
 
+  Widget _biometricButton() {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.white.withOpacity(0.92),
+        border: Border.all(color: Colors.white.withOpacity(0.96)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ElevatedButton.icon(
+        onPressed: _biometricLoading ? null : _loginWithBiometric,
+        icon: _biometricLoading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.1,
+                  color: kLoginBlue,
+                ),
+              )
+            : const Icon(
+                Icons.face_retouching_natural_rounded,
+                color: kLoginBlue,
+              ),
+        label: const Text(
+          'Войти через Face ID / Touch ID',
+          style: TextStyle(
+            color: kLoginBlue,
+            fontSize: 15.5,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          minimumSize: const Size.fromHeight(56),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _card() {
     return Container(
       width: 470,
@@ -618,6 +823,12 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
                           ),
                   ),
                 ),
+                if (!_biometricChecking &&
+                    _biometricAvailable &&
+                    _biometricEnabled) ...[
+                  const SizedBox(height: 12),
+                  _biometricButton(),
+                ],
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: _loading ? null : _openRecoverySheet,

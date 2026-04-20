@@ -417,27 +417,31 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
     return FadeTransition(
       opacity: _textOpacity,
       child: Container(
-        width: 120,
+        width: 132,
         height: 6,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(999),
           color: Colors.white.withOpacity(0.16),
         ),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: AnimatedBuilder(
-            animation: _pulseController,
-            builder: (context, child) {
-              return FractionallySizedBox(
-                widthFactor: 0.28 + (_pulseController.value * 0.42),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFFFFA11D),
-                        Color(0xFFFFC45E),
-                      ],
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 1150),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) {
+              return Align(
+                alignment: Alignment.centerLeft,
+                child: FractionallySizedBox(
+                  widthFactor: value.clamp(0.0, 1.0),
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Color(0xFFFFA11D),
+                          Color(0xFFFFC45E),
+                        ],
+                      ),
                     ),
                   ),
                 ),

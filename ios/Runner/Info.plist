@@ -30,6 +30,9 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Приложению нужен доступ к камере для сканирования QR-кодов клиентов.</string>
 
+	<key>NSFaceIDUsageDescription</key>
+	<string>Face ID используется для быстрого входа в Flowru Staff.</string>
+
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

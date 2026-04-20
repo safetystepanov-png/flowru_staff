@@ -28,18 +28,30 @@ class MyScheduleRequestItem {
     required this.updatedAt,
   });
 
+  static int _parseInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static List<int> _parseIntList(dynamic raw) {
+    if (raw is! List) return <int>[];
+
+    return raw
+        .map((e) => int.tryParse(e.toString()) ?? 0)
+        .where((e) => e > 0)
+        .toList()
+      ..sort();
+  }
+
   factory MyScheduleRequestItem.fromJson(Map<String, dynamic> json) {
     return MyScheduleRequestItem(
-      requestId: (json['request_id'] as num?)?.toInt() ?? 0,
-      establishmentId: (json['establishment_id'] as num?)?.toInt() ?? 0,
-      year: (json['year'] as num?)?.toInt() ?? 0,
-      month: (json['month'] as num?)?.toInt() ?? 0,
-      selectedDays: ((json['selected_days'] as List?) ?? const [])
-          .map((e) => int.tryParse(e.toString()) ?? 0)
-          .where((e) => e > 0)
-          .toList()
-        ..sort(),
-      status: json['status']?.toString() ?? 'pending',
+      requestId: _parseInt(json['request_id']),
+      establishmentId: _parseInt(json['establishment_id']),
+      year: _parseInt(json['year']),
+      month: _parseInt(json['month']),
+      selectedDays: _parseIntList(json['selected_days']),
+      status: (json['status'] ?? 'pending').toString(),
       comment: json['comment']?.toString(),
       createdAt: json['created_at']?.toString(),
       updatedAt: json['updated_at']?.toString(),
@@ -56,6 +68,54 @@ class StaffScheduleRequestsApi {
       throw Exception('Access token not found');
     }
     return token;
+  }
+
+  Map<String, dynamic>? _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return null;
+  }
+
+  List<Map<String, dynamic>> _asMapList(dynamic value) {
+    if (value is! List) return <Map<String, dynamic>>[];
+
+    return value
+        .where((e) => e is Map)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+  }
+
+  DateTime? _parseDate(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    return DateTime.tryParse(value.trim());
+  }
+
+  MyScheduleRequestItem? _pickExactMonthRequest({
+    required List<Map<String, dynamic>> items,
+    required int establishmentId,
+    required int year,
+    required int month,
+  }) {
+    final matches = items
+        .map(MyScheduleRequestItem.fromJson)
+        .where((request) =>
+            request.establishmentId == establishmentId &&
+            request.year == year &&
+            request.month == month)
+        .toList();
+
+    if (matches.isEmpty) return null;
+    if (matches.length == 1) return matches.first;
+
+    matches.sort((a, b) {
+      final aDate =
+          _parseDate(a.updatedAt) ?? _parseDate(a.createdAt) ?? DateTime(1970);
+      final bDate =
+          _parseDate(b.updatedAt) ?? _parseDate(b.createdAt) ?? DateTime(1970);
+      return bDate.compareTo(aDate);
+    });
+
+    return matches.first;
   }
 
   Future<MyScheduleRequestItem?> getLatestMyRequest({
@@ -78,7 +138,7 @@ class StaffScheduleRequestsApi {
       },
     );
 
-    if (response.statusCode != 200) {
+    if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
         'get latest request failed: ${response.statusCode} body=${response.body}',
       );
@@ -86,26 +146,65 @@ class StaffScheduleRequestsApi {
 
     final decoded = jsonDecode(response.body);
 
-    if (decoded is List && decoded.isNotEmpty) {
-      final first = decoded.first;
-      if (first is Map<String, dynamic>) {
-        return MyScheduleRequestItem.fromJson(first);
-      }
-      if (first is Map) {
-        return MyScheduleRequestItem.fromJson(Map<String, dynamic>.from(first));
-      }
+    if (decoded is List) {
+      final items = _asMapList(decoded);
+      return _pickExactMonthRequest(
+        items: items,
+        establishmentId: establishmentId,
+        year: year,
+        month: month,
+      );
     }
 
-    if (decoded is Map<String, dynamic>) {
-      final items = decoded['items'];
-      if (items is List && items.isNotEmpty) {
-        final first = items.first;
-        if (first is Map<String, dynamic>) {
-          return MyScheduleRequestItem.fromJson(first);
-        }
-        if (first is Map) {
-          return MyScheduleRequestItem.fromJson(Map<String, dynamic>.from(first));
-        }
+    final decodedMap = _asMap(decoded);
+    if (decodedMap == null) return null;
+
+    final directRequestId =
+        int.tryParse((decodedMap['request_id'] ?? '').toString()) ?? 0;
+    if (directRequestId > 0) {
+      final direct = MyScheduleRequestItem.fromJson(decodedMap);
+      if (direct.establishmentId == establishmentId &&
+          direct.year == year &&
+          direct.month == month) {
+        return direct;
+      }
+      return null;
+    }
+
+    final items = _asMapList(decodedMap['items']);
+    final fromItems = _pickExactMonthRequest(
+      items: items,
+      establishmentId: establishmentId,
+      year: year,
+      month: month,
+    );
+    if (fromItems != null) return fromItems;
+
+    final requests = _asMapList(decodedMap['requests']);
+    final fromRequests = _pickExactMonthRequest(
+      items: requests,
+      establishmentId: establishmentId,
+      year: year,
+      month: month,
+    );
+    if (fromRequests != null) return fromRequests;
+
+    final dataList = _asMapList(decodedMap['data']);
+    final fromDataList = _pickExactMonthRequest(
+      items: dataList,
+      establishmentId: establishmentId,
+      year: year,
+      month: month,
+    );
+    if (fromDataList != null) return fromDataList;
+
+    final dataMap = _asMap(decodedMap['data']);
+    if (dataMap != null) {
+      final dataRequest = MyScheduleRequestItem.fromJson(dataMap);
+      if (dataRequest.establishmentId == establishmentId &&
+          dataRequest.year == year &&
+          dataRequest.month == month) {
+        return dataRequest;
       }
     }
 
@@ -135,22 +234,32 @@ class StaffScheduleRequestsApi {
         'year': year,
         'month': month,
         'selected_days': selectedDays,
-        if (comment != null && comment.trim().isNotEmpty) 'comment': comment.trim(),
+        if (comment != null && comment.trim().isNotEmpty)
+          'comment': comment.trim(),
       }),
     );
 
-    if (response.statusCode != 200) {
+    if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
         'submit schedule request failed: ${response.statusCode} body=${response.body}',
       );
     }
 
     final decoded = jsonDecode(response.body);
-    if (decoded is Map<String, dynamic>) {
-      return MyScheduleRequestItem.fromJson(decoded);
-    }
-    if (decoded is Map) {
-      return MyScheduleRequestItem.fromJson(Map<String, dynamic>.from(decoded));
+
+    final decodedMap = _asMap(decoded);
+    if (decodedMap != null) {
+      final directRequestId =
+          int.tryParse((decodedMap['request_id'] ?? '').toString()) ?? 0;
+
+      if (directRequestId > 0) {
+        return MyScheduleRequestItem.fromJson(decodedMap);
+      }
+
+      final dataMap = _asMap(decodedMap['data']);
+      if (dataMap != null) {
+        return MyScheduleRequestItem.fromJson(dataMap);
+      }
     }
 
     return MyScheduleRequestItem(
@@ -185,11 +294,12 @@ class StaffScheduleRequestsApi {
       body: jsonEncode({
         'establishment_id': establishmentId,
         'shift_date': shiftDate,
-        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+        if (reason != null && reason.trim().isNotEmpty)
+          'reason': reason.trim(),
       }),
     );
 
-    if (response.statusCode != 200) {
+    if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
         'request swap failed: ${response.statusCode} body=${response.body}',
       );
