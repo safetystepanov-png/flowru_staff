@@ -128,7 +128,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   Future<void> _init() async {
-    await _load();
+    await _refreshMessagesSilently(keepScrollOffset: true);
   }
 
   void _onComposerChanged() {
@@ -243,11 +243,24 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     } catch (_) {}
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
+  Future<void> _load({
+    bool silent = false,
+    bool keepScrollOffset = false,
+    bool jumpToBottomAfter = true,
+  }) async {
+    final double? previousOffset =
+        keepScrollOffset && _scrollController.hasClients
+            ? _scrollController.offset
+            : null;
+
+    if (!silent) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    } else {
       _error = null;
-    });
+    }
 
     try {
       await _loadCurrentUser();
@@ -314,7 +327,16 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       _introController.forward(from: 0);
 
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        _scrollToBottom(jump: true);
+        if (!mounted) return;
+
+        if (keepScrollOffset && previousOffset != null && _scrollController.hasClients) {
+          final max = _scrollController.position.maxScrollExtent;
+          final target = previousOffset.clamp(0.0, max);
+          _scrollController.jumpTo(target);
+        } else if (jumpToBottomAfter) {
+          _scrollToBottom(jump: true);
+        }
+
         await _markDeliveredToBackend();
         _markVisibleMessagesAsRead();
       });
@@ -326,6 +348,14 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       });
       _introController.forward(from: 0);
     }
+  }
+
+  Future<void> _refreshMessagesSilently({bool keepScrollOffset = true}) async {
+    await _load(
+      silent: true,
+      keepScrollOffset: keepScrollOffset,
+      jumpToBottomAfter: !keepScrollOffset,
+    );
   }
 
   void _scrollToBottom({bool jump = false}) {
@@ -630,7 +660,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         _sending = false;
       });
 
-      await _load();
+      await _load(silent: true, keepScrollOffset: false, jumpToBottomAfter: true);
     } catch (e) {
       if (!mounted) return;
 
@@ -835,10 +865,10 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         ..fields['message_text'] = ''
         ..files.add(
           await http.MultipartFile.fromPath(
-            'file',
+            'audio',
             recordedPath,
             filename: 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a',
-            contentType: MediaType('audio', 'mp4'),
+            contentType: MediaType('audio', 'm4a'),
           ),
         );
 
@@ -859,7 +889,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         _messages = _messages.where((m) => m.id != localMessageId).toList();
       });
 
-      await _load();
+      await _refreshMessagesSilently(keepScrollOffset: true);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -1118,7 +1148,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       if (response.statusCode != 200) {
         throw Exception(_extractErrorText(response));
       }
-      await _load();
+      await _refreshMessagesSilently(keepScrollOffset: true);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -1462,7 +1492,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         _messages = _messages.where((m) => m.id != localMessageId).toList();
       });
 
-      await _load();
+      await _refreshMessagesSilently(keepScrollOffset: true);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -2480,126 +2510,181 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   Future<void> _openMessageActions(_ChatMessage message) async {
     final mine = _isMine(message);
 
-    await showDialog<void>(
+    await showModalBottomSheet<void>(
       context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black.withOpacity(0.18),
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
+      backgroundColor: Colors.transparent,
       builder: (dialogContext) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: Align(
-            alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 320),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.94),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.white.withOpacity(0.96)),
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.96),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: Colors.white.withOpacity(0.98)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 22,
+                      offset: const Offset(0, 10),
                     ),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _sheetAction(
-                            icon: CupertinoIcons.check_mark_circled,
-                            color: kChatAmber,
-                            title: 'Выбрать',
-                            onTap: () {
-                              Navigator.of(dialogContext).pop();
-                              _enterSelectionMode(message);
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          _sheetAction(
-                            icon: CupertinoIcons.reply,
-                            color: kChatBlue,
-                            title: 'Ответить',
-                            onTap: () {
-                              Navigator.of(dialogContext).pop();
-                              _startReply(message);
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          _sheetAction(
-                            icon: CupertinoIcons.doc_on_doc,
-                            color: kChatViolet,
-                            title: 'Копировать',
-                            onTap: () async {
-                              Navigator.of(dialogContext).pop();
-                              await _copyMessageText(message);
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          _sheetAction(
-                            icon: CupertinoIcons.smiley,
-                            color: kChatGreen,
-                            title: 'Добавить реакцию',
-                            onTap: () {
-                              Navigator.of(dialogContext).pop();
-                              _openEmojiPanel(message);
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          _sheetAction(
-                            icon: CupertinoIcons.pin,
-                            color: kChatAmber,
-                            title: message.isPinned || _pinnedMessageId == message.id
-                                ? 'Убрать из закрепа'
-                                : 'Закрепить',
-                            onTap: () {
-                              Navigator.of(dialogContext).pop();
-                              _togglePinnedMessageLocal(message);
-                            },
-                          ),
-                          if (message.type == _AttachmentType.file) ...[
-                            const SizedBox(height: 8),
-                            _sheetAction(
-                              icon: CupertinoIcons.paperclip,
-                              color: kChatBlue,
-                              title: 'Открыть файл',
-                              onTap: () {
-                                Navigator.of(dialogContext).pop();
-                                _openAttachment(message);
-                              },
-                            ),
-                          ],
-                          if (mine && !message.isDeleted && message.type == _AttachmentType.text) ...[
-                            const SizedBox(height: 8),
-                            _sheetAction(
-                              icon: CupertinoIcons.pencil,
-                              color: kChatBlue,
-                              title: 'Редактировать',
-                              onTap: () {
-                                Navigator.of(dialogContext).pop();
-                                _startEditMessage(message);
-                              },
-                            ),
-                          ],
-                          const SizedBox(height: 8),
-                          _sheetAction(
-                            icon: CupertinoIcons.delete_solid,
-                            color: kChatRed,
-                            title: mine ? 'Удалить у всех' : 'Удалить у себя',
-                            onTap: () {
-                              Navigator.of(dialogContext).pop();
-                              if (mine || message.isLocalOnly) {
-                                _deleteForAll(message);
-                              } else {
-                                _deleteForMe(message);
-                              }
-                            },
-                          ),
-                        ],
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD8E2E6),
+                        borderRadius: BorderRadius.circular(999),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            color: mine
+                                ? kChatBlue.withOpacity(0.10)
+                                : kChatGreen.withOpacity(0.10),
+                          ),
+                          child: Icon(
+                            mine ? CupertinoIcons.ellipsis : CupertinoIcons.chat_bubble_2_fill,
+                            color: mine ? kChatBlue : kChatGreen,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                mine ? 'Действия с вашим сообщением' : 'Действия с сообщением',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: kChatInk,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _messagePreview(message),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: kChatInkSoft,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    _sheetAction(
+                      icon: CupertinoIcons.check_mark_circled,
+                      color: kChatAmber,
+                      title: 'Выбрать',
+                      onTap: () {
+                        Navigator.of(dialogContext).pop();
+                        _enterSelectionMode(message);
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    _sheetAction(
+                      icon: CupertinoIcons.reply,
+                      color: kChatBlue,
+                      title: 'Ответить',
+                      onTap: () {
+                        Navigator.of(dialogContext).pop();
+                        _startReply(message);
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    _sheetAction(
+                      icon: CupertinoIcons.doc_on_doc,
+                      color: kChatViolet,
+                      title: 'Копировать',
+                      onTap: () async {
+                        Navigator.of(dialogContext).pop();
+                        await _copyMessageText(message);
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    _sheetAction(
+                      icon: CupertinoIcons.smiley,
+                      color: kChatGreen,
+                      title: 'Добавить реакцию',
+                      onTap: () {
+                        Navigator.of(dialogContext).pop();
+                        _openEmojiPanel(message);
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    _sheetAction(
+                      icon: CupertinoIcons.pin,
+                      color: kChatAmber,
+                      title: message.isPinned || _pinnedMessageId == message.id
+                          ? 'Убрать из закрепа'
+                          : 'Закрепить',
+                      onTap: () {
+                        Navigator.of(dialogContext).pop();
+                        _togglePinnedMessageLocal(message);
+                      },
+                    ),
+                    if (message.type == _AttachmentType.file) ...[
+                      const SizedBox(height: 8),
+                      _sheetAction(
+                        icon: CupertinoIcons.paperclip,
+                        color: kChatBlue,
+                        title: 'Открыть файл',
+                        onTap: () {
+                          Navigator.of(dialogContext).pop();
+                          _openAttachment(message);
+                        },
+                      ),
+                    ],
+                    if (mine && !message.isDeleted && message.type == _AttachmentType.text) ...[
+                      const SizedBox(height: 8),
+                      _sheetAction(
+                        icon: CupertinoIcons.pencil,
+                        color: kChatBlue,
+                        title: 'Редактировать',
+                        onTap: () {
+                          Navigator.of(dialogContext).pop();
+                          _startEditMessage(message);
+                        },
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    _sheetAction(
+                      icon: CupertinoIcons.delete_solid,
+                      color: kChatRed,
+                      title: mine ? 'Удалить у всех' : 'Удалить у себя',
+                      onTap: () {
+                        Navigator.of(dialogContext).pop();
+                        if (mine || message.isLocalOnly) {
+                          _deleteForAll(message);
+                        } else {
+                          _deleteForMe(message);
+                        }
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -3638,36 +3723,86 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
   Future<void> _openParticipantsSheet() async {
     final names = _participantNames();
+    final stats = <String, int>{};
+    for (final m in _messages) {
+      final name = m.senderName.trim().isEmpty ? 'Сотрудник' : m.senderName.trim();
+      stats[name] = (stats[name] ?? 0) + 1;
+    }
+
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(26),
+            borderRadius: BorderRadius.circular(28),
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
               child: Container(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.95),
-                  borderRadius: BorderRadius.circular(26),
+                  borderRadius: BorderRadius.circular(28),
                   border: Border.all(color: Colors.white.withOpacity(0.98)),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Участники чата',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 18,
-                        color: kChatInk,
+                    Center(
+                      child: Container(
+                        width: 42,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD8E2E6),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            color: kChatBlue.withOpacity(0.10),
+                          ),
+                          child: const Icon(
+                            CupertinoIcons.person_2_fill,
+                            color: kChatBlue,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Участники чата',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 18,
+                                  color: kChatInk,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Всего: ${names.length}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: kChatInkSoft,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
                     if (names.isEmpty)
                       const Text(
                         'Список пока пуст',
@@ -3678,36 +3813,68 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                       )
                     else
                       ...names.map(
-                        (name) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 34,
-                                height: 34,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: kChatBlue.withOpacity(0.10),
-                                ),
-                                child: const Icon(
-                                  CupertinoIcons.person_fill,
-                                  size: 16,
-                                  color: kChatBlue,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    color: kChatInk,
+                        (name) {
+                          final count = stats[name] ?? 0;
+                          final parts = name.trim().split(' ').where((e) => e.isNotEmpty).toList();
+                          final initials = parts.isEmpty
+                              ? 'С'
+                              : parts.take(2).map((e) => e.substring(0, 1).toUpperCase()).join();
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(18),
+                              color: const Color(0xFFF7FAFC),
+                              border: Border.all(color: const Color(0xFFE8EEF2)),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(
+                                      colors: [kChatBlue.withOpacity(0.85), kChatViolet.withOpacity(0.85)],
+                                    ),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    initials,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w900,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          color: kChatInk,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Сообщений в чате: $count',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          color: kChatInkSoft,
+                                          fontSize: 12.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                   ],
                 ),
