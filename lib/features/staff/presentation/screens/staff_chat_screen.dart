@@ -1,18 +1,18 @@
-// Полный обновлённый файл staff_chat_screen.dart
-// Добавлено: statuses UI, unread divider, jump to unread, typing bar,
-// улучшенные forward/reply блоки, multi-select actions, draft, voice local UI.
-
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 
 import '../../../auth/data/auth_storage.dart';
 import '../../../../core/config/app_config.dart';
@@ -60,7 +60,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   final ScrollController _scrollController = ScrollController();
   final FocusNode _messageFocusNode = FocusNode();
   final ImagePicker _picker = ImagePicker();
-
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  String? _recordingFilePath;
   bool _loading = true;
   bool _sending = false;
   bool _showScrollToBottom = false;
@@ -192,6 +193,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     _messageFocusNode.dispose();
     _bgController.dispose();
     _introController.dispose();
+    _audioRecorder.dispose();
     super.dispose();
   }
 
@@ -311,8 +313,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
       _introController.forward(from: 0);
 
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         _scrollToBottom(jump: true);
+        await _markDeliveredToBackend();
         _markVisibleMessagesAsRead();
         _simulateLocalDeliveryProgress();
       });
@@ -732,29 +735,78 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     }
   }
 
-  void _startVoiceRecording() {
+  Future<void> _startVoiceRecording() async {
     if (_isRecordingVoice) return;
-    setState(() {
-      _isRecordingVoice = true;
-      _recordingSeconds = 0;
-      _error = null;
-      _showTypingMock = false;
-    });
 
-    _recordingTimer?.cancel();
-    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+    try {
+      final hasPermission = await _audioRecorder.hasPermission();
+      if (!hasPermission) {
+        setState(() {
+          _error = 'Нет доступа к микрофону';
+        });
+        return;
+      }
+
+      final dir = await getTemporaryDirectory();
+      final filePath =
+          '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+      await _audioRecorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 128000,
+          sampleRate: 44100,
+        ),
+        path: filePath,
+      );
+
+      setState(() {
+        _isRecordingVoice = true;
+        _recordingSeconds = 0;
+        _error = null;
+        _showTypingMock = false;
+        _recordingFilePath = filePath;
+      });
+
+      _recordingTimer?.cancel();
+      _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted) return;
+        setState(() {
+          _recordingSeconds += 1;
+        });
+      });
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _recordingSeconds += 1;
+        _error = 'Не удалось начать запись: ${e.toString()}';
+        _isRecordingVoice = false;
+        _recordingSeconds = 0;
+        _recordingFilePath = null;
       });
-    });
+    }
   }
 
-  void _cancelVoiceRecording() {
+  Future<void> _cancelVoiceRecording() async {
     _recordingTimer?.cancel();
+
+    try {
+      if (await _audioRecorder.isRecording()) {
+        final path = await _audioRecorder.stop();
+        if (path != null) {
+          final file = File(path);
+          if (await file.exists()) {
+            await file.delete();
+          }
+        }
+      }
+    } catch (_) {}
+
+    if (!mounted) return;
+
     setState(() {
       _isRecordingVoice = false;
       _recordingSeconds = 0;
+      _recordingFilePath = null;
     });
   }
 
@@ -762,13 +814,47 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     _recordingTimer?.cancel();
     final int seconds = _recordingSeconds <= 0 ? 1 : _recordingSeconds;
 
-    if (!mounted) return;
+    String? recordedPath;
 
-    setState(() {
-      _isRecordingVoice = false;
-      _recordingSeconds = 0;
-      _error = null;
-    });
+    try {
+      recordedPath = await _audioRecorder.stop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isRecordingVoice = false;
+        _recordingSeconds = 0;
+        _recordingFilePath = null;
+        _error = 'Не удалось завершить запись: ${e.toString()}';
+      });
+      return;
+    }
+
+    recordedPath ??= _recordingFilePath;
+
+    if (recordedPath == null || recordedPath.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _isRecordingVoice = false;
+        _recordingSeconds = 0;
+        _recordingFilePath = null;
+        _error = 'Файл голосового сообщения не найден';
+      });
+      return;
+    }
+
+    final file = File(recordedPath);
+    if (!await file.exists()) {
+      if (!mounted) return;
+      setState(() {
+        _isRecordingVoice = false;
+        _recordingSeconds = 0;
+        _recordingFilePath = null;
+        _error = 'Записанный файл не найден';
+      });
+      return;
+    }
+
+    if (!mounted) return;
 
     final String localMessageId =
         'local_voice_${DateTime.now().microsecondsSinceEpoch}';
@@ -797,10 +883,18 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       isRead: false,
     );
 
+    final replyToMessageId = _replyingToMessageId;
+    final replySenderName = _replyingToSenderName;
+    final replyText = _replyingToText;
+
     setState(() {
+      _isRecordingVoice = false;
+      _recordingSeconds = 0;
+      _recordingFilePath = null;
       _replyingToMessageId = null;
       _replyingToSenderName = null;
       _replyingToText = null;
+      _error = null;
       _messages = [..._messages, optimisticMessage];
     });
 
@@ -811,19 +905,21 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     try {
       final token = await _token();
 
-      final uri = Uri.parse(
-        '${AppConfig.baseUrl}/api/v1/staff/chat/messages/voice',
-      );
-
-      final request = http.MultipartRequest('POST', uri)
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages/audio'),
+      )
         ..headers['Authorization'] = 'Bearer $token'
         ..headers['Accept'] = 'application/json'
         ..fields['establishment_id'] = widget.establishmentId.toString()
-        ..fields['duration_seconds'] = seconds.toString();
-
-      if (_replyingToMessageId != null) {
-        request.fields['reply_to_message_id'] = _replyingToMessageId!;
-      }
+        ..fields['message_text'] = '🎤 Голосовое сообщение'
+        ..files.add(
+          await http.MultipartFile.fromPath(
+            'audio',
+            recordedPath,
+            filename: 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a',
+          ),
+        );
 
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
@@ -849,8 +945,17 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       if (!mounted) return;
       setState(() {
         _messages = _messages.where((m) => m.id != localMessageId).toList();
+        _replyingToMessageId = replyToMessageId;
+        _replyingToSenderName = replySenderName;
+        _replyingToText = replyText;
         _error = e.toString().replaceFirst('Exception: ', '');
       });
+    } finally {
+      try {
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (_) {}
     }
   }
 
@@ -903,7 +1008,10 @@ class _StaffChatScreenState extends State<StaffChatScreen>
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({'message_text': text}),
+        body: jsonEncode({
+          'establishment_id': widget.establishmentId,
+          'message_text': text,
+        }),
       );
 
       if (response.statusCode != 200) {
@@ -947,7 +1055,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       final token = await _token();
       final response = await http.delete(
         Uri.parse(
-          '${AppConfig.baseUrl}/api/v1/staff/chat/messages/${message.id}?scope=me&establishment_id=${widget.establishmentId}',
+          '${AppConfig.baseUrl}/api/v1/staff/chat/messages/${message.id}?for_all=false&establishment_id=${widget.establishmentId}'
         ),
         headers: {
           'Authorization': 'Bearer $token',
@@ -983,7 +1091,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       final token = await _token();
       final response = await http.delete(
         Uri.parse(
-          '${AppConfig.baseUrl}/api/v1/staff/chat/messages/${message.id}?scope=all&establishment_id=${widget.establishmentId}',
+          '${AppConfig.baseUrl}/api/v1/staff/chat/messages/${message.id}?for_all=true&establishment_id=${widget.establishmentId}'
         ),
         headers: {
           'Authorization': 'Bearer $token',
@@ -1152,16 +1260,64 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     }
   }
 
-  void _openEmojiPanel(_ChatMessage message) {
-    setState(() {
-      if (_showEmojiPanel && _emojiTargetMessageId == message.id) {
-        _showEmojiPanel = false;
-        _emojiTargetMessageId = null;
-      } else {
-        _showEmojiPanel = true;
-        _emojiTargetMessageId = message.id;
-      }
-    });
+  Future<void> _openEmojiPanel(_ChatMessage message) async {
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.18),
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.96),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 18,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _emojiPalette.map((emoji) {
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () async {
+                        Navigator.of(dialogContext).pop();
+                        await _toggleReaction(message, emoji);
+                      },
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: kChatBlue.withOpacity(0.06),
+                        ),
+                        child: Text(
+                          emoji,
+                          style: const TextStyle(fontSize: 21),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _flashMessageHighlight(String messageId) {
@@ -1722,19 +1878,44 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
   Future<void> _sendDocumentPlaceholder() async {
     try {
+      final result = await FilePicker.platform.pickFiles(
+        allowMultiple: false,
+        withData: false,
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt'],
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final picked = result.files.single;
+      final path = picked.path;
+      if (path == null || path.isEmpty) {
+        setState(() {
+          _error = 'Не удалось получить путь к файлу';
+        });
+        return;
+      }
+
       final token = await _token();
 
-      final response = await http.post(
-        Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages/document'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'establishment_id': widget.establishmentId,
-        }),
-      );
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages/file'),
+      )
+        ..headers['Authorization'] = 'Bearer $token'
+        ..headers['Accept'] = 'application/json'
+        ..fields['establishment_id'] = widget.establishmentId.toString()
+        ..fields['message_text'] = '📎 Файл'
+        ..files.add(
+          await http.MultipartFile.fromPath(
+            'file',
+            path,
+            filename: picked.name,
+          ),
+        );
+
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
         throw Exception(_extractErrorText(response));
@@ -1750,20 +1931,70 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   Future<void> _sendContactPlaceholder() async {
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Отправить контакт'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Имя'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(labelText: 'Телефон'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Отмена'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Отправить'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    final contactName = nameController.text.trim();
+    final contactPhone = phoneController.text.trim();
+
+    if (contactName.isEmpty || contactPhone.isEmpty) {
+      setState(() {
+        _error = 'Укажи имя и телефон контакта';
+      });
+      return;
+    }
+
     try {
       final token = await _token();
 
-      final response = await http.post(
+      final request = http.MultipartRequest(
+        'POST',
         Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages/contact'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'establishment_id': widget.establishmentId,
-        }),
-      );
+      )
+        ..headers['Authorization'] = 'Bearer $token'
+        ..headers['Accept'] = 'application/json'
+        ..fields['establishment_id'] = widget.establishmentId.toString()
+        ..fields['contact_name'] = contactName
+        ..fields['contact_phone'] = contactPhone;
+
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
         throw Exception(_extractErrorText(response));
@@ -1779,22 +2010,78 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   Future<void> _sendGeoPlaceholder() async {
+    final latController = TextEditingController();
+    final lonController = TextEditingController();
+    final labelController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Отправить геолокацию'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: latController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                decoration: const InputDecoration(labelText: 'Широта'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: lonController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                decoration: const InputDecoration(labelText: 'Долгота'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: labelController,
+                decoration: const InputDecoration(labelText: 'Подпись'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Отмена'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Отправить'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    final lat = double.tryParse(latController.text.trim().replaceAll(',', '.'));
+    final lon = double.tryParse(lonController.text.trim().replaceAll(',', '.'));
+
+    if (lat == null || lon == null) {
+      setState(() {
+        _error = 'Некорректные координаты';
+      });
+      return;
+    }
+
     try {
       final token = await _token();
 
-      final response = await http.post(
+      final request = http.MultipartRequest(
+        'POST',
         Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages/location'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'establishment_id': widget.establishmentId,
-          'latitude': 0,
-          'longitude': 0,
-        }),
-      );
+      )
+        ..headers['Authorization'] = 'Bearer $token'
+        ..headers['Accept'] = 'application/json'
+        ..fields['establishment_id'] = widget.establishmentId.toString()
+        ..fields['latitude'] = lat.toString()
+        ..fields['longitude'] = lon.toString()
+        ..fields['label'] = labelController.text.trim();
+
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
         throw Exception(_extractErrorText(response));
@@ -1871,7 +2158,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       final token = await _token();
 
       final response = await http.post(
-        Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages/read'),
+        Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/mark_read'),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
@@ -1879,7 +2166,28 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         },
         body: jsonEncode({
           'establishment_id': widget.establishmentId,
-          'message_ids': messageIds,
+        }),
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw Exception(_extractErrorText(response));
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _markDeliveredToBackend() async {
+    try {
+      final token = await _token();
+
+      final response = await http.post(
+        Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/delivered'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'establishment_id': widget.establishmentId,
         }),
       );
 
@@ -2118,62 +2426,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     );
   }
 
-  Widget _emojiPanel(_ChatMessage message, bool mine) {
-    final visible = _showEmojiPanel && _emojiTargetMessageId == message.id;
-    if (!visible || message.isDeleted) return const SizedBox.shrink();
-
-    return Padding(
-      padding: EdgeInsets.only(
-        top: 6,
-        left: mine ? 30 : 0,
-        right: mine ? 0 : 30,
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(9),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: Colors.white.withOpacity(0.96),
-          border: Border.all(color: Colors.white),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Wrap(
-          spacing: 7,
-          runSpacing: 7,
-          children: [
-            ..._emojiPalette.map(
-              (emoji) => InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () async {
-                  setState(() {
-                    _showEmojiPanel = false;
-                    _emojiTargetMessageId = null;
-                  });
-                  await _toggleReaction(message, emoji);
-                },
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: kChatBlue.withOpacity(0.06),
-                  ),
-                  child: Text(emoji, style: const TextStyle(fontSize: 20)),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _statusIcon(_ChatMessage message, bool mine) {
     if (!mine || message.isDeleted) return const SizedBox.shrink();
 
@@ -2312,7 +2564,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
             const SizedBox(width: 10),
             const Expanded(
               child: Text(
-                'Кто-то печатает…',
+                'Печатают…',
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
                   color: kChatInk,
@@ -2788,7 +3040,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                       ),
                     ),
                     _reactionRow(message, mine),
-                    _emojiPanel(message, mine),
                   ],
                 ),
               ),
@@ -2822,125 +3073,122 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   Future<void> _openMessageActions(_ChatMessage message) async {
     final mine = _isMine(message);
 
-    await showModalBottomSheet<void>(
+    await showDialog<void>(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.94),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withOpacity(0.96)),
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _sheetAction(
-                        icon: CupertinoIcons.check_mark_circled,
-                        color: kChatAmber,
-                        title: 'Выбрать',
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          _enterSelectionMode(message);
-                        },
+      barrierColor: Colors.black.withOpacity(0.18),
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Align(
+            alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 320),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.94),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white.withOpacity(0.96)),
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _sheetAction(
+                            icon: CupertinoIcons.check_mark_circled,
+                            color: kChatAmber,
+                            title: 'Выбрать',
+                            onTap: () {
+                              Navigator.of(dialogContext).pop();
+                              _enterSelectionMode(message);
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          _sheetAction(
+                            icon: CupertinoIcons.reply,
+                            color: kChatBlue,
+                            title: 'Ответить',
+                            onTap: () {
+                              Navigator.of(dialogContext).pop();
+                              _startReply(message);
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          _sheetAction(
+                            icon: CupertinoIcons.arrowshape_turn_up_right_fill,
+                            color: kChatBlue,
+                            title: 'Переслать',
+                            onTap: () {
+                              Navigator.of(dialogContext).pop();
+                              _forwardOneMessageLocally(message);
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          _sheetAction(
+                            icon: CupertinoIcons.doc_on_doc,
+                            color: kChatViolet,
+                            title: 'Копировать',
+                            onTap: () async {
+                              Navigator.of(dialogContext).pop();
+                              await _copyMessageText(message);
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          _sheetAction(
+                            icon: CupertinoIcons.smiley,
+                            color: kChatGreen,
+                            title: 'Добавить реакцию',
+                            onTap: () {
+                              Navigator.of(dialogContext).pop();
+                              _openEmojiPanel(message);
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          _sheetAction(
+                            icon: CupertinoIcons.pin,
+                            color: kChatAmber,
+                            title: message.isPinned || _pinnedMessageId == message.id
+                                ? 'Убрать из закрепа'
+                                : 'Закрепить',
+                            onTap: () {
+                              Navigator.of(dialogContext).pop();
+                              _togglePinnedMessageLocal(message);
+                            },
+                          ),
+                          if (mine && !message.isDeleted && !message.isVoicePlaceholder) ...[
+                            const SizedBox(height: 8),
+                            _sheetAction(
+                              icon: CupertinoIcons.pencil,
+                              color: kChatBlue,
+                              title: 'Редактировать',
+                              onTap: () {
+                                Navigator.of(dialogContext).pop();
+                                _startEditMessage(message);
+                              },
+                            ),
+                          ],
+                          const SizedBox(height: 8),
+                          _sheetAction(
+                            icon: CupertinoIcons.delete_solid,
+                            color: kChatRed,
+                            title: mine ? 'Удалить' : 'Скрыть у себя',
+                            onTap: () {
+                              Navigator.of(dialogContext).pop();
+                              if (mine || message.isLocalOnly) {
+                                _showDeleteSheet(message);
+                              } else {
+                                _deleteForMe(message);
+                              }
+                            },
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      _sheetAction(
-                        icon: CupertinoIcons.reply,
-                        color: kChatBlue,
-                        title: 'Ответить',
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          _startReply(message);
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      _sheetAction(
-                        icon: CupertinoIcons.arrowshape_turn_up_right_fill,
-                        color: kChatBlue,
-                        title: 'Переслать',
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          _forwardOneMessageLocally(message);
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      _sheetAction(
-                        icon: CupertinoIcons.doc_on_doc,
-                        color: kChatViolet,
-                        title: 'Копировать',
-                        onTap: () async {
-                          Navigator.of(context).pop();
-                          await _copyMessageText(message);
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      _sheetAction(
-                        icon: CupertinoIcons.search,
-                        color: kChatViolet,
-                        title: 'Искать похожее',
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          _searchFromMessage(message);
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      _sheetAction(
-                        icon: CupertinoIcons.smiley,
-                        color: kChatGreen,
-                        title: 'Добавить реакцию',
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          _openEmojiPanel(message);
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      _sheetAction(
-                        icon: CupertinoIcons.pin,
-                        color: kChatAmber,
-                        title: message.isPinned || _pinnedMessageId == message.id
-                            ? 'Убрать из закрепа'
-                            : 'Закрепить',
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          _togglePinnedMessageLocal(message);
-                        },
-                      ),
-                      if (mine && !message.isDeleted && !message.isVoicePlaceholder) ...[
-                        const SizedBox(height: 8),
-                        _sheetAction(
-                          icon: CupertinoIcons.pencil,
-                          color: kChatBlue,
-                          title: 'Редактировать',
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            _startEditMessage(message);
-                          },
-                        ),
-                      ],
-                      const SizedBox(height: 8),
-                      _sheetAction(
-                        icon: CupertinoIcons.delete_solid,
-                        color: kChatRed,
-                        title: mine ? 'Удалить' : 'Скрыть у себя',
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          if (mine || message.isLocalOnly) {
-                            _showDeleteSheet(message);
-                          } else {
-                            _deleteForMe(message);
-                          }
-                        },
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -3049,13 +3297,26 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                   ],
                 ),
               ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                onPressed: () => _scrollToMessageById(pinned.id),
-                icon: const Icon(
-                  CupertinoIcons.arrow_turn_down_right,
-                  color: kChatBlue,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => _scrollToMessageById(pinned.id),
+                    icon: const Icon(
+                      CupertinoIcons.arrow_turn_down_right,
+                      color: kChatBlue,
+                    ),
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => _togglePinnedMessageLocal(pinned),
+                    icon: const Icon(
+                      CupertinoIcons.xmark_circle_fill,
+                      color: kChatRed,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

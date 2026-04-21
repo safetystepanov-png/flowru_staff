@@ -2,7 +2,7 @@ name: flowru_staff
 description: "Flowru Staff"
 publish_to: 'none'
 
-version: 1.0.0+34
+version: 1.0.0+35
 
 environment:
   sdk: ^3.11.4
@@ -20,6 +20,12 @@ dependencies:
   mobile_scanner: ^7.1.4
   url_launcher: ^6.3.2
   local_auth: ^3.0.1
+
+  file_picker: ^8.1.2
+  share_plus: ^10.0.2
+  record: ^5.1.2
+  path_provider: ^2.1.4
+  geolocator: ^13.0.1
 
 dev_dependencies:
   flutter_test:
