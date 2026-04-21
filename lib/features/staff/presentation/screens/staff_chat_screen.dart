@@ -10,9 +10,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 
 import '../../../auth/data/auth_storage.dart';
 import '../../../../core/config/app_config.dart';
@@ -61,6 +63,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   final FocusNode _messageFocusNode = FocusNode();
   final ImagePicker _picker = ImagePicker();
   final AudioRecorder _audioRecorder = AudioRecorder();
+
   String? _recordingFilePath;
   bool _loading = true;
   bool _sending = false;
@@ -77,9 +80,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   String? _pendingImageName;
 
   String? _editingMessageId;
-  bool _showEmojiPanel = false;
-  String? _emojiTargetMessageId;
-
   String _searchQuery = '';
   String? _replyingToMessageId;
   String? _replyingToSenderName;
@@ -95,7 +95,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
   Timer? _recordingTimer;
   Timer? _highlightTimer;
-  Timer? _deliveryTimer;
   Timer? _typingTimer;
   int _recordingSeconds = 0;
 
@@ -184,7 +183,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   void dispose() {
     _recordingTimer?.cancel();
     _highlightTimer?.cancel();
-    _deliveryTimer?.cancel();
     _typingTimer?.cancel();
     _messageController.removeListener(_onComposerChanged);
     _messageController.dispose();
@@ -286,7 +284,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
           .map((e) => _ChatMessage.fromJson(e as Map<String, dynamic>))
           .toList();
 
-      final localOnly = _messages.where((m) => m.isLocalOnly).toList();
+      final localPending = _messages
+          .where((m) => m.isLocalOnly && m.status == _MessageStatus.sending)
+          .toList();
 
       String? pinnedId;
       String? unreadId;
@@ -305,7 +305,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       pinnedId ??= _pinnedMessageId;
 
       setState(() {
-        _messages = [...serverMessages, ...localOnly];
+        _messages = [...serverMessages, ...localPending];
         _pinnedMessageId = pinnedId;
         _firstUnreadMessageId = unreadId;
         _loading = false;
@@ -317,7 +317,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         _scrollToBottom(jump: true);
         await _markDeliveredToBackend();
         _markVisibleMessagesAsRead();
-        _simulateLocalDeliveryProgress();
       });
     } catch (e) {
       if (!mounted) return;
@@ -353,43 +352,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     return count;
   }
 
-  void _simulateLocalDeliveryProgress() {
-    _deliveryTimer?.cancel();
-    _deliveryTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (!mounted) return;
-
-      bool changed = false;
-      final updated = <_ChatMessage>[];
-
-      for (final m in _messages) {
-        if (!m.isLocalOnly || !_isMine(m)) {
-          updated.add(m);
-          continue;
-        }
-
-        if (m.status == _MessageStatus.sent) {
-          updated.add(m.copyWith(status: _MessageStatus.delivered));
-          changed = true;
-          continue;
-        }
-
-        if (m.status == _MessageStatus.delivered) {
-          updated.add(m.copyWith(status: _MessageStatus.read, isRead: true));
-          changed = true;
-          continue;
-        }
-
-        updated.add(m);
-      }
-
-      if (changed) {
-        setState(() {
-          _messages = updated;
-        });
-      }
-    });
-  }
-
   void _markVisibleMessagesAsRead() {
     if (!mounted) return;
 
@@ -403,7 +365,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     final updated = <_ChatMessage>[];
     for (final m in _messages) {
       if (!_isMine(m) && !m.isRead && !m.isDeleted) {
-        updated.add(m.copyWith(isRead: true));
+        updated.add(m.copyWith(isRead: true, status: _MessageStatus.read));
       } else {
         updated.add(m);
       }
@@ -425,7 +387,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
     for (final m in _messages) {
       if (m.id == messageId && !_isMine(m) && !m.isRead) {
-        updated.add(m.copyWith(isRead: true));
+        updated.add(m.copyWith(isRead: true, status: _MessageStatus.read));
         changed = true;
       } else {
         updated.add(m);
@@ -501,28 +463,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     });
   }
 
-  void _removeMessageById(String messageId) {
-    _messages = _messages.where((m) => m.id != messageId).toList();
-  }
-
-  void _replaceMessageById(String messageId, _ChatMessage newMessage) {
-    final index = _messages.indexWhere((m) => m.id == messageId);
-    if (index < 0) return;
-    final updated = [..._messages];
-    updated[index] = newMessage;
-    _messages = updated;
-  }
-
   void _startReply(_ChatMessage message) {
-    final previewText = message.isDeleted
-        ? 'Сообщение удалено'
-        : message.messageText.trim().isNotEmpty
-            ? message.messageText.trim()
-            : message.hasImage
-                ? '📷 Фото'
-                : message.isVoicePlaceholder
-                    ? '🎤 Голосовое сообщение'
-                    : 'Сообщение';
+    final previewText = _messagePreview(message);
 
     setState(() {
       _replyingToMessageId = message.id;
@@ -530,8 +472,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
           ? 'Сотрудник'
           : message.senderName.trim();
       _replyingToText = previewText;
-      _showEmojiPanel = false;
-      _emojiTargetMessageId = null;
     });
     _messageFocusNode.requestFocus();
   }
@@ -545,10 +485,21 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   String _messagePreview(_ChatMessage message) {
-    if (message.isDeleted) return 'Сообщение удалено';
-    if (message.messageText.trim().isNotEmpty) return message.messageText.trim();
-    if (message.hasImage) return '📷 Фото';
-    if (message.isVoicePlaceholder) return '🎤 Голосовое сообщение';
+    if (message.isDeleted) return 'Сообщение';
+    if (message.type == _AttachmentType.file) {
+      return '📎 ${message.fileName ?? 'Файл'}';
+    }
+    if (message.type == _AttachmentType.voice) {
+      return '🎤 Голосовое сообщение';
+    }
+    if (message.type == _AttachmentType.image) {
+      return message.messageText.trim().isNotEmpty
+          ? message.messageText.trim()
+          : '📷 Фото';
+    }
+    if (message.messageText.trim().isNotEmpty) {
+      return message.messageText.trim();
+    }
     return 'Сообщение';
   }
 
@@ -583,7 +534,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       messageText: text,
       createdAt: DateTime.now().toIso8601String(),
       localImageBytes: pendingImageBytes,
-      imageUrl: null,
+      attachmentUrl: null,
+      fileName: pendingImageBytes != null ? (pendingImageName ?? 'image.jpg') : null,
       reactions: const [],
       isDeleted: false,
       isEdited: false,
@@ -591,11 +543,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       replySenderName: replyingToSenderName,
       replyText: replyingToText,
       isPinned: false,
-      isVoicePlaceholder: false,
+      type: pendingImageBytes != null ? _AttachmentType.image : _AttachmentType.text,
       voiceDurationSeconds: null,
       isLocalOnly: true,
-      isForwarded: false,
-      forwardedFromName: null,
       status: _MessageStatus.sending,
       isRead: false,
     );
@@ -603,10 +553,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     setState(() {
       _sending = true;
       _error = null;
-      _showEmojiPanel = false;
-      _emojiTargetMessageId = null;
       _showTypingMock = false;
-
       _draftText = '';
       _messageController.clear();
       _pendingImageBytes = null;
@@ -614,7 +561,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       _replyingToMessageId = null;
       _replyingToSenderName = null;
       _replyingToText = null;
-
       _messages = [..._messages, optimisticMessage];
     });
 
@@ -639,35 +585,22 @@ class _StaffChatScreenState extends State<StaffChatScreen>
               'file',
               pendingImageBytes,
               filename: pendingImageName ?? 'chat_image.jpg',
+              contentType: MediaType('image', 'jpeg'),
             ),
           );
+
+        if (text.isNotEmpty) {
+          request.fields['message_text'] = text;
+        }
+        if (replyingToMessageId != null) {
+          request.fields['reply_to_message_id'] = replyingToMessageId;
+        }
 
         final streamed = await request.send();
         final response = await http.Response.fromStream(streamed);
 
         if (response.statusCode != 200 && response.statusCode != 201) {
           throw Exception(_extractErrorText(response));
-        }
-
-        if (text.isNotEmpty) {
-          final textResponse = await http.post(
-            Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages'),
-            headers: {
-              'Authorization': 'Bearer $token',
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: jsonEncode({
-              'establishment_id': widget.establishmentId,
-              'message_text': text,
-              if (replyingToMessageId != null)
-                'reply_to_message_id': replyingToMessageId,
-            }),
-          );
-
-          if (textResponse.statusCode != 200 && textResponse.statusCode != 201) {
-            throw Exception(_extractErrorText(textResponse));
-          }
         }
       } else {
         final response = await http.post(
@@ -693,39 +626,27 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       if (!mounted) return;
 
       setState(() {
-        final index = _messages.indexWhere((m) => m.id == localMessageId);
-        if (index >= 0) {
-          final updated = [..._messages];
-          updated[index] = updated[index].copyWith(
-            status: _MessageStatus.sent,
-          );
-          _messages = updated;
-        }
+        _messages = _messages.where((m) => m.id != localMessageId).toList();
         _sending = false;
       });
 
-      _simulateLocalDeliveryProgress();
-      Future.delayed(const Duration(milliseconds: 250), _load);
+      await _load();
     } catch (e) {
       if (!mounted) return;
 
       setState(() {
-        _removeMessageById(localMessageId);
-
+        _messages = _messages.where((m) => m.id != localMessageId).toList();
         _sending = false;
         _error = e.toString().replaceFirst('Exception: ', '');
-
         _messageController.text = text;
         _messageController.selection = TextSelection.fromPosition(
           TextPosition(offset: _messageController.text.length),
         );
-
         _pendingImageBytes = pendingImageBytes;
         _pendingImageName = pendingImageName;
         _replyingToMessageId = replyingToMessageId;
         _replyingToSenderName = replyingToSenderName;
         _replyingToText = replyingToText;
-
         if (_messageController.text.trim().isNotEmpty) {
           _draftText = _messageController.text;
         }
@@ -866,7 +787,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       messageText: '',
       createdAt: DateTime.now().toIso8601String(),
       localImageBytes: null,
-      imageUrl: null,
+      attachmentUrl: null,
+      fileName: 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a',
       reactions: const [],
       isDeleted: false,
       isEdited: false,
@@ -874,11 +796,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       replySenderName: _replyingToSenderName,
       replyText: _replyingToText,
       isPinned: false,
-      isVoicePlaceholder: true,
+      type: _AttachmentType.voice,
       voiceDurationSeconds: seconds,
       isLocalOnly: true,
-      isForwarded: false,
-      forwardedFromName: null,
       status: _MessageStatus.sending,
       isRead: false,
     );
@@ -912,14 +832,19 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         ..headers['Authorization'] = 'Bearer $token'
         ..headers['Accept'] = 'application/json'
         ..fields['establishment_id'] = widget.establishmentId.toString()
-        ..fields['message_text'] = '🎤 Голосовое сообщение'
+        ..fields['message_text'] = ''
         ..files.add(
           await http.MultipartFile.fromPath(
-            'audio',
+            'file',
             recordedPath,
             filename: 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a',
+            contentType: MediaType('audio', 'mp4'),
           ),
         );
+
+      if (replyToMessageId != null) {
+        request.fields['reply_to_message_id'] = replyToMessageId;
+      }
 
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
@@ -931,16 +856,10 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       if (!mounted) return;
 
       setState(() {
-        final index = _messages.indexWhere((m) => m.id == localMessageId);
-        if (index >= 0) {
-          _messages[index] = _messages[index].copyWith(
-            status: _MessageStatus.sent,
-          );
-        }
+        _messages = _messages.where((m) => m.id != localMessageId).toList();
       });
 
-      _simulateLocalDeliveryProgress();
-      Future.delayed(const Duration(milliseconds: 250), _load);
+      await _load();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -966,8 +885,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       _replyingToMessageId = null;
       _replyingToSenderName = null;
       _replyingToText = null;
-      _showEmojiPanel = false;
-      _emojiTargetMessageId = null;
       _showTypingMock = false;
     });
     _messageFocusNode.requestFocus();
@@ -1055,7 +972,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       final token = await _token();
       final response = await http.delete(
         Uri.parse(
-          '${AppConfig.baseUrl}/api/v1/staff/chat/messages/${message.id}?for_all=false&establishment_id=${widget.establishmentId}'
+          '${AppConfig.baseUrl}/api/v1/staff/chat/messages/${message.id}?for_all=false&establishment_id=${widget.establishmentId}',
         ),
         headers: {
           'Authorization': 'Bearer $token',
@@ -1091,7 +1008,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       final token = await _token();
       final response = await http.delete(
         Uri.parse(
-          '${AppConfig.baseUrl}/api/v1/staff/chat/messages/${message.id}?for_all=true&establishment_id=${widget.establishmentId}'
+          '${AppConfig.baseUrl}/api/v1/staff/chat/messages/${message.id}?for_all=true&establishment_id=${widget.establishmentId}',
         ),
         headers: {
           'Authorization': 'Bearer $token',
@@ -1103,19 +1020,10 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         throw Exception(_extractErrorText(response));
       }
 
-      final index = _messages.indexWhere((m) => m.id == message.id);
-      if (index >= 0) {
-        final updated = [..._messages];
-        updated[index] = updated[index].copyWith(
-          messageText: '',
-          isDeleted: true,
-          reactions: const [],
-        );
-        _messages = updated;
-      }
-
       if (!mounted) return;
-      setState(() {});
+      setState(() {
+        _messages = _messages.where((m) => m.id != message.id).toList();
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -1154,17 +1062,19 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _sheetAction(
-                      icon: CupertinoIcons.eye_slash,
-                      color: kChatBlue,
-                      title: 'Удалить у себя',
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        _deleteForMe(message);
-                      },
-                    ),
+                    if (!_isMine(message) && !message.isLocalOnly)
+                      _sheetAction(
+                        icon: CupertinoIcons.eye_slash,
+                        color: kChatBlue,
+                        title: 'Удалить у себя',
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          _deleteForMe(message);
+                        },
+                      ),
                     if (_isMine(message) || message.isLocalOnly) ...[
-                      const SizedBox(height: 8),
+                      if (!_isMine(message) && !message.isLocalOnly)
+                        const SizedBox(height: 8),
                       _sheetAction(
                         icon: CupertinoIcons.delete_solid,
                         color: kChatRed,
@@ -1186,50 +1096,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   Future<void> _toggleReaction(_ChatMessage message, String emoji) async {
-    if (message.isLocalOnly) {
-      final index = _messages.indexWhere((m) => m.id == message.id);
-      if (index < 0) return;
-      final list = [..._messages];
-      final current = list[index];
-      final reactions = [...current.reactions];
-      final reactionIndex = reactions.indexWhere((r) => r.emoji == emoji);
-
-      if (reactionIndex >= 0) {
-        final item = reactions[reactionIndex];
-        if (item.reactedByMe) {
-          final newCount = item.count - 1;
-          if (newCount <= 0) {
-            reactions.removeAt(reactionIndex);
-          } else {
-            reactions[reactionIndex] = _ReactionItem(
-              emoji: item.emoji,
-              count: newCount,
-              reactedByMe: false,
-            );
-          }
-        } else {
-          reactions[reactionIndex] = _ReactionItem(
-            emoji: item.emoji,
-            count: item.count + 1,
-            reactedByMe: true,
-          );
-        }
-      } else {
-        reactions.add(
-          _ReactionItem(
-            emoji: emoji,
-            count: 1,
-            reactedByMe: true,
-          ),
-        );
-      }
-
-      setState(() {
-        list[index] = current.copyWith(reactions: reactions);
-        _messages = list;
-      });
-      return;
-    }
+    if (message.isLocalOnly) return;
 
     try {
       final token = await _token();
@@ -1263,6 +1130,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   Future<void> _openEmojiPanel(_ChatMessage message) async {
     await showDialog<void>(
       context: context,
+      barrierDismissible: true,
       barrierColor: Colors.black.withOpacity(0.18),
       builder: (dialogContext) {
         return Dialog(
@@ -1377,7 +1245,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         message.senderName.toLowerCase().contains(q) ||
         (message.replyText?.toLowerCase().contains(q) ?? false) ||
         (message.replySenderName?.toLowerCase().contains(q) ?? false) ||
-        (message.forwardedFromName?.toLowerCase().contains(q) ?? false);
+        (message.fileName?.toLowerCase().contains(q) ?? false);
   }
 
   void _jumpToSearchResult() {
@@ -1390,8 +1258,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     setState(() {
       _selectionMode = true;
       _selectedMessageIds.add(message.id);
-      _showEmojiPanel = false;
-      _emojiTargetMessageId = null;
     });
   }
 
@@ -1422,292 +1288,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   }
 
-  Future<void> _openForwardSheet() async {
-    final selected = _selectedMessages();
-    if (selected.isEmpty) return;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withOpacity(0.98)),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Переслать сообщения',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: kChatInk,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 220),
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: selected.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final m = selected[index];
-                          return Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(14),
-                              color: const Color(0xFFF6F8FB),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  CupertinoIcons.arrowshape_turn_up_right_fill,
-                                  color: kChatBlue,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    _messagePreview(m),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      color: kChatInk,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Отмена'),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                              _forwardSelectedMessagesLocally();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: kChatBlue,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: const Text('Переслать'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _forwardSelectedMessagesLocally() async {
-    final selected = _selectedMessages();
-    if (selected.isEmpty) return;
-
-    final localIds = <String>[];
-    final optimisticMessages = selected.map((m) {
-      final localId =
-          'local_forward_${DateTime.now().microsecondsSinceEpoch}_${m.id}';
-      localIds.add(localId);
-
-      return _ChatMessage(
-        id: localId,
-        senderUserId: _currentUserId ?? 'me',
-        senderName: 'Вы',
-        messageText: m.messageText,
-        createdAt: DateTime.now().toIso8601String(),
-        localImageBytes: m.localImageBytes,
-        imageUrl: m.imageUrl,
-        reactions: const [],
-        isDeleted: false,
-        isEdited: false,
-        replyToMessageId: null,
-        replySenderName: null,
-        replyText: null,
-        isPinned: false,
-        isVoicePlaceholder: m.isVoicePlaceholder,
-        voiceDurationSeconds: m.voiceDurationSeconds,
-        isLocalOnly: true,
-        isForwarded: true,
-        forwardedFromName:
-            m.senderName.trim().isEmpty ? 'Сотрудник' : m.senderName.trim(),
-        status: _MessageStatus.sending,
-        isRead: false,
-      );
-    }).toList();
-
-    setState(() {
-      _messages = [..._messages, ...optimisticMessages];
-      _selectionMode = false;
-      _selectedMessageIds.clear();
-    });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom();
-    });
-
-    try {
-      final token = await _token();
-
-      for (final message in selected) {
-        final response = await http.post(
-          Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages/forward'),
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode({
-            'establishment_id': widget.establishmentId,
-            'source_message_id': message.id,
-          }),
-        );
-
-        if (response.statusCode != 200 && response.statusCode != 201) {
-          throw Exception(_extractErrorText(response));
-        }
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        for (final localId in localIds) {
-          final index = _messages.indexWhere((m) => m.id == localId);
-          if (index >= 0) {
-            _messages[index] = _messages[index].copyWith(
-              status: _MessageStatus.sent,
-            );
-          }
-        }
-      });
-
-      _simulateLocalDeliveryProgress();
-      Future.delayed(const Duration(milliseconds: 250), _load);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _messages =
-            _messages.where((m) => !localIds.contains(m.id)).toList();
-        _error = e.toString().replaceFirst('Exception: ', '');
-      });
-    }
-  }
-
-  Future<void> _forwardOneMessageLocally(_ChatMessage message) async {
-    final String localMessageId =
-        'local_forward_${DateTime.now().microsecondsSinceEpoch}_${message.id}';
-
-    final optimisticMessage = _ChatMessage(
-      id: localMessageId,
-      senderUserId: _currentUserId ?? 'me',
-      senderName: 'Вы',
-      messageText: message.messageText,
-      createdAt: DateTime.now().toIso8601String(),
-      localImageBytes: message.localImageBytes,
-      imageUrl: message.imageUrl,
-      reactions: const [],
-      isDeleted: false,
-      isEdited: false,
-      replyToMessageId: null,
-      replySenderName: null,
-      replyText: null,
-      isPinned: false,
-      isVoicePlaceholder: message.isVoicePlaceholder,
-      voiceDurationSeconds: message.voiceDurationSeconds,
-      isLocalOnly: true,
-      isForwarded: true,
-      forwardedFromName:
-          message.senderName.trim().isEmpty ? 'Сотрудник' : message.senderName.trim(),
-      status: _MessageStatus.sending,
-      isRead: false,
-    );
-
-    setState(() {
-      _messages = [..._messages, optimisticMessage];
-      _selectionMode = false;
-      _selectedMessageIds.clear();
-    });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom();
-    });
-
-    try {
-      final token = await _token();
-
-      final response = await http.post(
-        Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages/forward'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'establishment_id': widget.establishmentId,
-          'source_message_id': message.id,
-        }),
-      );
-
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception(_extractErrorText(response));
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        final index = _messages.indexWhere((m) => m.id == localMessageId);
-        if (index >= 0) {
-          _messages[index] = _messages[index].copyWith(
-            status: _MessageStatus.sent,
-          );
-        }
-      });
-
-      _simulateLocalDeliveryProgress();
-      Future.delayed(const Duration(milliseconds: 250), _load);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _messages = _messages.where((m) => m.id != localMessageId).toList();
-        _error = e.toString().replaceFirst('Exception: ', '');
-      });
-    }
-  }
-
   Future<void> _copyMessageText(_ChatMessage message) async {
     final String text = _messagePreview(message).trim();
     if (text.isEmpty) return;
@@ -1721,19 +1301,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         behavior: SnackBarBehavior.floating,
       ),
     );
-  }
-
-  void _searchFromMessage(_ChatMessage message) {
-    final text = _messagePreview(message).trim();
-    if (text.isEmpty) return;
-
-    setState(() {
-      _searchQuery = text.length > 32 ? text.substring(0, 32) : text;
-    });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _jumpToSearchResult();
-    });
   }
 
   Future<void> _togglePinnedMessageLocal(_ChatMessage message) async {
@@ -1780,81 +1347,12 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         _messages = updated;
         _pinnedMessageId = shouldPin ? message.id : null;
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            shouldPin ? 'Сообщение закреплено' : 'Сообщение откреплено',
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _error = e.toString().replaceFirst('Exception: ', '');
       });
     }
-  }
-
-  Widget _searchEmptyState() {
-    return _GlassCard(
-      radius: 28,
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        children: [
-          Container(
-            width: 82,
-            height: 82,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  kChatViolet.withOpacity(0.16),
-                  kChatBlue.withOpacity(0.08),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: const Icon(
-              CupertinoIcons.search,
-              color: kChatInkSoft,
-              size: 30,
-            ),
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            'Ничего не найдено',
-            style: TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.w900,
-              color: kChatInk,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'По запросу “$_searchQuery” нет совпадений',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.4,
-              fontWeight: FontWeight.w700,
-              color: kChatInkSoft,
-            ),
-          ),
-          const SizedBox(height: 14),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _searchQuery = '';
-              });
-            },
-            child: const Text('Сбросить поиск'),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _deleteSelectedMessages() async {
@@ -1876,13 +1374,11 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     });
   }
 
-  Future<void> _sendDocumentPlaceholder() async {
+  Future<void> _sendDocument() async {
     try {
       final result = await FilePicker.platform.pickFiles(
         allowMultiple: false,
         withData: false,
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt'],
       );
 
       if (result == null || result.files.isEmpty) return;
@@ -1896,6 +1392,43 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         return;
       }
 
+      final localMessageId =
+          'local_file_${DateTime.now().microsecondsSinceEpoch}_${math.Random().nextInt(99999)}';
+
+      final optimistic = _ChatMessage(
+        id: localMessageId,
+        senderUserId: _currentUserId ?? 'me',
+        senderName: 'Вы',
+        messageText: '',
+        createdAt: DateTime.now().toIso8601String(),
+        localImageBytes: null,
+        attachmentUrl: null,
+        fileName: picked.name,
+        reactions: const [],
+        isDeleted: false,
+        isEdited: false,
+        replyToMessageId: _replyingToMessageId,
+        replySenderName: _replyingToSenderName,
+        replyText: _replyingToText,
+        isPinned: false,
+        type: _AttachmentType.file,
+        voiceDurationSeconds: null,
+        isLocalOnly: true,
+        status: _MessageStatus.sending,
+        isRead: false,
+      );
+
+      final replyToMessageId = _replyingToMessageId;
+      final replySenderName = _replyingToSenderName;
+      final replyText = _replyingToText;
+
+      setState(() {
+        _replyingToMessageId = null;
+        _replyingToSenderName = null;
+        _replyingToText = null;
+        _messages = [..._messages, optimistic];
+      });
+
       final token = await _token();
 
       final request = http.MultipartRequest(
@@ -1905,7 +1438,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         ..headers['Authorization'] = 'Bearer $token'
         ..headers['Accept'] = 'application/json'
         ..fields['establishment_id'] = widget.establishmentId.toString()
-        ..fields['message_text'] = '📎 Файл'
+        ..fields['message_text'] = ''
         ..files.add(
           await http.MultipartFile.fromPath(
             'file',
@@ -1914,84 +1447,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
           ),
         );
 
-      final streamed = await request.send();
-      final response = await http.Response.fromStream(streamed);
-
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception(_extractErrorText(response));
+      if (replyToMessageId != null) {
+        request.fields['reply_to_message_id'] = replyToMessageId;
       }
-
-      await _load();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.toString().replaceFirst('Exception: ', '');
-      });
-    }
-  }
-
-  Future<void> _sendContactPlaceholder() async {
-    final nameController = TextEditingController();
-    final phoneController = TextEditingController();
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Отправить контакт'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Имя'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Телефон'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Отмена'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Отправить'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed != true) return;
-
-    final contactName = nameController.text.trim();
-    final contactPhone = phoneController.text.trim();
-
-    if (contactName.isEmpty || contactPhone.isEmpty) {
-      setState(() {
-        _error = 'Укажи имя и телефон контакта';
-      });
-      return;
-    }
-
-    try {
-      final token = await _token();
-
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages/contact'),
-      )
-        ..headers['Authorization'] = 'Bearer $token'
-        ..headers['Accept'] = 'application/json'
-        ..fields['establishment_id'] = widget.establishmentId.toString()
-        ..fields['contact_name'] = contactName
-        ..fields['contact_phone'] = contactPhone;
 
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
@@ -2000,92 +1458,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         throw Exception(_extractErrorText(response));
       }
 
-      await _load();
-    } catch (e) {
-      if (!mounted) return;
       setState(() {
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _messages = _messages.where((m) => m.id != localMessageId).toList();
       });
-    }
-  }
-
-  Future<void> _sendGeoPlaceholder() async {
-    final latController = TextEditingController();
-    final lonController = TextEditingController();
-    final labelController = TextEditingController();
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Отправить геолокацию'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: latController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                decoration: const InputDecoration(labelText: 'Широта'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: lonController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                decoration: const InputDecoration(labelText: 'Долгота'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: labelController,
-                decoration: const InputDecoration(labelText: 'Подпись'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Отмена'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Отправить'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed != true) return;
-
-    final lat = double.tryParse(latController.text.trim().replaceAll(',', '.'));
-    final lon = double.tryParse(lonController.text.trim().replaceAll(',', '.'));
-
-    if (lat == null || lon == null) {
-      setState(() {
-        _error = 'Некорректные координаты';
-      });
-      return;
-    }
-
-    try {
-      final token = await _token();
-
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages/location'),
-      )
-        ..headers['Authorization'] = 'Bearer $token'
-        ..headers['Accept'] = 'application/json'
-        ..fields['establishment_id'] = widget.establishmentId.toString()
-        ..fields['latitude'] = lat.toString()
-        ..fields['longitude'] = lon.toString()
-        ..fields['label'] = labelController.text.trim();
-
-      final streamed = await request.send();
-      final response = await http.Response.fromStream(streamed);
-
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception(_extractErrorText(response));
-      }
 
       await _load();
     } catch (e) {
@@ -2313,12 +1688,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       );
     }
 
-    if (message.imageUrl != null && message.imageUrl!.trim().isNotEmpty) {
-      final url = message.imageUrl!;
-      final fullUrl = url.startsWith('http')
-          ? url
-          : '${AppConfig.baseUrl}${url.startsWith('/') ? '' : '/'}$url';
-
+    final fullUrl = _fullUrl(message.attachmentUrl);
+    if (fullUrl != null && fullUrl.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: GestureDetector(
@@ -2326,29 +1697,95 @@ class _StaffChatScreenState extends State<StaffChatScreen>
           child: Image.network(
             fullUrl,
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                height: 180,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: Colors.black.withOpacity(0.08),
-                ),
-                alignment: Alignment.center,
-                child: const Text(
-                  'Не удалось загрузить изображение',
-                  style: TextStyle(
-                    color: kChatInkSoft,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              );
-            },
+            errorBuilder: (_, __, ___) => Container(
+              height: 180,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: Colors.black.withOpacity(0.06),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(
+                CupertinoIcons.photo,
+                color: kChatInkSoft,
+                size: 30,
+              ),
+            ),
           ),
         ),
       );
     }
 
     return const SizedBox.shrink();
+  }
+
+  Widget _fileBubble(bool mine, _ChatMessage message) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: () => _openAttachment(message),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          color: mine
+              ? Colors.white.withOpacity(0.14)
+              : const Color(0xFFF3F7FA),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                color: mine
+                    ? Colors.white.withOpacity(0.18)
+                    : kChatAmber.withOpacity(0.12),
+              ),
+              child: Icon(
+                CupertinoIcons.doc_fill,
+                size: 20,
+                color: mine ? Colors.white : kChatAmber,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message.fileName?.trim().isNotEmpty == true
+                        ? message.fileName!
+                        : 'Файл',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      color: mine ? Colors.white : kChatInk,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Нажмите, чтобы открыть',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: mine
+                          ? Colors.white.withOpacity(0.84)
+                          : kChatInkSoft,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              CupertinoIcons.paperclip,
+              size: 16,
+              color: mine ? Colors.white : kChatInkSoft,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _voiceBubble(bool mine, int durationSeconds) {
@@ -2408,6 +1845,37 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         ],
       ),
     );
+  }
+
+  Future<void> _openAttachment(_ChatMessage message) async {
+    final fullUrl = _fullUrl(message.attachmentUrl);
+    if (fullUrl == null || fullUrl.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ссылка на файл не найдена'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final opened = await launchUrlString(fullUrl, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      await Clipboard.setData(ClipboardData(text: fullUrl));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Не удалось открыть файл. Ссылка скопирована'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  String? _fullUrl(String? url) {
+    if (url == null || url.trim().isEmpty) return null;
+    if (url.startsWith('http')) return url;
+    return '${AppConfig.baseUrl}${url.startsWith('/') ? '' : '/'}$url';
   }
 
   void _openBytesPreview(Uint8List bytes) {
@@ -2489,15 +1957,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                 fontWeight: FontWeight.w900,
                 fontSize: 17,
               ),
-            ),
-          ),
-          IconButton(
-            onPressed: _selectedMessageIds.isEmpty ? null : _openForwardSheet,
-            icon: Icon(
-              CupertinoIcons.arrowshape_turn_up_right,
-              color: _selectedMessageIds.isEmpty
-                  ? Colors.white.withOpacity(0.35)
-                  : Colors.white,
             ),
           ),
           IconButton(
@@ -2822,35 +2281,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (message.isForwarded) ...[
-                              Row(
-                                children: [
-                                  Icon(
-                                    CupertinoIcons.arrowshape_turn_up_right_fill,
-                                    size: 12,
-                                    color: mine
-                                        ? Colors.white.withOpacity(0.88)
-                                        : kChatBlue,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      'Переслано${(message.forwardedFromName ?? '').trim().isNotEmpty ? ' от ${message.forwardedFromName}' : ''}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w900,
-                                        color: mine
-                                            ? Colors.white.withOpacity(0.88)
-                                            : kChatBlue,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                            ],
                             if (!mine && showAuthor)
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 6),
@@ -2951,35 +2381,26 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                   ),
                                 ),
                               ),
-                            if (message.hasImage) ...[
+                            if (message.type == _AttachmentType.image) ...[
                               _messageImage(message),
-                              if (!message.isDeleted &&
-                                  (message.messageText.trim().isNotEmpty ||
-                                      message.isVoicePlaceholder))
+                              if (message.messageText.trim().isNotEmpty)
                                 const SizedBox(height: 8),
                             ],
-                            if (message.isVoicePlaceholder) ...[
+                            if (message.type == _AttachmentType.voice) ...[
                               _voiceBubble(
                                 mine,
-                                message.voiceDurationSeconds ?? 12,
+                                message.voiceDurationSeconds ?? 1,
                               ),
-                              if (!message.isDeleted &&
-                                  message.messageText.trim().isNotEmpty)
+                              if (message.messageText.trim().isNotEmpty)
                                 const SizedBox(height: 8),
                             ],
-                            if (message.isDeleted)
-                              Text(
-                                'Сообщение удалено',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontStyle: FontStyle.italic,
-                                  fontWeight: FontWeight.w700,
-                                  color: mine
-                                      ? Colors.white.withOpacity(0.88)
-                                      : kChatInkSoft,
-                                ),
-                              )
-                            else if (message.messageText.trim().isNotEmpty)
+                            if (message.type == _AttachmentType.file) ...[
+                              _fileBubble(mine, message),
+                              if (message.messageText.trim().isNotEmpty)
+                                const SizedBox(height: 8),
+                            ],
+                            if (!message.isDeleted &&
+                                message.messageText.trim().isNotEmpty)
                               _messageBodyText(message, mine),
                             const SizedBox(height: 7),
                             Row(
@@ -2994,20 +2415,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                         : kChatBlue,
                                   ),
                                   const SizedBox(width: 4),
-                                ],
-                                if (message.isLocalOnly &&
-                                    message.isVoicePlaceholder) ...[
-                                  Text(
-                                    'локально',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                      color: mine
-                                          ? Colors.white.withOpacity(0.82)
-                                          : kChatInkSoft,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
                                 ],
                                 Text(
                                   _formatMessageTime(message.createdAt),
@@ -3075,6 +2482,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
     await showDialog<void>(
       context: context,
+      barrierDismissible: true,
       barrierColor: Colors.black.withOpacity(0.18),
       builder: (dialogContext) {
         return Dialog(
@@ -3120,16 +2528,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                           ),
                           const SizedBox(height: 8),
                           _sheetAction(
-                            icon: CupertinoIcons.arrowshape_turn_up_right_fill,
-                            color: kChatBlue,
-                            title: 'Переслать',
-                            onTap: () {
-                              Navigator.of(dialogContext).pop();
-                              _forwardOneMessageLocally(message);
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          _sheetAction(
                             icon: CupertinoIcons.doc_on_doc,
                             color: kChatViolet,
                             title: 'Копировать',
@@ -3160,7 +2558,19 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                               _togglePinnedMessageLocal(message);
                             },
                           ),
-                          if (mine && !message.isDeleted && !message.isVoicePlaceholder) ...[
+                          if (message.type == _AttachmentType.file) ...[
+                            const SizedBox(height: 8),
+                            _sheetAction(
+                              icon: CupertinoIcons.paperclip,
+                              color: kChatBlue,
+                              title: 'Открыть файл',
+                              onTap: () {
+                                Navigator.of(dialogContext).pop();
+                                _openAttachment(message);
+                              },
+                            ),
+                          ],
+                          if (mine && !message.isDeleted && message.type == _AttachmentType.text) ...[
                             const SizedBox(height: 8),
                             _sheetAction(
                               icon: CupertinoIcons.pencil,
@@ -3176,11 +2586,11 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                           _sheetAction(
                             icon: CupertinoIcons.delete_solid,
                             color: kChatRed,
-                            title: mine ? 'Удалить' : 'Скрыть у себя',
+                            title: mine ? 'Удалить у всех' : 'Удалить у себя',
                             onTap: () {
                               Navigator.of(dialogContext).pop();
                               if (mine || message.isLocalOnly) {
-                                _showDeleteSheet(message);
+                                _deleteForAll(message);
                               } else {
                                 _deleteForMe(message);
                               }
@@ -3246,7 +2656,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
   Widget _pinnedBanner() {
     final pinned = _getPinnedMessage();
-    if (pinned == null || pinned.isDeleted) return const SizedBox.shrink();
+    if (pinned == null) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
@@ -3297,26 +2707,13 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                   ],
                 ),
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => _scrollToMessageById(pinned.id),
-                    icon: const Icon(
-                      CupertinoIcons.arrow_turn_down_right,
-                      color: kChatBlue,
-                    ),
-                  ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => _togglePinnedMessageLocal(pinned),
-                    icon: const Icon(
-                      CupertinoIcons.xmark_circle_fill,
-                      color: kChatRed,
-                    ),
-                  ),
-                ],
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                onPressed: () => _togglePinnedMessageLocal(pinned),
+                icon: const Icon(
+                  CupertinoIcons.xmark_circle_fill,
+                  color: kChatRed,
+                ),
               ),
             ],
           ),
@@ -3705,6 +3102,22 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     );
   }
 
+  Widget _topChatBanners() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _pinnedBanner(),
+        _typingBar(),
+        _unreadJumpBanner(),
+        _searchBanner(),
+        _replyBanner(),
+        _editBanner(),
+        _recordingBanner(),
+        _draftBanner(),
+      ],
+    );
+  }
+
   Widget _composer() {
     final showSendButton = _messageController.text.trim().isNotEmpty ||
         _pendingImageBytes != null ||
@@ -3714,14 +3127,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       mainAxisSize: MainAxisSize.min,
       children: [
         _pendingImagePreview(),
-        _pinnedBanner(),
-        _unreadJumpBanner(),
-        _searchBanner(),
-        _replyBanner(),
-        _editBanner(),
-        _recordingBanner(),
-        _typingBar(),
-        _draftBanner(),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
           child: ClipRRect(
@@ -3861,7 +3266,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     if (_loading) {
       return ListView(
         controller: _scrollController,
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+        padding: const EdgeInsets.fromLTRB(16, 120, 16, 120),
         children: const [
           Center(
             child: Padding(
@@ -3885,7 +3290,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     if (_messages.isEmpty) {
       return ListView(
         controller: _scrollController,
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+        padding: const EdgeInsets.fromLTRB(16, 120, 16, 120),
         children: [
           _stagger(index: 0, child: _errorCard()),
           if (_error != null) const SizedBox(height: 14),
@@ -3897,7 +3302,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     if (filteredMessages.isEmpty) {
       return ListView(
         controller: _scrollController,
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+        padding: const EdgeInsets.fromLTRB(16, 120, 16, 120),
         children: [
           _stagger(index: 0, child: _errorCard()),
           if (_error != null) const SizedBox(height: 14),
@@ -3989,7 +3394,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       children: [
         ListView(
           controller: _scrollController,
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+          padding: const EdgeInsets.fromLTRB(16, 120, 16, 120),
           children: children,
         ),
         if (_showScrollToBottom)
@@ -4061,6 +3466,66 @@ class _StaffChatScreenState extends State<StaffChatScreen>
             ),
           ),
       ],
+    );
+  }
+
+  Widget _searchEmptyState() {
+    return _GlassCard(
+      radius: 28,
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        children: [
+          Container(
+            width: 82,
+            height: 82,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  kChatViolet.withOpacity(0.16),
+                  kChatBlue.withOpacity(0.08),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: const Icon(
+              CupertinoIcons.search,
+              color: kChatInkSoft,
+              size: 30,
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Ничего не найдено',
+            style: TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.w900,
+              color: kChatInk,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'По запросу “$_searchQuery” нет совпадений',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              fontWeight: FontWeight.w700,
+              color: kChatInkSoft,
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _searchQuery = '';
+              });
+            },
+            child: const Text('Сбросить поиск'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -4162,6 +3627,98 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     }
   }
 
+  List<String> _participantNames() {
+    final set = <String>{};
+    for (final m in _messages) {
+      final name = m.senderName.trim().isEmpty ? 'Сотрудник' : m.senderName.trim();
+      set.add(name);
+    }
+    return set.toList()..sort();
+  }
+
+  Future<void> _openParticipantsSheet() async {
+    final names = _participantNames();
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(26),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(color: Colors.white.withOpacity(0.98)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Участники чата',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                        color: kChatInk,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (names.isEmpty)
+                      const Text(
+                        'Список пока пуст',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: kChatInkSoft,
+                        ),
+                      )
+                    else
+                      ...names.map(
+                        (name) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: kChatBlue.withOpacity(0.10),
+                                ),
+                                child: const Icon(
+                                  CupertinoIcons.person_fill,
+                                  size: 16,
+                                  color: kChatBlue,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    color: kChatInk,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   PreferredSizeWidget _buildAppBar() {
     if (_selectionMode) {
       return AppBar(
@@ -4204,18 +3761,13 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       iconTheme: const IconThemeData(color: Colors.white),
       systemOverlayStyle: SystemUiOverlayStyle.light,
       actions: [
-        if (_searchQuery.trim().isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: _topIconButton(
-              icon: CupertinoIcons.clear_circled,
-              onTap: () {
-                setState(() {
-                  _searchQuery = '';
-                });
-              },
-            ),
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: _topIconButton(
+            icon: CupertinoIcons.person_2_fill,
+            onTap: _openParticipantsSheet,
           ),
+        ),
         Padding(
           padding: const EdgeInsets.only(right: 8),
           child: Stack(
@@ -4504,21 +4056,21 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                     ),
                     const SizedBox(height: 6),
                     GridView.count(
-                      crossAxisCount: 3,
+                      crossAxisCount: 2,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       crossAxisSpacing: 8,
                       mainAxisSpacing: 8,
-                      childAspectRatio: 1.12,
+                      childAspectRatio: 1.25,
                       children: [
                         _attachmentTile(
                           icon: CupertinoIcons.doc_fill,
                           colors: const [kChatAmber, kChatAccentSoft],
-                          title: 'Документ',
-                          subtitle: 'PDF / DOC',
+                          title: 'Файл',
+                          subtitle: 'Любой документ',
                           onTap: () {
                             Navigator.of(context).pop();
-                            _sendDocumentPlaceholder();
+                            _sendDocument();
                           },
                         ),
                         _attachmentTile(
@@ -4535,37 +4087,17 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                           icon: CupertinoIcons.photo_fill_on_rectangle_fill,
                           colors: const [kChatPink, kChatRed],
                           title: 'Галерея',
-                          subtitle: 'Фото',
+                          subtitle: 'Одно фото',
                           onTap: () {
                             Navigator.of(context).pop();
                             _pickImage();
                           },
                         ),
                         _attachmentTile(
-                          icon: CupertinoIcons.person_crop_circle_badge_plus,
-                          colors: const [kChatGreen, Color(0xFF12B07C)],
-                          title: 'Контакт',
-                          subtitle: 'Карточка',
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            _sendContactPlaceholder();
-                          },
-                        ),
-                        _attachmentTile(
-                          icon: CupertinoIcons.location_solid,
-                          colors: const [kChatViolet, kChatBlue],
-                          title: 'Гео',
-                          subtitle: 'Точка',
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            _sendGeoPlaceholder();
-                          },
-                        ),
-                        _attachmentTile(
                           icon: CupertinoIcons.mic_fill,
                           colors: const [kChatRed, kChatPink],
                           title: 'Голос',
-                          subtitle: 'Voice',
+                          subtitle: 'Сообщение',
                           onTap: () {
                             Navigator.of(context).pop();
                             _startVoiceRecording();
@@ -4774,12 +4306,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       body: GestureDetector(
         onTap: () {
           FocusScope.of(context).unfocus();
-          if (_showEmojiPanel) {
-            setState(() {
-              _showEmojiPanel = false;
-              _emojiTargetMessageId = null;
-            });
-          }
         },
         child: AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle.light,
@@ -4791,6 +4317,13 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                 child: Stack(
                   children: [
                     Positioned.fill(child: _messagesList()),
+                    if (!_selectionMode)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        child: _topChatBanners(),
+                      ),
                     if (!_selectionMode)
                       Positioned(
                         left: 0,
@@ -4991,6 +4524,7 @@ class _ImagePreviewScreen extends StatelessWidget {
 }
 
 enum _MessageStatus { sending, sent, delivered, read }
+enum _AttachmentType { text, image, file, voice }
 
 class _ChatMessage {
   final String id;
@@ -4999,7 +4533,8 @@ class _ChatMessage {
   final String messageText;
   final String createdAt;
   final Uint8List? localImageBytes;
-  final String? imageUrl;
+  final String? attachmentUrl;
+  final String? fileName;
   final List<_ReactionItem> reactions;
   final bool isDeleted;
   final bool isEdited;
@@ -5007,11 +4542,9 @@ class _ChatMessage {
   final String? replySenderName;
   final String? replyText;
   final bool isPinned;
-  final bool isVoicePlaceholder;
+  final _AttachmentType type;
   final int? voiceDurationSeconds;
   final bool isLocalOnly;
-  final bool isForwarded;
-  final String? forwardedFromName;
   final _MessageStatus status;
   final bool isRead;
 
@@ -5022,7 +4555,8 @@ class _ChatMessage {
     required this.messageText,
     required this.createdAt,
     required this.localImageBytes,
-    required this.imageUrl,
+    required this.attachmentUrl,
+    required this.fileName,
     required this.reactions,
     required this.isDeleted,
     required this.isEdited,
@@ -5030,18 +4564,12 @@ class _ChatMessage {
     required this.replySenderName,
     required this.replyText,
     required this.isPinned,
-    required this.isVoicePlaceholder,
+    required this.type,
     required this.voiceDurationSeconds,
     required this.isLocalOnly,
-    required this.isForwarded,
-    required this.forwardedFromName,
     required this.status,
     required this.isRead,
   });
-
-  bool get hasImage =>
-      localImageBytes != null ||
-      (imageUrl != null && imageUrl!.trim().isNotEmpty);
 
   bool isMineLocal(String? currentUserId) {
     if (currentUserId == null || currentUserId.isEmpty) return false;
@@ -5079,14 +4607,39 @@ class _ChatMessage {
       return _MessageStatus.sent;
     }
 
-    final imageUrl = json['image_url']?.toString() ??
-        json['media_url']?.toString() ??
-        json['file_url']?.toString() ??
-        json['attachment_url']?.toString();
+    final typeRaw = (json['message_type']?.toString().toLowerCase() ??
+            json['type']?.toString().toLowerCase() ??
+            '')
+        .trim();
 
-    final type = json['message_type']?.toString().toLowerCase() ??
-        json['type']?.toString().toLowerCase() ??
-        '';
+    final fileUrl = json['file_url']?.toString() ?? json['attachment_url']?.toString();
+    final imageUrl = json['image_url']?.toString() ?? json['media_url']?.toString();
+    final audioUrl = json['audio_url']?.toString() ?? json['voice_url']?.toString();
+    final attachmentUrl = imageUrl?.trim().isNotEmpty == true
+        ? imageUrl
+        : fileUrl?.trim().isNotEmpty == true
+            ? fileUrl
+            : audioUrl;
+
+    final fileName = json['file_name']?.toString() ??
+        json['original_file_name']?.toString() ??
+        json['attachment_name']?.toString() ??
+        json['document_name']?.toString();
+
+    _AttachmentType attachmentType;
+    if (typeRaw == 'voice' || typeRaw == 'audio' || audioUrl?.isNotEmpty == true) {
+      attachmentType = _AttachmentType.voice;
+    } else if (typeRaw == 'file' || typeRaw == 'document') {
+      attachmentType = _AttachmentType.file;
+    } else if (typeRaw == 'image' || typeRaw == 'photo') {
+      attachmentType = _AttachmentType.image;
+    } else if ((imageUrl ?? '').isNotEmpty) {
+      attachmentType = _AttachmentType.image;
+    } else if ((fileUrl ?? '').isNotEmpty) {
+      attachmentType = _AttachmentType.file;
+    } else {
+      attachmentType = _AttachmentType.text;
+    }
 
     final isRead = parseBool(json['is_read'] ?? json['read']);
 
@@ -5102,7 +4655,8 @@ class _ChatMessage {
           json['message_text']?.toString() ?? json['text']?.toString() ?? '',
       createdAt: json['created_at']?.toString() ?? '',
       localImageBytes: null,
-      imageUrl: imageUrl,
+      attachmentUrl: attachmentUrl,
+      fileName: fileName,
       reactions: parseReactions(json['reactions']),
       isDeleted: parseBool(json['is_deleted'] ?? json['deleted']),
       isEdited: parseBool(json['is_edited'] ?? json['edited']),
@@ -5112,13 +4666,10 @@ class _ChatMessage {
       replyText: json['reply_text']?.toString() ??
           json['reply_to_message_text']?.toString(),
       isPinned: parseBool(json['is_pinned']),
-      isVoicePlaceholder:
-          type == 'voice' || parseBool(json['is_voice_placeholder']),
+      type: attachmentType,
       voiceDurationSeconds:
           parseInt(json['voice_duration_seconds'] ?? json['duration_seconds']),
       isLocalOnly: false,
-      isForwarded: parseBool(json['is_forwarded']),
-      forwardedFromName: json['forwarded_from_name']?.toString(),
       status: parseStatus(json['status'], isRead),
       isRead: isRead,
     );
@@ -5127,7 +4678,8 @@ class _ChatMessage {
   _ChatMessage copyWith({
     String? messageText,
     Uint8List? localImageBytes,
-    String? imageUrl,
+    String? attachmentUrl,
+    String? fileName,
     List<_ReactionItem>? reactions,
     bool? isDeleted,
     bool? isEdited,
@@ -5135,11 +4687,9 @@ class _ChatMessage {
     String? replySenderName,
     String? replyText,
     bool? isPinned,
-    bool? isVoicePlaceholder,
+    _AttachmentType? type,
     int? voiceDurationSeconds,
     bool? isLocalOnly,
-    bool? isForwarded,
-    String? forwardedFromName,
     _MessageStatus? status,
     bool? isRead,
   }) {
@@ -5150,7 +4700,8 @@ class _ChatMessage {
       messageText: messageText ?? this.messageText,
       createdAt: createdAt,
       localImageBytes: localImageBytes ?? this.localImageBytes,
-      imageUrl: imageUrl ?? this.imageUrl,
+      attachmentUrl: attachmentUrl ?? this.attachmentUrl,
+      fileName: fileName ?? this.fileName,
       reactions: reactions ?? this.reactions,
       isDeleted: isDeleted ?? this.isDeleted,
       isEdited: isEdited ?? this.isEdited,
@@ -5158,11 +4709,9 @@ class _ChatMessage {
       replySenderName: replySenderName ?? this.replySenderName,
       replyText: replyText ?? this.replyText,
       isPinned: isPinned ?? this.isPinned,
-      isVoicePlaceholder: isVoicePlaceholder ?? this.isVoicePlaceholder,
+      type: type ?? this.type,
       voiceDurationSeconds: voiceDurationSeconds ?? this.voiceDurationSeconds,
       isLocalOnly: isLocalOnly ?? this.isLocalOnly,
-      isForwarded: isForwarded ?? this.isForwarded,
-      forwardedFromName: forwardedFromName ?? this.forwardedFromName,
       status: status ?? this.status,
       isRead: isRead ?? this.isRead,
     );

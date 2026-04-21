@@ -112,10 +112,16 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
         _scheduleApi.getEmployees(
           establishmentId: widget.establishmentId,
         ),
+        _scheduleApi.getScheduleMonth(
+          establishmentId: widget.establishmentId,
+          year: _targetMonth.year,
+          month: _targetMonth.month,
+        ),
       ]);
 
       final bundle = results[0] as OwnerRequestsBundle;
       final employees = results[1] as List<OwnerScheduleEmployee>;
+      final month = results[2] as OwnerScheduleMonthResponse;
 
       final filtered = bundle.items.where((item) {
         if (!item.isSchedule) return false;
@@ -124,12 +130,42 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
             item.status == 'approved';
       }).toList();
 
+      final Map<DateTime, List<_PlannerAssignment>> prepared = {};
+
+      for (final day in month.days) {
+        final safeDate = DateTime(day.date.year, day.date.month, day.date.day);
+
+        prepared[safeDate] = day.items.map<_PlannerAssignment>((person) {
+          return _PlannerAssignment.fromScheduleMonthItem(
+            employeeUserId: person.employeeUserId.trim(),
+            employeeName: person.employeeName.trim().isEmpty
+                ? 'Сотрудник'
+                : person.employeeName.trim(),
+            badge: (person.employeeLabel?.trim().isNotEmpty == true)
+                ? person.employeeLabel!.trim().toUpperCase()
+                : _buildBadgeFromName(person.employeeName),
+            employeeRole: (person.employeeRole?.trim().isNotEmpty == true)
+                ? person.employeeRole!.trim()
+                : 'Сотрудник',
+          );
+        }).toList();
+      }
+
       for (final request in filtered) {
         for (final day in request.selectedDays) {
           final date = DateTime(_targetMonth.year, _targetMonth.month, day);
-          _selectedByDay.putIfAbsent(date, () => <_PlannerAssignment>[]).add(
-                _PlannerAssignment.fromApprovedRequest(request),
-              );
+
+          final assignment = _PlannerAssignment.fromApprovedRequest(request);
+
+          final list = prepared.putIfAbsent(
+            date,
+            () => <_PlannerAssignment>[],
+          );
+
+          final exists = list.any((e) => e.uniqueKey == assignment.uniqueKey);
+          if (!exists) {
+            list.add(assignment);
+          }
         }
       }
 
@@ -137,6 +173,9 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
       setState(() {
         _requests = filtered;
         _employees = employees;
+        _selectedByDay
+          ..clear()
+          ..addAll(prepared);
         _loading = false;
       });
       _introController.forward(from: 0);
@@ -171,6 +210,40 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
 
   String _monthLabel(DateTime month) {
     return '${_monthNames[month.month - 1]} ${month.year}';
+  }
+
+  String _buildBadgeFromName(String rawName) {
+    final safeName = rawName.trim();
+    if (safeName.isEmpty) return '—';
+
+    final parts = safeName
+        .split(RegExp(r'\s+'))
+        .where((e) => e.trim().isNotEmpty)
+        .toList();
+
+    if (parts.isEmpty) return '—';
+
+    if (parts.length >= 2) {
+      final first = parts[0].trim();
+      final second = parts[1].trim();
+
+      final firstLetter = first.isNotEmpty ? first.substring(0, 1) : '';
+      final secondLetter = second.isNotEmpty ? second.substring(0, 1) : '';
+
+      final result = '$firstLetter$secondLetter'.trim();
+      if (result.isNotEmpty) return result.toUpperCase();
+    }
+
+    final word = parts.first.trim().toUpperCase();
+    if (word.length >= 3) return word.substring(0, 3);
+    return word;
+  }
+
+  void _changeMonth(int delta) {
+    setState(() {
+      _targetMonth = DateTime(_targetMonth.year, _targetMonth.month + delta);
+    });
+    _load();
   }
 
   Future<void> _pickDay(DateTime date) async {
@@ -775,9 +848,9 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            'Публикация графика на ${_monthNames[_targetMonth.month - 1].toLowerCase()} ${_targetMonth.year}',
-            style: const TextStyle(
+          const Text(
+            'Планирование и публикация графика',
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w800,
               color: kOwnerPlanInkSoft,
@@ -786,11 +859,63 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
           const SizedBox(height: 14),
           Row(
             children: [
+              _OwnerMonthNavButton(
+                icon: CupertinoIcons.chevron_left,
+                onTap: () => _changeMonth(-1),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.74),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: const Color(0xA6FFFFFF),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        _monthNames[_targetMonth.month - 1],
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: kOwnerPlanInk,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${_targetMonth.year}',
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: kOwnerPlanInkSoft,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              _OwnerMonthNavButton(
+                icon: CupertinoIcons.chevron_right,
+                onTap: () => _changeMonth(1),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
               Expanded(
                 child: _OwnerMetricCard(
                   icon: CupertinoIcons.check_mark_circled_solid,
                   value: '${_requests.length}',
-                  label: 'Согласовано',
+                  label: 'Заявки',
                   colorA: kOwnerPlanSuccess,
                   colorB: kOwnerPlanBlue,
                 ),
@@ -810,7 +935,7 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
                 child: _OwnerMetricCard(
                   icon: CupertinoIcons.square_grid_2x2_fill,
                   value: '$_filledDaysCount',
-                  label: 'Дней',
+                  label: 'Дни',
                   colorA: kOwnerPlanBlue,
                   colorB: kOwnerPlanViolet,
                 ),
@@ -1015,6 +1140,23 @@ class _PlannerAssignment {
     );
   }
 
+  factory _PlannerAssignment.fromScheduleMonthItem({
+    required String employeeUserId,
+    required String employeeName,
+    required String badge,
+    required String? employeeRole,
+  }) {
+    return _PlannerAssignment(
+      employeeUserId: employeeUserId,
+      employeeName: employeeName,
+      badge: badge,
+      employeeRole: employeeRole,
+      sourceRequest: null,
+      isManual: true,
+      uniqueKey: 'saved_${employeeUserId}_$badge',
+    );
+  }
+
   factory _PlannerAssignment.fromEmployee(OwnerScheduleEmployee employee) {
     return _PlannerAssignment(
       employeeUserId: employee.employeeUserId,
@@ -1024,6 +1166,37 @@ class _PlannerAssignment {
       sourceRequest: null,
       isManual: true,
       uniqueKey: 'employee_${employee.employeeUserId}',
+    );
+  }
+}
+
+class _OwnerMonthNavButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _OwnerMonthNavButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withOpacity(0.86),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 42,
+          height: 42,
+          child: Icon(
+            icon,
+            color: kOwnerPlanInk,
+            size: 20,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1111,8 +1284,10 @@ class _OwnerMetricCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 22,
+              fontSize: 19,
               fontWeight: FontWeight.w900,
               color: kOwnerPlanInk,
             ),
@@ -1121,8 +1296,10 @@ class _OwnerMetricCard extends StatelessWidget {
           Text(
             label,
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 12.5,
+              fontSize: 11.2,
               fontWeight: FontWeight.w800,
               color: kOwnerPlanInkSoft,
             ),

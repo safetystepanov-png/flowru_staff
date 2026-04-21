@@ -28,7 +28,16 @@
 	<true/>
 
 	<key>NSCameraUsageDescription</key>
-	<string>Приложению нужен доступ к камере для сканирования QR-кодов клиентов и съемки фото для чата.</string>
+	<string>Приложению нужен доступ к камере для сканирования QR-кодов клиентов.</string>
+
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Приложению нужен доступ к геолокации для работы с адресами, картой и функциями, связанными с местоположением.</string>
+
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Приложению нужен доступ к геолокации для работы с адресами, картой и функциями, связанными с местоположением.</string>
+
+	<key>NSFaceIDUsageDescription</key>
+	<string>Face ID используется для быстрого входа в Flowru Staff.</string>
 
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Приложению нужен доступ к фото, чтобы вы могли выбирать и отправлять изображения в чате.</string>

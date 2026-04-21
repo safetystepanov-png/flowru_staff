@@ -57,6 +57,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
   bool _biometricEnabled = false;
   bool _biometricChecking = true;
   bool _biometricLoading = false;
+  bool _hasRefreshSession = false;
 
   late final AnimationController _introController;
   late final AnimationController _ambientController;
@@ -107,8 +108,8 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
 
   Future<void> _initSavedLoginAndBiometric() async {
     final savedPhone = await AuthStorage.getSavedPhone();
-    final savedPassword = await AuthStorage.getSavedPassword();
     final biometricEnabled = await AuthStorage.isBiometricEnabled();
+    final refreshToken = await AuthStorage.getRefreshToken();
 
     if (!mounted) return;
 
@@ -116,9 +117,8 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
       _phoneController.text = savedPhone.trim();
     }
 
-    if (savedPassword != null && savedPassword.isNotEmpty) {
-      _passwordController.text = savedPassword;
-    }
+    final hasRefreshSession =
+        refreshToken != null && refreshToken.trim().isNotEmpty;
 
     bool available = false;
 
@@ -127,8 +127,14 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
         final canCheck = await _localAuth.canCheckBiometrics;
         final isSupported = await _localAuth.isDeviceSupported();
         available = canCheck || isSupported;
-      } catch (_) {
+
+        debugPrint(
+          'BIOMETRIC init: canCheck=$canCheck isSupported=$isSupported '
+          'biometricEnabled=$biometricEnabled hasRefreshSession=$hasRefreshSession',
+        );
+      } catch (e) {
         available = false;
+        debugPrint('BIOMETRIC init error: $e');
       }
     }
 
@@ -137,6 +143,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
     setState(() {
       _biometricAvailable = available;
       _biometricEnabled = biometricEnabled;
+      _hasRefreshSession = hasRefreshSession;
       _biometricChecking = false;
     });
   }
@@ -194,14 +201,16 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
     await AuthStorage.saveRefreshToken(result.refreshToken);
 
     if (saveCredentials) {
-      await AuthStorage.saveLoginCredentials(
-        phone: phone,
-        password: password,
-      );
+      await AuthStorage.savePhoneOnly(result.phone.isNotEmpty ? result.phone : phone);
       await _enableBiometricIfPossible();
     }
 
     if (!mounted) return;
+
+    setState(() {
+      _loading = false;
+      _hasRefreshSession = true;
+    });
 
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const StaffEstablishmentsScreen()),
@@ -230,15 +239,11 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
 
     if (_loading || _biometricLoading) return;
 
-    final savedPhone = await AuthStorage.getSavedPhone();
-    final savedPassword = await AuthStorage.getSavedPassword();
+    final refreshToken = await AuthStorage.getRefreshToken();
 
-    if (savedPhone == null ||
-        savedPhone.trim().isEmpty ||
-        savedPassword == null ||
-        savedPassword.isEmpty) {
+    if (refreshToken == null || refreshToken.trim().isEmpty) {
       setState(() {
-        _error = 'Нет сохранённых данных для входа';
+        _error = 'Нет сохранённой сессии для входа';
       });
       return;
     }
@@ -263,10 +268,39 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
         return;
       }
 
-      await _submitWithCredentials(
-        phone: savedPhone.trim(),
-        password: savedPassword,
-        saveCredentials: false,
+      final result = await _userApi.refresh(
+        refreshToken: refreshToken.trim(),
+        deviceId: kIsWeb ? 'staff-web' : 'staff-mobile',
+        platform: kIsWeb ? 'web' : 'mobile',
+      );
+
+      if (!mounted) return;
+
+      if (!result.ok) {
+        await AuthStorage.clearSessionButKeepBiometric();
+        setState(() {
+          _biometricLoading = false;
+          _hasRefreshSession = false;
+          _error = result.message;
+        });
+        return;
+      }
+
+      await AuthStorage.saveAccessToken(result.accessToken);
+      await AuthStorage.saveRefreshToken(result.refreshToken);
+      await AuthStorage.setBiometricEnabled(true);
+
+      if (!mounted) return;
+
+      setState(() {
+        _biometricLoading = false;
+        _biometricEnabled = true;
+        _hasRefreshSession = true;
+      });
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const StaffEstablishmentsScreen()),
+        (route) => false,
       );
     } on PlatformException catch (e) {
       final code = e.code.toLowerCase();
@@ -616,6 +650,14 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
     );
   }
 
+  bool get _shouldShowBiometricButton {
+    if (_biometricChecking) return false;
+    if (!_biometricAvailable) return false;
+    if (!_hasRefreshSession) return false;
+
+    return _biometricEnabled || _hasRefreshSession;
+  }
+
   Widget _biometricButton() {
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -823,9 +865,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
                           ),
                   ),
                 ),
-                if (!_biometricChecking &&
-                    _biometricAvailable &&
-                    _biometricEnabled) ...[
+                if (_shouldShowBiometricButton) ...[
                   const SizedBox(height: 12),
                   _biometricButton(),
                 ],

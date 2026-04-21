@@ -955,25 +955,15 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
   }
 
   Widget _buildTopInfoRow() {
-    final width = MediaQuery.of(context).size.width;
-
-    if (width < 680) {
-      return Column(
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildMySummary(),
-          const SizedBox(height: 12),
-          _buildLegend(),
+          Expanded(child: _buildLegend()),
+          const SizedBox(width: 12),
+          Expanded(child: _buildMySummary()),
         ],
-      );
-    }
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: _buildMySummary()),
-        const SizedBox(width: 12),
-        Expanded(child: _buildLegend()),
-      ],
+      ),
     );
   }
 

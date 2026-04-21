@@ -52,6 +52,42 @@ class AuthResult {
   }
 }
 
+class RefreshResult {
+  final bool ok;
+  final String message;
+  final String accessToken;
+  final String refreshToken;
+  final String tokenType;
+
+  const RefreshResult({
+    required this.ok,
+    required this.message,
+    required this.accessToken,
+    required this.refreshToken,
+    required this.tokenType,
+  });
+
+  factory RefreshResult.fromJson(Map<String, dynamic> json) {
+    return RefreshResult(
+      ok: true,
+      message: 'OK',
+      accessToken: json['access_token']?.toString() ?? '',
+      refreshToken: json['refresh_token']?.toString() ?? '',
+      tokenType: json['token_type']?.toString() ?? 'bearer',
+    );
+  }
+
+  factory RefreshResult.error(String message) {
+    return RefreshResult(
+      ok: false,
+      message: message,
+      accessToken: '',
+      refreshToken: '',
+      tokenType: '',
+    );
+  }
+}
+
 class UserMe {
   final String id;
   final String phone;
@@ -240,6 +276,42 @@ class UserApi {
     } catch (_) {}
 
     return AuthResult.error(message);
+  }
+
+  Future<RefreshResult> refresh({
+    required String refreshToken,
+    required String deviceId,
+    required String platform,
+  }) async {
+    final response = await http.post(
+      Uri.parse('${AppConfig.baseUrl}/api/v1/auth/refresh'),
+      headers: const {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({
+        'refresh_token': refreshToken,
+        'device_id': deviceId,
+        'platform': platform,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      return RefreshResult.fromJson(decoded);
+    }
+
+    String message = 'Не удалось обновить сессию';
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        message = decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            message;
+      }
+    } catch (_) {}
+
+    return RefreshResult.error(message);
   }
 
   static Future<UserMe> getMe(String accessToken) async {
