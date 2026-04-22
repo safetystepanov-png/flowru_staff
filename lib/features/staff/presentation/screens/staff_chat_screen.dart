@@ -78,6 +78,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
   Uint8List? _pendingImageBytes;
   String? _pendingImageName;
+  String? _pendingImagePath;
 
   String? _editingMessageId;
   String _searchQuery = '';
@@ -324,7 +325,11 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         _loading = false;
       });
 
-      _introController.forward(from: 0);
+      if (!silent) {
+        if (!silent) {
+        _introController.forward(from: 0);
+      }
+      }
 
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
@@ -453,6 +458,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       setState(() {
         _pendingImageBytes = bytes;
         _pendingImageName = file.name;
+        _pendingImagePath = file.path;
       });
       _messageFocusNode.requestFocus();
     } catch (_) {
@@ -476,6 +482,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       setState(() {
         _pendingImageBytes = bytes;
         _pendingImageName = file.name.isEmpty ? 'camera_image.jpg' : file.name;
+        _pendingImagePath = file.path;
       });
       _messageFocusNode.requestFocus();
     } catch (_) {
@@ -490,6 +497,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     setState(() {
       _pendingImageBytes = null;
       _pendingImageName = null;
+      _pendingImagePath = null;
+      _pendingImagePath = null;
     });
   }
 
@@ -542,6 +551,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     final String text = _messageController.text.trim();
     final Uint8List? pendingImageBytes = _pendingImageBytes;
     final String? pendingImageName = _pendingImageName;
+    final String? pendingImagePath = _pendingImagePath;
     final String? replyingToMessageId = _replyingToMessageId;
     final String? replyingToSenderName = _replyingToSenderName;
     final String? replyingToText = _replyingToText;
@@ -610,7 +620,23 @@ class _StaffChatScreenState extends State<StaffChatScreen>
           ..headers['Authorization'] = 'Bearer $token'
           ..headers['Accept'] = 'application/json'
           ..fields['establishment_id'] = widget.establishmentId.toString()
-          ..files.add(
+          ;
+
+        if (pendingImagePath != null && pendingImagePath.trim().isNotEmpty) {
+          request.files.add(
+            await http.MultipartFile.fromPath(
+              'file',
+              pendingImagePath,
+              filename: pendingImageName ?? _fileNameFromPath(pendingImagePath),
+              contentType: _mediaTypeForPath(
+                pendingImagePath,
+                fallbackType: 'image',
+                fallbackSubtype: 'jpeg',
+              ),
+            ),
+          );
+        } else {
+          request.files.add(
             http.MultipartFile.fromBytes(
               'file',
               pendingImageBytes,
@@ -618,6 +644,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
               contentType: MediaType('image', 'jpeg'),
             ),
           );
+        }
 
         if (text.isNotEmpty) {
           request.fields['message_text'] = text;
@@ -674,6 +701,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         );
         _pendingImageBytes = pendingImageBytes;
         _pendingImageName = pendingImageName;
+        _pendingImagePath = pendingImagePath;
         _replyingToMessageId = replyingToMessageId;
         _replyingToSenderName = replyingToSenderName;
         _replyingToText = replyingToText;
@@ -868,7 +896,11 @@ class _StaffChatScreenState extends State<StaffChatScreen>
             'audio',
             recordedPath,
             filename: 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a',
-            contentType: MediaType('audio', 'm4a'),
+            contentType: _mediaTypeForPath(
+              recordedPath,
+              fallbackType: 'audio',
+              fallbackSubtype: 'mp4',
+            ),
           ),
         );
 
@@ -991,12 +1023,18 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   Future<void> _deleteForMe(_ChatMessage message) async {
+    final previousMessages = List<_ChatMessage>.from(_messages);
+
     if (message.isLocalOnly) {
       setState(() {
         _messages = _messages.where((m) => m.id != message.id).toList();
       });
       return;
     }
+
+    setState(() {
+      _messages = _messages.where((m) => m.id != message.id).toList();
+    });
 
     try {
       final token = await _token();
@@ -1013,26 +1051,28 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       if (response.statusCode != 200) {
         throw Exception(_extractErrorText(response));
       }
-
-      if (!mounted) return;
-      setState(() {
-        _messages = _messages.where((m) => m.id != message.id).toList();
-      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
+        _messages = previousMessages;
         _error = e.toString().replaceFirst('Exception: ', '');
       });
     }
   }
 
   Future<void> _deleteForAll(_ChatMessage message) async {
+    final previousMessages = List<_ChatMessage>.from(_messages);
+
     if (message.isLocalOnly) {
       setState(() {
         _messages = _messages.where((m) => m.id != message.id).toList();
       });
       return;
     }
+
+    setState(() {
+      _messages = _messages.where((m) => m.id != message.id).toList();
+    });
 
     try {
       final token = await _token();
@@ -1049,14 +1089,10 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       if (response.statusCode != 200) {
         throw Exception(_extractErrorText(response));
       }
-
-      if (!mounted) return;
-      setState(() {
-        _messages = _messages.where((m) => m.id != message.id).toList();
-      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
+        _messages = previousMessages;
         _error = e.toString().replaceFirst('Exception: ', '');
       });
     }
@@ -1602,6 +1638,64 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     } catch (_) {}
   }
 
+
+  String _fileNameFromPath(String path) {
+    if (path.trim().isEmpty) return 'file';
+    return path.split(Platform.pathSeparator).last;
+  }
+
+  MediaType _mediaTypeForPath(
+    String? path, {
+    required String fallbackType,
+    required String fallbackSubtype,
+  }) {
+    final normalized = (path ?? '').toLowerCase();
+
+    if (normalized.endsWith('.jpg') || normalized.endsWith('.jpeg')) {
+      return MediaType('image', 'jpeg');
+    }
+    if (normalized.endsWith('.png')) {
+      return MediaType('image', 'png');
+    }
+    if (normalized.endsWith('.webp')) {
+      return MediaType('image', 'webp');
+    }
+    if (normalized.endsWith('.heic')) {
+      return MediaType('image', 'heic');
+    }
+    if (normalized.endsWith('.m4a')) {
+      return MediaType('audio', 'mp4');
+    }
+    if (normalized.endsWith('.aac')) {
+      return MediaType('audio', 'aac');
+    }
+    if (normalized.endsWith('.mp3')) {
+      return MediaType('audio', 'mpeg');
+    }
+    if (normalized.endsWith('.wav')) {
+      return MediaType('audio', 'wav');
+    }
+    if (normalized.endsWith('.ogg')) {
+      return MediaType('audio', 'ogg');
+    }
+
+    return MediaType(fallbackType, fallbackSubtype);
+  }
+
+  String? _cacheSafeAttachmentUrl(_ChatMessage message) {
+    final fullUrl = _fullUrl(message.attachmentUrl);
+    if (fullUrl == null || fullUrl.isEmpty) return null;
+
+    final separator = fullUrl.contains('?') ? '&' : '?';
+    return '$fullUrl${separator}m=${Uri.encodeComponent(message.id)}_${Uri.encodeComponent(message.createdAt)}';
+  }
+
+  bool _showDeletedPlaceholder(_ChatMessage message) {
+    return message.isDeleted &&
+        message.messageText.trim().isEmpty &&
+        message.type == _AttachmentType.text;
+  }
+
   Widget _errorCard() {
     if (_error == null) return const SizedBox.shrink();
     return _GlassCard(
@@ -1718,7 +1812,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       );
     }
 
-    final fullUrl = _fullUrl(message.attachmentUrl);
+    final fullUrl = _cacheSafeAttachmentUrl(message);
     if (fullUrl != null && fullUrl.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -2230,7 +2324,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                         if (_selectionMode) {
                           _toggleSelection(message);
                         } else {
-                          _enterSelectionMode(message);
+                          _openMessageActions(message);
                         }
                       },
                       onSecondaryTap: () => _openMessageActions(message),
@@ -2322,6 +2416,22 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w900,
                                     color: kChatInkSoft,
+                                  ),
+                                ),
+                              ),
+                            if (_showDeletedPlaceholder(message))
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 2),
+                                child: Text(
+                                  'Сообщение удалено',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    height: 1.35,
+                                    fontWeight: FontWeight.w800,
+                                    fontStyle: FontStyle.italic,
+                                    color: mine
+                                        ? Colors.white.withOpacity(0.88)
+                                        : kChatInkSoft,
                                   ),
                                 ),
                               ),
@@ -2480,7 +2590,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                   ],
                 ),
               ),
-              if (mine && showAuthor)
+              if (mine)
                 Padding(
                   padding: const EdgeInsets.only(left: 6),
                   child: _bubbleSideButton(
@@ -3791,7 +3901,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Всего: ${names.length}',
+                                'Всего: ${names.length} • Сообщений: ${_messages.where((m) => !m.isDeleted).length}',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
                                   color: kChatInkSoft,
