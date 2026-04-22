@@ -78,7 +78,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
   Uint8List? _pendingImageBytes;
   String? _pendingImageName;
-  String? _pendingImagePath;
 
   String? _editingMessageId;
   String _searchQuery = '';
@@ -325,11 +324,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         _loading = false;
       });
 
-      if (!silent) {
-        if (!silent) {
-        _introController.forward(from: 0);
-      }
-      }
+      _introController.forward(from: 0);
 
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
@@ -458,7 +453,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       setState(() {
         _pendingImageBytes = bytes;
         _pendingImageName = file.name;
-        _pendingImagePath = file.path;
       });
       _messageFocusNode.requestFocus();
     } catch (_) {
@@ -482,7 +476,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       setState(() {
         _pendingImageBytes = bytes;
         _pendingImageName = file.name.isEmpty ? 'camera_image.jpg' : file.name;
-        _pendingImagePath = file.path;
       });
       _messageFocusNode.requestFocus();
     } catch (_) {
@@ -497,8 +490,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     setState(() {
       _pendingImageBytes = null;
       _pendingImageName = null;
-      _pendingImagePath = null;
-      _pendingImagePath = null;
     });
   }
 
@@ -551,7 +542,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     final String text = _messageController.text.trim();
     final Uint8List? pendingImageBytes = _pendingImageBytes;
     final String? pendingImageName = _pendingImageName;
-    final String? pendingImagePath = _pendingImagePath;
     final String? replyingToMessageId = _replyingToMessageId;
     final String? replyingToSenderName = _replyingToSenderName;
     final String? replyingToText = _replyingToText;
@@ -620,23 +610,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
           ..headers['Authorization'] = 'Bearer $token'
           ..headers['Accept'] = 'application/json'
           ..fields['establishment_id'] = widget.establishmentId.toString()
-          ;
-
-        if (pendingImagePath != null && pendingImagePath.trim().isNotEmpty) {
-          request.files.add(
-            await http.MultipartFile.fromPath(
-              'file',
-              pendingImagePath,
-              filename: pendingImageName ?? _fileNameFromPath(pendingImagePath),
-              contentType: _mediaTypeForPath(
-                pendingImagePath,
-                fallbackType: 'image',
-                fallbackSubtype: 'jpeg',
-              ),
-            ),
-          );
-        } else {
-          request.files.add(
+          ..files.add(
             http.MultipartFile.fromBytes(
               'file',
               pendingImageBytes,
@@ -644,7 +618,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
               contentType: MediaType('image', 'jpeg'),
             ),
           );
-        }
 
         if (text.isNotEmpty) {
           request.fields['message_text'] = text;
@@ -701,7 +674,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         );
         _pendingImageBytes = pendingImageBytes;
         _pendingImageName = pendingImageName;
-        _pendingImagePath = pendingImagePath;
         _replyingToMessageId = replyingToMessageId;
         _replyingToSenderName = replyingToSenderName;
         _replyingToText = replyingToText;
@@ -896,11 +868,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
             'audio',
             recordedPath,
             filename: 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a',
-            contentType: _mediaTypeForPath(
-              recordedPath,
-              fallbackType: 'audio',
-              fallbackSubtype: 'mp4',
-            ),
+            contentType: MediaType('audio', 'm4a'),
           ),
         );
 
@@ -1023,18 +991,12 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   Future<void> _deleteForMe(_ChatMessage message) async {
-    final previousMessages = List<_ChatMessage>.from(_messages);
-
     if (message.isLocalOnly) {
       setState(() {
         _messages = _messages.where((m) => m.id != message.id).toList();
       });
       return;
     }
-
-    setState(() {
-      _messages = _messages.where((m) => m.id != message.id).toList();
-    });
 
     try {
       final token = await _token();
@@ -1051,28 +1013,26 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       if (response.statusCode != 200) {
         throw Exception(_extractErrorText(response));
       }
+
+      if (!mounted) return;
+      setState(() {
+        _messages = _messages.where((m) => m.id != message.id).toList();
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _messages = previousMessages;
         _error = e.toString().replaceFirst('Exception: ', '');
       });
     }
   }
 
   Future<void> _deleteForAll(_ChatMessage message) async {
-    final previousMessages = List<_ChatMessage>.from(_messages);
-
     if (message.isLocalOnly) {
       setState(() {
         _messages = _messages.where((m) => m.id != message.id).toList();
       });
       return;
     }
-
-    setState(() {
-      _messages = _messages.where((m) => m.id != message.id).toList();
-    });
 
     try {
       final token = await _token();
@@ -1089,10 +1049,14 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       if (response.statusCode != 200) {
         throw Exception(_extractErrorText(response));
       }
+
+      if (!mounted) return;
+      setState(() {
+        _messages = _messages.where((m) => m.id != message.id).toList();
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _messages = previousMessages;
         _error = e.toString().replaceFirst('Exception: ', '');
       });
     }
@@ -1638,64 +1602,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     } catch (_) {}
   }
 
-
-  String _fileNameFromPath(String path) {
-    if (path.trim().isEmpty) return 'file';
-    return path.split(Platform.pathSeparator).last;
-  }
-
-  MediaType _mediaTypeForPath(
-    String? path, {
-    required String fallbackType,
-    required String fallbackSubtype,
-  }) {
-    final normalized = (path ?? '').toLowerCase();
-
-    if (normalized.endsWith('.jpg') || normalized.endsWith('.jpeg')) {
-      return MediaType('image', 'jpeg');
-    }
-    if (normalized.endsWith('.png')) {
-      return MediaType('image', 'png');
-    }
-    if (normalized.endsWith('.webp')) {
-      return MediaType('image', 'webp');
-    }
-    if (normalized.endsWith('.heic')) {
-      return MediaType('image', 'heic');
-    }
-    if (normalized.endsWith('.m4a')) {
-      return MediaType('audio', 'mp4');
-    }
-    if (normalized.endsWith('.aac')) {
-      return MediaType('audio', 'aac');
-    }
-    if (normalized.endsWith('.mp3')) {
-      return MediaType('audio', 'mpeg');
-    }
-    if (normalized.endsWith('.wav')) {
-      return MediaType('audio', 'wav');
-    }
-    if (normalized.endsWith('.ogg')) {
-      return MediaType('audio', 'ogg');
-    }
-
-    return MediaType(fallbackType, fallbackSubtype);
-  }
-
-  String? _cacheSafeAttachmentUrl(_ChatMessage message) {
-    final fullUrl = _fullUrl(message.attachmentUrl);
-    if (fullUrl == null || fullUrl.isEmpty) return null;
-
-    final separator = fullUrl.contains('?') ? '&' : '?';
-    return '$fullUrl${separator}m=${Uri.encodeComponent(message.id)}_${Uri.encodeComponent(message.createdAt)}';
-  }
-
-  bool _showDeletedPlaceholder(_ChatMessage message) {
-    return message.isDeleted &&
-        message.messageText.trim().isEmpty &&
-        message.type == _AttachmentType.text;
-  }
-
   Widget _errorCard() {
     if (_error == null) return const SizedBox.shrink();
     return _GlassCard(
@@ -1812,7 +1718,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       );
     }
 
-    final fullUrl = _cacheSafeAttachmentUrl(message);
+    final fullUrl = _fullUrl(message.attachmentUrl);
     if (fullUrl != null && fullUrl.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -1912,61 +1818,82 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     );
   }
 
-  Widget _voiceBubble(bool mine, int durationSeconds) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: mine
-            ? Colors.white.withOpacity(0.14)
-            : const Color(0xFFF3F7FA),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: mine
-                  ? Colors.white.withOpacity(0.18)
-                  : kChatBlue.withOpacity(0.10),
-            ),
-            child: Icon(
-              CupertinoIcons.play_fill,
-              size: 18,
-              color: mine ? Colors.white : kChatBlue,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: List<Widget>.generate(
-                16,
-                (i) => Container(
-                  width: 4,
-                  height: (8 + (i % 4) * 6).toDouble(),
-                  decoration: BoxDecoration(
-                    color: mine
-                        ? Colors.white.withOpacity(0.75)
-                        : kChatBlue.withOpacity(0.68),
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                ),
+  Widget _voiceBubble(bool mine, _ChatMessage message) {
+    final durationSeconds = message.voiceDurationSeconds ?? 1;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: () => _openAttachment(message),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          color: mine
+              ? Colors.white.withOpacity(0.14)
+              : const Color(0xFFF3F7FA),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: mine
+                    ? Colors.white.withOpacity(0.18)
+                    : kChatBlue.withOpacity(0.10),
+              ),
+              child: Icon(
+                CupertinoIcons.play_fill,
+                size: 19,
+                color: mine ? Colors.white : kChatBlue,
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            _formatSeconds(durationSeconds),
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              color: mine ? Colors.white : kChatInk,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: List<Widget>.generate(
+                      18,
+                      (i) => Container(
+                        width: 3.4,
+                        height: (8 + (i % 5) * 4).toDouble(),
+                        margin: EdgeInsets.only(right: i == 17 ? 0 : 3),
+                        decoration: BoxDecoration(
+                          color: mine
+                              ? Colors.white.withOpacity(0.78)
+                              : kChatBlue.withOpacity(0.68),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Нажмите, чтобы прослушать',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      color: mine
+                          ? Colors.white.withOpacity(0.82)
+                          : kChatInkSoft,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 10),
+            Text(
+              _formatSeconds(durationSeconds),
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                color: mine ? Colors.white : kChatInk,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2286,22 +2213,24 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                 mine ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              if (!mine && showAuthor)
+              if (!mine)
                 Padding(
                   padding: const EdgeInsets.only(right: 6),
-                  child: _bubbleSideButton(
-                    icon: _selectionMode
-                        ? (isSelected
-                            ? CupertinoIcons.check_mark_circled_solid
-                            : CupertinoIcons.circle)
-                        : CupertinoIcons.smiley,
-                    onTap: () {
-                      if (_selectionMode) {
-                        _toggleSelection(message);
-                      } else {
-                        _openEmojiPanel(message);
-                      }
-                    },
+                  child: Builder(
+                    builder: (buttonContext) => _bubbleSideButton(
+                      icon: _selectionMode
+                          ? (isSelected
+                              ? CupertinoIcons.check_mark_circled_solid
+                              : CupertinoIcons.circle)
+                          : CupertinoIcons.ellipsis_circle,
+                      onTap: () {
+                        if (_selectionMode) {
+                          _toggleSelection(message);
+                        } else {
+                          _openMessageActions(message, anchorContext: buttonContext);
+                        }
+                      },
+                    ),
                   ),
                 )
               else if (!mine)
@@ -2324,7 +2253,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                         if (_selectionMode) {
                           _toggleSelection(message);
                         } else {
-                          _openMessageActions(message);
+                          _enterSelectionMode(message);
                         }
                       },
                       onSecondaryTap: () => _openMessageActions(message),
@@ -2416,22 +2345,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w900,
                                     color: kChatInkSoft,
-                                  ),
-                                ),
-                              ),
-                            if (_showDeletedPlaceholder(message))
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 2),
-                                child: Text(
-                                  'Сообщение удалено',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    height: 1.35,
-                                    fontWeight: FontWeight.w800,
-                                    fontStyle: FontStyle.italic,
-                                    color: mine
-                                        ? Colors.white.withOpacity(0.88)
-                                        : kChatInkSoft,
                                   ),
                                 ),
                               ),
@@ -2527,10 +2440,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                 const SizedBox(height: 8),
                             ],
                             if (message.type == _AttachmentType.voice) ...[
-                              _voiceBubble(
-                                mine,
-                                message.voiceDurationSeconds ?? 1,
-                              ),
+                              _voiceBubble(mine, message),
                               if (message.messageText.trim().isNotEmpty)
                                 const SizedBox(height: 8),
                             ],
@@ -2593,19 +2503,21 @@ class _StaffChatScreenState extends State<StaffChatScreen>
               if (mine)
                 Padding(
                   padding: const EdgeInsets.only(left: 6),
-                  child: _bubbleSideButton(
-                    icon: _selectionMode
-                        ? (isSelected
-                            ? CupertinoIcons.check_mark_circled_solid
-                            : CupertinoIcons.circle)
-                        : CupertinoIcons.ellipsis,
-                    onTap: () {
-                      if (_selectionMode) {
-                        _toggleSelection(message);
-                      } else {
-                        _openMessageActions(message);
-                      }
-                    },
+                  child: Builder(
+                    builder: (buttonContext) => _bubbleSideButton(
+                      icon: _selectionMode
+                          ? (isSelected
+                              ? CupertinoIcons.check_mark_circled_solid
+                              : CupertinoIcons.circle)
+                          : CupertinoIcons.ellipsis_circle,
+                      onTap: () {
+                        if (_selectionMode) {
+                          _toggleSelection(message);
+                        } else {
+                          _openMessageActions(message, anchorContext: buttonContext);
+                        }
+                      },
+                    ),
                   ),
                 )
               else if (mine)
@@ -2617,191 +2529,152 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     );
   }
 
-  Future<void> _openMessageActions(_ChatMessage message) async {
+  Future<void> _openMessageActions(
+    _ChatMessage message, {
+    BuildContext? anchorContext,
+  }) async {
     final mine = _isMine(message);
 
-    await showModalBottomSheet<void>(
+    final entries = <({String value, IconData icon, Color color, String title})>[
+      (
+        value: 'select',
+        icon: CupertinoIcons.check_mark_circled,
+        color: kChatAmber,
+        title: 'Выбрать',
+      ),
+      (
+        value: 'reply',
+        icon: CupertinoIcons.reply,
+        color: kChatBlue,
+        title: 'Ответить',
+      ),
+      (
+        value: 'copy',
+        icon: CupertinoIcons.doc_on_doc,
+        color: kChatViolet,
+        title: 'Копировать',
+      ),
+      (
+        value: 'react',
+        icon: CupertinoIcons.smiley,
+        color: kChatGreen,
+        title: 'Добавить реакцию',
+      ),
+      (
+        value: 'pin',
+        icon: CupertinoIcons.pin,
+        color: kChatAmber,
+        title: message.isPinned || _pinnedMessageId == message.id
+            ? 'Убрать из закрепа'
+            : 'Закрепить',
+      ),
+      if (message.type == _AttachmentType.file || message.type == _AttachmentType.voice)
+        (
+          value: 'open',
+          icon: message.type == _AttachmentType.voice
+              ? CupertinoIcons.play_circle
+              : CupertinoIcons.paperclip,
+          color: kChatBlue,
+          title: message.type == _AttachmentType.voice
+              ? 'Прослушать'
+              : 'Открыть файл',
+        ),
+      if (mine && !message.isDeleted && message.type == _AttachmentType.text)
+        (
+          value: 'edit',
+          icon: CupertinoIcons.pencil,
+          color: kChatBlue,
+          title: 'Редактировать',
+        ),
+      (
+        value: 'delete',
+        icon: CupertinoIcons.delete_solid,
+        color: kChatRed,
+        title: mine ? 'Удалить у всех' : 'Удалить у себя',
+      ),
+    ];
+
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final renderBox = (anchorContext ?? context).findRenderObject() as RenderBox;
+    final offset = renderBox.localToGlobal(Offset.zero, ancestor: overlay);
+    final rect = RelativeRect.fromRect(
+      Rect.fromLTWH(offset.dx, offset.dy, renderBox.size.width, renderBox.size.height),
+      Offset.zero & overlay.size,
+    );
+
+    final selected = await showMenu<String>(
       context: context,
-      isScrollControlled: true,
-      isDismissible: true,
-      enableDrag: true,
-      backgroundColor: Colors.transparent,
-      builder: (dialogContext) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.96),
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: Colors.white.withOpacity(0.98)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 22,
-                      offset: const Offset(0, 10),
+      position: rect,
+      color: Colors.white.withOpacity(0.98),
+      elevation: 18,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      items: entries
+          .map(
+            (entry) => PopupMenuItem<String>(
+              value: entry.value,
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+              child: Row(
+                children: [
+                  Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: entry.color.withOpacity(0.10),
+                      borderRadius: BorderRadius.circular(9),
                     ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD8E2E6),
-                        borderRadius: BorderRadius.circular(999),
+                    child: Icon(entry.icon, size: 14, color: entry.color),
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      entry.title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: kChatInk,
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            color: mine
-                                ? kChatBlue.withOpacity(0.10)
-                                : kChatGreen.withOpacity(0.10),
-                          ),
-                          child: Icon(
-                            mine ? CupertinoIcons.ellipsis : CupertinoIcons.chat_bubble_2_fill,
-                            color: mine ? kChatBlue : kChatGreen,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                mine ? 'Действия с вашим сообщением' : 'Действия с сообщением',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                  color: kChatInk,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                _messagePreview(message),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: kChatInkSoft,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    _sheetAction(
-                      icon: CupertinoIcons.check_mark_circled,
-                      color: kChatAmber,
-                      title: 'Выбрать',
-                      onTap: () {
-                        Navigator.of(dialogContext).pop();
-                        _enterSelectionMode(message);
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    _sheetAction(
-                      icon: CupertinoIcons.reply,
-                      color: kChatBlue,
-                      title: 'Ответить',
-                      onTap: () {
-                        Navigator.of(dialogContext).pop();
-                        _startReply(message);
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    _sheetAction(
-                      icon: CupertinoIcons.doc_on_doc,
-                      color: kChatViolet,
-                      title: 'Копировать',
-                      onTap: () async {
-                        Navigator.of(dialogContext).pop();
-                        await _copyMessageText(message);
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    _sheetAction(
-                      icon: CupertinoIcons.smiley,
-                      color: kChatGreen,
-                      title: 'Добавить реакцию',
-                      onTap: () {
-                        Navigator.of(dialogContext).pop();
-                        _openEmojiPanel(message);
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    _sheetAction(
-                      icon: CupertinoIcons.pin,
-                      color: kChatAmber,
-                      title: message.isPinned || _pinnedMessageId == message.id
-                          ? 'Убрать из закрепа'
-                          : 'Закрепить',
-                      onTap: () {
-                        Navigator.of(dialogContext).pop();
-                        _togglePinnedMessageLocal(message);
-                      },
-                    ),
-                    if (message.type == _AttachmentType.file) ...[
-                      const SizedBox(height: 8),
-                      _sheetAction(
-                        icon: CupertinoIcons.paperclip,
-                        color: kChatBlue,
-                        title: 'Открыть файл',
-                        onTap: () {
-                          Navigator.of(dialogContext).pop();
-                          _openAttachment(message);
-                        },
-                      ),
-                    ],
-                    if (mine && !message.isDeleted && message.type == _AttachmentType.text) ...[
-                      const SizedBox(height: 8),
-                      _sheetAction(
-                        icon: CupertinoIcons.pencil,
-                        color: kChatBlue,
-                        title: 'Редактировать',
-                        onTap: () {
-                          Navigator.of(dialogContext).pop();
-                          _startEditMessage(message);
-                        },
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    _sheetAction(
-                      icon: CupertinoIcons.delete_solid,
-                      color: kChatRed,
-                      title: mine ? 'Удалить у всех' : 'Удалить у себя',
-                      onTap: () {
-                        Navigator.of(dialogContext).pop();
-                        if (mine || message.isLocalOnly) {
-                          _deleteForAll(message);
-                        } else {
-                          _deleteForMe(message);
-                        }
-                      },
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ),
-        );
-      },
+          )
+          .toList(),
     );
+
+    if (selected == null || !mounted) return;
+
+    switch (selected) {
+      case 'select':
+        _enterSelectionMode(message);
+        break;
+      case 'reply':
+        _startReply(message);
+        break;
+      case 'copy':
+        await _copyMessageText(message);
+        break;
+      case 'react':
+        await _openEmojiPanel(message);
+        break;
+      case 'pin':
+        await _togglePinnedMessageLocal(message);
+        break;
+      case 'open':
+        await _openAttachment(message);
+        break;
+      case 'edit':
+        await _startEditMessage(message);
+        break;
+      case 'delete':
+        if (mine || message.isLocalOnly) {
+          await _deleteForAll(message);
+        } else {
+          await _deleteForMe(message);
+        }
+        break;
+    }
   }
 
   Widget _pendingImagePreview() {
@@ -3901,7 +3774,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Всего: ${names.length} • Сообщений: ${_messages.where((m) => !m.isDeleted).length}',
+                                'Всего: ${names.length}',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
                                   color: kChatInkSoft,
@@ -4892,6 +4765,7 @@ class _ChatMessage {
     final fileUrl = json['file_url']?.toString() ?? json['attachment_url']?.toString();
     final imageUrl = json['image_url']?.toString() ?? json['media_url']?.toString();
     final audioUrl = json['audio_url']?.toString() ?? json['voice_url']?.toString();
+    final attachmentTypeRaw = (json['attachment_type']?.toString().toLowerCase() ?? '').trim();
     final attachmentUrl = imageUrl?.trim().isNotEmpty == true
         ? imageUrl
         : fileUrl?.trim().isNotEmpty == true
@@ -4904,7 +4778,10 @@ class _ChatMessage {
         json['document_name']?.toString();
 
     _AttachmentType attachmentType;
-    if (typeRaw == 'voice' || typeRaw == 'audio' || audioUrl?.isNotEmpty == true) {
+    if (typeRaw == 'voice' ||
+        typeRaw == 'audio' ||
+        audioUrl?.isNotEmpty == true ||
+        attachmentTypeRaw.startsWith('audio/')) {
       attachmentType = _AttachmentType.voice;
     } else if (typeRaw == 'file' || typeRaw == 'document') {
       attachmentType = _AttachmentType.file;
