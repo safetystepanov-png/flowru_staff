@@ -45,8 +45,17 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Приложению нужен доступ к микрофону, чтобы вы могли записывать и отправлять голосовые сообщения.</string>
 
-	<key>NSFaceIDUsageDescription</key>
-	<string>Face ID используется для быстрого входа в Flowru Staff.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>Разрешение может использоваться для улучшения уведомлений и работы приложения.</string>
+
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<true/>
+
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
