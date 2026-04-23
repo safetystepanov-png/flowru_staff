@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui';
+import 'package:audioplayers/audioplayers.dart';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
@@ -95,6 +96,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   final Map<String, dynamic> _voiceAudioElements = <String, dynamic>{};
   final Map<String, double> _voiceCurrentSeconds = <String, double>{};
   final Map<String, double> _voiceTotalSeconds = <String, double>{};
+  final Map<String, AudioPlayer> _nativeVoicePlayers = <String, AudioPlayer>{};
+  final Map<String, String> _nativeVoiceLoadedUrls = <String, String>{};
   Timer? _voiceProgressTimer;
   String? _playingVoiceMessageId;
 
@@ -206,6 +209,15 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       } catch (_) {}
     }
     _voiceAudioElements.clear();
+
+    for (final player in _nativeVoicePlayers.values) {
+      try {
+        player.dispose();
+      } catch (_) {}
+    }
+    _nativeVoicePlayers.clear();
+    _nativeVoiceLoadedUrls.clear();
+
     _audioRecorder.dispose();
     super.dispose();
   }
@@ -1953,17 +1965,87 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   Future<void> _toggleInlineVoicePlayback(_ChatMessage message) async {
-    if (!kIsWeb) {
-      await _openAttachment(message);
-      return;
-    }
-
-    final audio = _voiceAudioElements[message.id];
-    if (audio == null) {
+    final fullUrl = _cacheSafeAttachmentUrl(message) ?? _fullUrl(message.attachmentUrl);
+    if (fullUrl == null || fullUrl.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Голосовое ещё загружается, попробуйте ещё раз'),
+          content: Text('Ссылка на голосовое не найдена'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (kIsWeb) {
+      final audio = _voiceAudioElements[message.id];
+      if (audio == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Голосовое ещё загружается, попробуйте ещё раз'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      if (_playingVoiceMessageId != null && _playingVoiceMessageId != message.id) {
+        final previousWeb = _voiceAudioElements[_playingVoiceMessageId!];
+        try {
+          previousWeb?.pause();
+        } catch (_) {}
+
+        final previousNative = _nativeVoicePlayers[_playingVoiceMessageId!];
+        if (previousNative != null) {
+          try {
+            await previousNative.pause();
+          } catch (_) {}
+        }
+      }
+
+      final alreadyPlaying =
+          _playingVoiceMessageId == message.id && !(audio.paused == true);
+
+      if (alreadyPlaying) {
+        try {
+          audio.pause();
+        } catch (_) {}
+        _voiceProgressTimer?.cancel();
+        if (mounted) {
+          setState(() {
+            _playingVoiceMessageId = null;
+          });
+        }
+        return;
+      }
+
+      try {
+        final maybeFuture = audio.play();
+        if (maybeFuture != null) {
+          await maybeFuture;
+        }
+      } catch (_) {}
+
+      if (!mounted) return;
+      setState(() {
+        _playingVoiceMessageId = message.id;
+        final initialDuration = _safeAudioNumber(audio.duration);
+        if (initialDuration > 0) {
+          _voiceTotalSeconds[message.id] = initialDuration;
+        }
+        _voiceCurrentSeconds[message.id] = _safeAudioNumber(audio.currentTime);
+      });
+      _startVoiceProgressTicker(message.id);
+      return;
+    }
+
+    final player = await _ensureNativeVoicePlayer(message);
+    if (player == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Не удалось подготовить голосовое'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -1971,20 +2053,27 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     }
 
     if (_playingVoiceMessageId != null && _playingVoiceMessageId != message.id) {
-      final previous = _voiceAudioElements[_playingVoiceMessageId!];
-      try {
-        previous?.pause();
-      } catch (_) {}
+      final previousNative = _nativeVoicePlayers[_playingVoiceMessageId!];
+      if (previousNative != null) {
+        try {
+          await previousNative.pause();
+        } catch (_) {}
+      }
+
+      final previousWeb = _voiceAudioElements[_playingVoiceMessageId!];
+      if (previousWeb != null) {
+        try {
+          previousWeb.pause();
+        } catch (_) {}
+      }
     }
 
-    final alreadyPlaying =
-        _playingVoiceMessageId == message.id && !(audio.paused == true);
+    final alreadyPlaying = _playingVoiceMessageId == message.id;
 
     if (alreadyPlaying) {
       try {
-        audio.pause();
+        await player.pause();
       } catch (_) {}
-      _voiceProgressTimer?.cancel();
       if (mounted) {
         setState(() {
           _playingVoiceMessageId = null;
@@ -1993,23 +2082,18 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       return;
     }
 
-    try {
-      final maybeFuture = audio.play();
-      if (maybeFuture != null) {
-        await maybeFuture;
-      }
-    } catch (_) {}
+    final current = _voiceCurrentSeconds[message.id] ?? 0;
+    if (current <= 0.05) {
+      await player.play(UrlSource(fullUrl));
+      _nativeVoiceLoadedUrls[message.id] = fullUrl;
+    } else {
+      await player.resume();
+    }
 
     if (!mounted) return;
     setState(() {
       _playingVoiceMessageId = message.id;
-      final initialDuration = _safeAudioNumber(audio.duration);
-      if (initialDuration > 0) {
-        _voiceTotalSeconds[message.id] = initialDuration;
-      }
-      _voiceCurrentSeconds[message.id] = _safeAudioNumber(audio.currentTime);
     });
-    _startVoiceProgressTicker(message.id);
   }
 
   Widget _inlineVoicePlayer(bool mine, _ChatMessage message) {
@@ -2094,9 +2178,36 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   void _seekVoiceMessageFromTap(_ChatMessage message, TapDownDetails details) {
-    if (!kIsWeb) return;
-    final audio = _voiceAudioElements[message.id];
-    if (audio == null) return;
+    if (kIsWeb) {
+      final audio = _voiceAudioElements[message.id];
+      if (audio == null) return;
+
+      final box = context.findRenderObject();
+      if (box is! RenderBox) return;
+
+      final width = box.size.width;
+      if (width <= 0) return;
+
+      final localDx = details.localPosition.dx.clamp(0.0, width);
+      final ratio = (localDx / width).clamp(0.0, 1.0);
+      final duration = _voiceEffectiveDuration(message);
+      if (duration <= 0) return;
+
+      final nextValue = duration * ratio;
+      try {
+        audio.currentTime = nextValue;
+      } catch (_) {}
+
+      if (mounted) {
+        setState(() {
+          _voiceCurrentSeconds[message.id] = nextValue;
+        });
+      }
+      return;
+    }
+
+    final player = _nativeVoicePlayers[message.id];
+    if (player == null) return;
 
     final box = context.findRenderObject();
     if (box is! RenderBox) return;
@@ -2111,7 +2222,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
     final nextValue = duration * ratio;
     try {
-      audio.currentTime = nextValue;
+      player.seek(Duration(milliseconds: (nextValue * 1000).round()));
     } catch (_) {}
 
     if (mounted) {
@@ -2119,6 +2230,60 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         _voiceCurrentSeconds[message.id] = nextValue;
       });
     }
+  }
+
+  Future<AudioPlayer?> _ensureNativeVoicePlayer(_ChatMessage message) async {
+    final fullUrl = _cacheSafeAttachmentUrl(message) ?? _fullUrl(message.attachmentUrl);
+    if (fullUrl == null || fullUrl.isEmpty) return null;
+
+    AudioPlayer? player = _nativeVoicePlayers[message.id];
+
+    if (player == null) {
+      player = AudioPlayer();
+      _nativeVoicePlayers[message.id] = player;
+
+      player.onDurationChanged.listen((duration) {
+        if (!mounted) return;
+        setState(() {
+          _voiceTotalSeconds[message.id] =
+              duration.inMilliseconds <= 0 ? 0 : duration.inMilliseconds / 1000.0;
+        });
+      });
+
+      player.onPositionChanged.listen((position) {
+        if (!mounted) return;
+        setState(() {
+          _voiceCurrentSeconds[message.id] =
+              position.inMilliseconds <= 0 ? 0 : position.inMilliseconds / 1000.0;
+        });
+      });
+
+      player.onPlayerComplete.listen((_) {
+        if (!mounted) return;
+        setState(() {
+          _playingVoiceMessageId = null;
+          _voiceCurrentSeconds[message.id] = 0;
+        });
+      });
+    }
+
+    final loadedUrl = _nativeVoiceLoadedUrls[message.id];
+    if (loadedUrl != fullUrl) {
+      try {
+        await player.stop();
+      } catch (_) {}
+
+      await player.setSource(UrlSource(fullUrl));
+      _nativeVoiceLoadedUrls[message.id] = fullUrl;
+
+      if (mounted) {
+        setState(() {
+          _voiceCurrentSeconds[message.id] = 0;
+        });
+      }
+    }
+
+    return player;
   }
 
   double _safeAudioNumber(dynamic value) {
