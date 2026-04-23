@@ -180,12 +180,23 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
       _error = null;
     });
 
-    final result = await _userApi.login(
-      phone: phone,
-      password: password,
-      deviceId: kIsWeb ? 'staff-web' : 'staff-mobile',
-      platform: kIsWeb ? 'web' : 'mobile',
-    );
+    AuthResult result;
+
+    try {
+      result = await _userApi.login(
+        phone: phone,
+        password: password,
+        deviceId: kIsWeb ? 'staff-web' : 'staff-mobile',
+        platform: kIsWeb ? 'web' : 'mobile',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Ошибка входа: $e';
+      });
+      return;
+    }
 
     if (!mounted) return;
 
