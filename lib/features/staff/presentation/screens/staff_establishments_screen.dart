@@ -98,6 +98,11 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
       _introController.forward(from: 0);
 
       if (!widget.forceChooser) {
+        if (items.length == 1) {
+          await _openEstablishment(items.first);
+          return;
+        }
+
         await _tryAutoOpenSaved(items);
       }
     } catch (_) {

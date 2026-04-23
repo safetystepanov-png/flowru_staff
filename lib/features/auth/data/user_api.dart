@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../core/config/app_config.dart';
@@ -189,10 +188,7 @@ class AccessProfile {
       user: json['user'] is Map<String, dynamic>
           ? AccessProfileUser.fromJson(json['user'] as Map<String, dynamic>)
           : null,
-      roles: rolesRaw
-          .map((e) => e?.toString() ?? '')
-          .where((e) => e.isNotEmpty)
-          .toList(),
+      roles: rolesRaw.map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).toList(),
       hasAccess: json['has_access'] as bool? ?? false,
       establishments: establishmentsRaw
           .whereType<Map<String, dynamic>>()
@@ -211,71 +207,53 @@ class UserApi {
     required String deviceId,
     required String platform,
   }) async {
-    final uri = Uri.parse('${AppConfig.baseUrl}/api/v1/auth/register');
+    final response = await http.post(
+      Uri.parse('${AppConfig.baseUrl}/api/v1/auth/register'),
+      headers: const {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({
+        'phone': phone,
+        'password': password,
+        'password_confirm': passwordConfirm,
+        'full_name': fullName,
+        'device_id': deviceId,
+        'platform': platform,
+      }),
+    );
 
-    try {
-      debugPrint('REGISTER request -> $uri');
-
-      final response = await http
-          .post(
-            uri,
-            headers: const {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            body: jsonEncode({
-              'phone': phone,
-              'password': password,
-              'password_confirm': passwordConfirm,
-              'full_name': fullName,
-              'device_id': deviceId,
-              'platform': platform,
-            }),
-          )
-          .timeout(const Duration(seconds: 15));
-
-      debugPrint('REGISTER status -> ${response.statusCode}');
-      debugPrint('REGISTER body -> ${response.body}');
-
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-        return AuthResult.fromJson(decoded);
-      }
-
-      String message = 'Ошибка регистрации';
-      try {
-        final decoded = jsonDecode(response.body);
-        if (decoded is Map<String, dynamic>) {
-          message = decoded['detail']?.toString() ??
-              decoded['message']?.toString() ??
-              message;
-        }
-      } catch (_) {}
-
-      return AuthResult.error(message);
-    } on TimeoutException catch (e) {
-      debugPrint('REGISTER timeout -> $e');
-      return AuthResult.error('Сервер долго не отвечает');
-    } catch (e) {
-      debugPrint('REGISTER exception -> $e');
-      return AuthResult.error('Ошибка сети: $e');
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      return AuthResult.fromJson(decoded);
     }
+
+    String message = 'Ошибка регистрации';
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        message = decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            message;
+      }
+    } catch (_) {}
+
+    return AuthResult.error(message);
   }
 
-  Future<AuthResult> login({
-    required String phone,
-    required String password,
-    required String deviceId,
-    required String platform,
-  }) async {
-    final uri = Uri.parse('${AppConfig.baseUrl}/api/v1/auth/login');
 
+Future<AuthResult> login({
+  required String phone,
+  required String password,
+  required String deviceId,
+  required String platform,
+}) async {
+  final uri = Uri.parse('${AppConfig.baseUrl}/api/v1/auth/login');
+
+  Object? lastError;
+
+  for (int attempt = 1; attempt <= 2; attempt++) {
     try {
-      debugPrint('LOGIN request -> $uri');
-      debugPrint(
-        'LOGIN payload -> phone=$phone deviceId=$deviceId platform=$platform',
-      );
-
       final response = await http
           .post(
             uri,
@@ -290,10 +268,7 @@ class UserApi {
               'platform': platform,
             }),
           )
-          .timeout(const Duration(seconds: 15));
-
-      debugPrint('LOGIN status -> ${response.statusCode}');
-      debugPrint('LOGIN body -> ${response.body}');
+          .timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body) as Map<String, dynamic>;
@@ -310,86 +285,74 @@ class UserApi {
         }
       } catch (_) {}
 
+      final canRetry = response.statusCode >= 500 && attempt < 2;
+      if (canRetry) {
+        await Future<void>.delayed(const Duration(milliseconds: 700));
+        continue;
+      }
+
       return AuthResult.error(message);
     } on TimeoutException catch (e) {
-      debugPrint('LOGIN timeout -> $e');
-      return AuthResult.error('Сервер долго не отвечает');
+      lastError = e;
+    } on http.ClientException catch (e) {
+      lastError = e;
     } catch (e) {
-      debugPrint('LOGIN exception -> $e');
-      return AuthResult.error('Ошибка сети: $e');
+      lastError = e;
+      break;
+    }
+
+    if (attempt < 2) {
+      await Future<void>.delayed(const Duration(milliseconds: 700));
     }
   }
+
+  return AuthResult.error('Ошибка сети: $lastError');
+}
 
   Future<RefreshResult> refresh({
     required String refreshToken,
     required String deviceId,
     required String platform,
   }) async {
-    final uri = Uri.parse('${AppConfig.baseUrl}/api/v1/auth/refresh');
+    final response = await http.post(
+      Uri.parse('${AppConfig.baseUrl}/api/v1/auth/refresh'),
+      headers: const {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({
+        'refresh_token': refreshToken,
+        'device_id': deviceId,
+        'platform': platform,
+      }),
+    );
 
-    try {
-      debugPrint('REFRESH request -> $uri');
-
-      final response = await http
-          .post(
-            uri,
-            headers: const {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            body: jsonEncode({
-              'refresh_token': refreshToken,
-              'device_id': deviceId,
-              'platform': platform,
-            }),
-          )
-          .timeout(const Duration(seconds: 15));
-
-      debugPrint('REFRESH status -> ${response.statusCode}');
-      debugPrint('REFRESH body -> ${response.body}');
-
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-        return RefreshResult.fromJson(decoded);
-      }
-
-      String message = 'Не удалось обновить сессию';
-      try {
-        final decoded = jsonDecode(response.body);
-        if (decoded is Map<String, dynamic>) {
-          message = decoded['detail']?.toString() ??
-              decoded['message']?.toString() ??
-              message;
-        }
-      } catch (_) {}
-
-      return RefreshResult.error(message);
-    } on TimeoutException catch (e) {
-      debugPrint('REFRESH timeout -> $e');
-      return RefreshResult.error('Сервер долго не отвечает');
-    } catch (e) {
-      debugPrint('REFRESH exception -> $e');
-      return RefreshResult.error('Ошибка сети: $e');
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      return RefreshResult.fromJson(decoded);
     }
+
+    String message = 'Не удалось обновить сессию';
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        message = decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            message;
+      }
+    } catch (_) {}
+
+    return RefreshResult.error(message);
   }
 
   static Future<UserMe> getMe(String accessToken) async {
-    final uri = Uri.parse('${AppConfig.baseUrl}/api/v1/users/me');
-
-    debugPrint('GET ME request -> $uri');
-
-    final response = await http
-        .get(
-          uri,
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': 'Bearer $accessToken',
-          },
-        )
-        .timeout(const Duration(seconds: 15));
-
-    debugPrint('GET ME status -> ${response.statusCode}');
-    debugPrint('GET ME body -> ${response.body}');
+    final response = await http.get(
+      Uri.parse('${AppConfig.baseUrl}/api/v1/users/me'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      },
+    );
 
     if (response.statusCode != 200) {
       throw Exception('GET me failed: ${response.statusCode} ${response.body}');
@@ -400,22 +363,13 @@ class UserApi {
   }
 
   static Future<AccessProfile> getAccessProfile(String accessToken) async {
-    final uri = Uri.parse('${AppConfig.baseUrl}/api/v1/users/access-profile');
-
-    debugPrint('GET ACCESS PROFILE request -> $uri');
-
-    final response = await http
-        .get(
-          uri,
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': 'Bearer $accessToken',
-          },
-        )
-        .timeout(const Duration(seconds: 15));
-
-    debugPrint('GET ACCESS PROFILE status -> ${response.statusCode}');
-    debugPrint('GET ACCESS PROFILE body -> ${response.body}');
+    final response = await http.get(
+      Uri.parse('${AppConfig.baseUrl}/api/v1/users/access-profile'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      },
+    );
 
     if (response.statusCode != 200) {
       throw Exception(

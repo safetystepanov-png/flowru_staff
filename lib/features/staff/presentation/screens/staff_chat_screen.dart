@@ -103,6 +103,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
   final Set<String> _selectedMessageIds = <String>{};
   final Map<String, GlobalKey> _messageKeys = <String, GlobalKey>{};
+  final Set<String> _evaporatingMessageIds = <String>{};
 
   Timer? _recordingTimer;
   Timer? _highlightTimer;
@@ -169,7 +170,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       });
     }
 
-    if (mounted) setState(() {});
   }
 
   void _onScrollChanged() {
@@ -351,7 +351,11 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         _loading = false;
       });
 
-      _introController.forward(from: 0);
+      if (!silent) {
+        if (!silent) {
+        _introController.forward(from: 0);
+      }
+      }
 
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
@@ -602,6 +606,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       isPinned: false,
       type: pendingImageBytes != null ? _AttachmentType.image : _AttachmentType.text,
       voiceDurationSeconds: null,
+      localVoicePath: null,
       isLocalOnly: true,
       status: _MessageStatus.sending,
       isRead: false,
@@ -855,6 +860,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       isPinned: false,
       type: _AttachmentType.voice,
       voiceDurationSeconds: seconds,
+      localVoicePath: recordedPath,
       isLocalOnly: true,
       status: _MessageStatus.sending,
       isRead: false,
@@ -1019,9 +1025,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
   Future<void> _deleteForMe(_ChatMessage message) async {
     if (message.isLocalOnly) {
-      setState(() {
-        _messages = _messages.where((m) => m.id != message.id).toList();
-      });
+      await _evaporateAndRemoveMessage(message.id);
       return;
     }
 
@@ -1042,9 +1046,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       }
 
       if (!mounted) return;
-      setState(() {
-        _messages = _messages.where((m) => m.id != message.id).toList();
-      });
+      await _evaporateAndRemoveMessage(message.id);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -1053,11 +1055,26 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     }
   }
 
+
+
+Future<void> _evaporateAndRemoveMessage(String messageId) async {
+  if (!mounted) return;
+
+  setState(() {
+    _evaporatingMessageIds.add(messageId);
+  });
+
+  await Future<void>.delayed(const Duration(milliseconds: 260));
+  if (!mounted) return;
+
+  setState(() {
+    _evaporatingMessageIds.remove(messageId);
+    _messages = _messages.where((m) => m.id != messageId).toList();
+  });
+}
   Future<void> _deleteForAll(_ChatMessage message) async {
     if (message.isLocalOnly) {
-      setState(() {
-        _messages = _messages.where((m) => m.id != message.id).toList();
-      });
+      await _evaporateAndRemoveMessage(message.id);
       return;
     }
 
@@ -1078,9 +1095,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       }
 
       if (!mounted) return;
-      setState(() {
-        _messages = _messages.where((m) => m.id != message.id).toList();
-      });
+      await _evaporateAndRemoveMessage(message.id);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -1090,6 +1105,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   Future<void> _showDeleteSheet(_ChatMessage message) async {
+    FocusScope.of(context).unfocus();
+    _messageFocusNode.unfocus();
+
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1125,6 +1143,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                         color: kChatBlue,
                         title: 'Удалить у себя',
                         onTap: () {
+                          FocusScope.of(context).unfocus();
+                          _messageFocusNode.unfocus();
                           Navigator.of(context).pop();
                           _deleteForMe(message);
                         },
@@ -1137,6 +1157,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                         color: kChatRed,
                         title: 'Удалить у всех',
                         onTap: () {
+                          FocusScope.of(context).unfocus();
+                          _messageFocusNode.unfocus();
                           Navigator.of(context).pop();
                           _deleteForAll(message);
                         },
@@ -1470,6 +1492,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         isPinned: false,
         type: _AttachmentType.file,
         voiceDurationSeconds: null,
+        localVoicePath: null,
         isLocalOnly: true,
         status: _MessageStatus.sending,
         isRead: false,
@@ -1854,8 +1877,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     final waveformHeights = _voiceWaveHeights(message, count: 30);
 
     final Color bubbleColor = mine
-        ? Colors.white.withOpacity(0.14)
-        : const Color(0xFFF5F7FB);
+        ? Colors.white.withOpacity(0.16)
+        : const Color(0xFFF7FBFF);
     final Color activeColor = mine ? Colors.white : kChatBlue;
     final Color passiveColor = mine
         ? Colors.white.withOpacity(0.30)
@@ -1871,6 +1894,18 @@ class _StaffChatScreenState extends State<StaffChatScreen>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             color: bubbleColor,
+            border: Border.all(
+              color: mine
+                  ? Colors.white.withOpacity(0.16)
+                  : kChatBlue.withOpacity(0.10),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: (mine ? Colors.black : kChatBlue).withOpacity(0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -1934,7 +1969,17 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                           ),
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          minHeight: 3,
+                          value: progress.clamp(0.0, 1.0),
+                          backgroundColor: passiveColor,
+                          valueColor: AlwaysStoppedAnimation<Color>(activeColor),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -1965,12 +2010,16 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   Future<void> _toggleInlineVoicePlayback(_ChatMessage message) async {
+    final localVoicePath = message.localVoicePath;
     final fullUrl = _cacheSafeAttachmentUrl(message) ?? _fullUrl(message.attachmentUrl);
-    if (fullUrl == null || fullUrl.isEmpty) {
+    final hasLocalSource = !kIsWeb && localVoicePath != null && localVoicePath.trim().isNotEmpty;
+    final hasRemoteSource = fullUrl != null && fullUrl.isNotEmpty;
+
+    if (!hasLocalSource && !hasRemoteSource) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Ссылка на голосовое не найдена'),
+          content: Text('Источник голосового не найден'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -2084,8 +2133,13 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
     final current = _voiceCurrentSeconds[message.id] ?? 0;
     if (current <= 0.05) {
-      await player.play(UrlSource(fullUrl));
-      _nativeVoiceLoadedUrls[message.id] = fullUrl;
+      if (hasLocalSource) {
+        await player.play(DeviceFileSource(localVoicePath!));
+        _nativeVoiceLoadedUrls[message.id] = localVoicePath;
+      } else {
+        await player.play(UrlSource(fullUrl!));
+        _nativeVoiceLoadedUrls[message.id] = fullUrl;
+      }
     } else {
       await player.resume();
     }
@@ -2233,8 +2287,12 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   Future<AudioPlayer?> _ensureNativeVoicePlayer(_ChatMessage message) async {
+    final localVoicePath = message.localVoicePath;
     final fullUrl = _cacheSafeAttachmentUrl(message) ?? _fullUrl(message.attachmentUrl);
-    if (fullUrl == null || fullUrl.isEmpty) return null;
+    final sourceKey = !kIsWeb && localVoicePath != null && localVoicePath.trim().isNotEmpty
+        ? localVoicePath
+        : fullUrl;
+    if (sourceKey == null || sourceKey.isEmpty) return null;
 
     AudioPlayer? player = _nativeVoicePlayers[message.id];
 
@@ -2268,13 +2326,18 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     }
 
     final loadedUrl = _nativeVoiceLoadedUrls[message.id];
-    if (loadedUrl != fullUrl) {
+    if (loadedUrl != sourceKey) {
       try {
         await player.stop();
       } catch (_) {}
 
-      await player.setSource(UrlSource(fullUrl));
-      _nativeVoiceLoadedUrls[message.id] = fullUrl;
+      if (!kIsWeb && localVoicePath != null && localVoicePath.trim().isNotEmpty) {
+        await player.setSource(DeviceFileSource(localVoicePath));
+        _nativeVoiceLoadedUrls[message.id] = localVoicePath;
+      } else if (fullUrl != null && fullUrl.isNotEmpty) {
+        await player.setSource(UrlSource(fullUrl));
+        _nativeVoiceLoadedUrls[message.id] = fullUrl;
+      }
 
       if (mounted) {
         setState(() {
@@ -2655,9 +2718,22 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     final isHighlighted = _highlightedMessageId == message.id;
     final isSelected = _selectedMessageIds.contains(message.id);
 
-    return Container(
-      key: _keyForMessage(message.id),
-      child: Align(
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+      child: AnimatedSlide(
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+        offset: _evaporatingMessageIds.contains(message.id)
+            ? const Offset(0, -0.08)
+            : Offset.zero,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          opacity: _evaporatingMessageIds.contains(message.id) ? 0.0 : 1.0,
+          child: Container(
+            key: _keyForMessage(message.id),
+            child: Align(
         alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
         child: Padding(
           padding: EdgeInsets.only(bottom: compactTopSpacing ? 6 : 12),
@@ -2981,7 +3057,10 @@ class _StaffChatScreenState extends State<StaffChatScreen>
           ),
         ),
       ),
-    );
+    ),
+  ),
+),
+);
   }
 
   Future<void> _openMessageActions(
@@ -5149,6 +5228,7 @@ class _ChatMessage {
   final bool isPinned;
   final _AttachmentType type;
   final int? voiceDurationSeconds;
+  final String? localVoicePath;
   final bool isLocalOnly;
   final _MessageStatus status;
   final bool isRead;
@@ -5171,6 +5251,7 @@ class _ChatMessage {
     required this.isPinned,
     required this.type,
     required this.voiceDurationSeconds,
+    required this.localVoicePath,
     required this.isLocalOnly,
     required this.status,
     required this.isRead,
@@ -5278,6 +5359,7 @@ class _ChatMessage {
       type: attachmentType,
       voiceDurationSeconds:
           parseInt(json['voice_duration_seconds'] ?? json['duration_seconds']),
+      localVoicePath: null,
       isLocalOnly: false,
       status: parseStatus(json['status'], isRead),
       isRead: isRead,
@@ -5298,6 +5380,7 @@ class _ChatMessage {
     bool? isPinned,
     _AttachmentType? type,
     int? voiceDurationSeconds,
+    String? localVoicePath,
     bool? isLocalOnly,
     _MessageStatus? status,
     bool? isRead,
@@ -5320,6 +5403,7 @@ class _ChatMessage {
       isPinned: isPinned ?? this.isPinned,
       type: type ?? this.type,
       voiceDurationSeconds: voiceDurationSeconds ?? this.voiceDurationSeconds,
+      localVoicePath: localVoicePath ?? this.localVoicePath,
       isLocalOnly: isLocalOnly ?? this.isLocalOnly,
       status: status ?? this.status,
       isRead: isRead ?? this.isRead,

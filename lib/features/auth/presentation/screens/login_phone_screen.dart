@@ -180,8 +180,9 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
       _error = null;
     });
 
-    AuthResult result;
+    debugPrint('LOGIN STEP 1 -> before _userApi.login');
 
+    late final AuthResult result;
     try {
       result = await _userApi.login(
         phone: phone,
@@ -190,6 +191,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
         platform: kIsWeb ? 'web' : 'mobile',
       );
     } catch (e) {
+      debugPrint('LOGIN STEP ERROR -> login exception: $e');
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -197,6 +199,8 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
       });
       return;
     }
+
+    debugPrint('LOGIN STEP 2 -> login returned, ok=${result.ok}, message=${result.message}');
 
     if (!mounted) return;
 
@@ -208,12 +212,34 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
       return;
     }
 
-    await AuthStorage.saveAccessToken(result.accessToken);
-    await AuthStorage.saveRefreshToken(result.refreshToken);
+    try {
+      debugPrint('LOGIN STEP 3 -> before saveAccessToken');
+      await AuthStorage.saveAccessToken(result.accessToken);
+      debugPrint('LOGIN STEP 4 -> after saveAccessToken');
 
-    if (saveCredentials) {
-      await AuthStorage.savePhoneOnly(result.phone.isNotEmpty ? result.phone : phone);
-      await _enableBiometricIfPossible();
+      debugPrint('LOGIN STEP 5 -> before saveRefreshToken');
+      await AuthStorage.saveRefreshToken(result.refreshToken);
+      debugPrint('LOGIN STEP 6 -> after saveRefreshToken');
+
+      if (saveCredentials) {
+        debugPrint('LOGIN STEP 7 -> before savePhoneOnly');
+        await AuthStorage.savePhoneOnly(
+          result.phone.isNotEmpty ? result.phone : phone,
+        );
+        debugPrint('LOGIN STEP 8 -> after savePhoneOnly');
+
+        debugPrint('LOGIN STEP 9 -> before _enableBiometricIfPossible');
+        await _enableBiometricIfPossible();
+        debugPrint('LOGIN STEP 10 -> after _enableBiometricIfPossible');
+      }
+    } catch (e) {
+      debugPrint('LOGIN STEP ERROR -> storage exception: $e');
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Ошибка сохранения сессии: $e';
+      });
+      return;
     }
 
     if (!mounted) return;
@@ -223,10 +249,14 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
       _hasRefreshSession = true;
     });
 
+    debugPrint('LOGIN STEP 11 -> before Navigator');
+
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const StaffEstablishmentsScreen()),
       (route) => false,
     );
+
+    debugPrint('LOGIN STEP 12 -> after Navigator');
   }
 
   Future<void> _submit() async {
