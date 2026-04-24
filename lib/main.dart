@@ -49,20 +49,33 @@ void _setupForegroundMessageHandler() {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // Безопасная инициализация Firebase
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint('Firebase initialized successfully');
+  } catch (e, stack) {
+    debugPrint('Firebase initialization failed: $e');
+    debugPrint('Stack trace: $stack');
+    // Продолжаем работу, но push-уведомления не будут работать
+  }
 
-  await _requestNotificationPermissions();
-  await _printFcmToken();
-  _setupForegroundMessageHandler();
+  // Запрашиваем разрешения и инициализируем FCM только если Firebase инициализирована
+  if (Firebase.apps.isNotEmpty) {
+    await _requestNotificationPermissions();
+    await _printFcmToken();
+    _setupForegroundMessageHandler();
 
-  if (!kIsWeb) {
-    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
-    if (initialMessage != null) {
-      debugPrint('FCM initialMessage: ${initialMessage.messageId}');
-      debugPrint('FCM initial data: ${initialMessage.data}');
+    if (!kIsWeb) {
+      final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+      if (initialMessage != null) {
+        debugPrint('FCM initialMessage: ${initialMessage.messageId}');
+        debugPrint('FCM initial data: ${initialMessage.data}');
+      }
     }
+  } else {
+    debugPrint('Firebase not available, skipping FCM setup');
   }
 
   runApp(const FlowruStaffApp());
