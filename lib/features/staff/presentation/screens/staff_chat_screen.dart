@@ -2205,13 +2205,29 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     final raw = message.attachmentUrl;
     final full = _fullUrl(raw);
     if (full == null || full.isEmpty) return null;
-    if (!kIsWeb) return full;
+
+    String result = full;
+
+    // Для голосовых: если URL идет через media-proxy, достаем прямую ссылку.
+    if (message.type == AttachmentType.voice &&
+        result.contains('/api/v1/staff/chat/media-proxy?url=')) {
+      try {
+        final uri = Uri.parse(result);
+        final direct = uri.queryParameters['url'];
+        if (direct != null && direct.trim().isNotEmpty) {
+          result = Uri.decodeComponent(direct);
+        }
+      } catch (_) {}
+    }
+
+    // Для web добавляем cache-buster, для mobile не трогаем.
+    if (!kIsWeb) return result;
 
     final seedSource = message.createdAt.trim().isNotEmpty
         ? message.createdAt.trim()
         : message.id;
-    final separator = full.contains('?') ? '&' : '?';
-    return '${full}${separator}v=${Uri.encodeComponent(seedSource)}';
+    final separator = result.contains('?') ? '&' : '?';
+    return '${result}${separator}v=${Uri.encodeComponent(seedSource)}';
   }
 
   void _openBytesPreview(Uint8List bytes) {
@@ -3157,68 +3173,156 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
   Widget _recordingBanner() {
     if (!_isRecordingVoice) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-      child: _GlassCard(
-        radius: 22,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
+
+    return Animate(
+      effects: [
+        FadeEffect(duration: 200.ms),
+        SlideEffect(begin: const Offset(0, -20), end: Offset.zero, duration: 300.ms, curve: Curves.easeOutBack),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: kChatRed.withOpacity(0.12),
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.white.withOpacity(0.25),
+                    Colors.white.withOpacity(0.1),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                borderRadius: BorderRadius.circular(32),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
-              child: const Icon(
-                CupertinoIcons.mic_fill,
-                color: kChatRed,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
               child: Row(
                 children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: kChatRed,
+                  // Анимированный индикатор записи (круг с микрофоном)
+                  SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        const CircularProgressIndicator(
+                          strokeWidth: 3,
+                          valueColor: AlwaysStoppedAnimation<Color>(kChatRed),
+                          backgroundColor: Color(0x33FF6A5E),
+                        ),
+                        Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: kChatRed,
+                            boxShadow: [
+                              BoxShadow(
+                                color: kChatRed.withOpacity(0.5),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.mic, color: Colors.white, size: 16),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Идёт запись • ${_formatSeconds(_recordingSeconds)}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      color: kChatInk,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Запись голосового сообщения',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                            color: Colors.white,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: kChatRed,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _formatSeconds(_recordingSeconds),
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                fontFeatures: [FontFeature.tabularFigures()],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
+                  ),
+                  // Кнопка Отмена
+                  _buildGlassButton(
+                    label: 'Отмена',
+                    onTap: _cancelVoiceRecording,
+                    textColor: Colors.white70,
+                  ),
+                  const SizedBox(width: 10),
+                  // Кнопка Отправить
+                  _buildGlassButton(
+                    label: 'Отправить',
+                    onTap: _stopAndSendVoiceRecording,
+                    textColor: Colors.white,
+                    filled: true,
                   ),
                 ],
               ),
             ),
-            TextButton(
-              onPressed: _cancelVoiceRecording,
-              child: const Text('Отмена'),
-            ),
-            const SizedBox(width: 6),
-            ElevatedButton(
-              onPressed: _stopAndSendVoiceRecording,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kChatBlue,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              ),
-              child: const Text('Отправить'),
-            ),
-          ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassButton({
+    required String label,
+    required VoidCallback onTap,
+    required Color textColor,
+    bool filled = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+          color: filled ? kChatBlue : Colors.white.withOpacity(0.15),
+          border: filled ? null : Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+          ),
         ),
       ),
     );
