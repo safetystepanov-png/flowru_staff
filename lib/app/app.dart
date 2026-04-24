@@ -43,19 +43,15 @@ class _LaunchFlowruScreen extends StatefulWidget {
 
 class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
     with TickerProviderStateMixin {
-  // Основные контроллеры
   late final AnimationController _ambientController;
   late final AnimationController _logoController;
   late final AnimationController _pulseController;
   late final AnimationController _particlesController;
-  
-  // Побуквенная анимация
   late final AnimationController _letterController;
+  late final AnimationController _decorationsController;
+  
   final List<Animation<double>> _letterAnimations = [];
   final List<Animation<double>> _letterScales = [];
-  
-  // Декоративные элементы
-  late final AnimationController _decorationsController;
   final List<_DecorElement> _decorElements = [];
 
   Timer? _timer;
@@ -65,7 +61,6 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
   void initState() {
     super.initState();
 
-    // Инициализация декоративных элементов
     _initDecorElements();
 
     _ambientController = AnimationController(
@@ -98,26 +93,31 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
       duration: const Duration(milliseconds: 6000),
     )..repeat();
 
-    // Инициализация побуквенных анимаций
+    // Инициализация побуквенных анимаций - ИСПРАВЛЕНО
     final letters = 'FLOWRU STAFF';
     for (int i = 0; i < letters.length; i++) {
       final delay = i * 0.08;
-      final start = 0.01 + (delay * 0.7).clamp(0.0, 0.70);
-      final end = (start + 0.15).clamp(0.01, 0.95);
+      final start = (0.01 + delay * 0.7).clamp(0.01, 0.70);
+      final end = (start + 0.15).clamp(0.02, 0.95);
+      
+      // Гарантируем что веса всегда > 0 и сумма = 1.0
+      final weight1 = start.clamp(0.01, 0.98);
+      final weight2 = (end - start).clamp(0.01, 0.50);
+      final weight3 = (1.0 - end).clamp(0.01, 0.98);
       
       _letterAnimations.add(
         TweenSequence<double>([
           TweenSequenceItem(
-            tween: Tween<double>(begin: 0.0, end: 0.0),
-            weight: start.clamp(0.001, 1.0),
+            tween: Tween<double>(begin: 0.0, end: 0.0).chain(CurveTween(curve: Curves.easeOutCubic)),
+            weight: weight1,
           ),
           TweenSequenceItem(
-            tween: Tween<double>(begin: 0.0, end: 1.0),
-            weight: (end - start).clamp(0.01, 0.5),
+            tween: Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeOutCubic)),
+            weight: weight2,
           ),
           TweenSequenceItem(
             tween: Tween<double>(begin: 1.0, end: 1.0),
-            weight: (1.0 - end).clamp(0.001, 1.0),
+            weight: weight3,
           ),
         ]).animate(_letterController),
       );
@@ -126,28 +126,23 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
         TweenSequence<double>([
           TweenSequenceItem(
             tween: Tween<double>(begin: 0.3, end: 0.3),
-            weight: start.clamp(0.001, 1.0),
+            weight: weight1,
           ),
           TweenSequenceItem(
-            tween: Tween<double>(begin: 0.3, end: 1.0),
-            weight: (end - start).clamp(0.01, 0.5),
+            tween: Tween<double>(begin: 0.3, end: 1.0).chain(CurveTween(curve: Curves.easeOutBack)),
+            weight: weight2,
           ),
           TweenSequenceItem(
             tween: Tween<double>(begin: 1.0, end: 1.0),
-            weight: (1.0 - end).clamp(0.001, 1.0),
+            weight: weight3,
           ),
-        ]).animate(
-          CurvedAnimation(
-            parent: _letterController,
-            curve: Curves.easeOutBack,
-          ),
-        ),
+        ]).animate(_letterController),
       );
     }
 
-    // Запуск анимаций с приятной вибрацией
+    // Запуск анимаций с вибрацией
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // Серия легких вибраций для приятного тактильного отклика
+      // Легкая вибрация при загрузке
       await HapticFeedback.lightImpact();
       await Future.delayed(const Duration(milliseconds: 50));
       await HapticFeedback.selectionClick();
@@ -262,7 +257,6 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
 
         return Stack(
           children: [
-            // Основной градиент с анимацией
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -270,14 +264,14 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
                     Color.lerp(
                       const Color(0xFF0CB7B3),
                       const Color(0xFF0898AB),
-                      math.sin(t * math.pi) * 0.5 + 0.5,
+                      (math.sin(t * math.pi) * 0.5 + 0.5).clamp(0.0, 1.0),
                     )!,
                     const Color(0xFF08A9AB),
                     const Color(0xFF067D87),
                     Color.lerp(
                       const Color(0xFF055E66),
                       const Color(0xFF074D5A),
-                      math.cos(t * math.pi) * 0.5 + 0.5,
+                      (math.cos(t * math.pi) * 0.5 + 0.5).clamp(0.0, 1.0),
                     )!,
                   ],
                   begin: Alignment.topLeft,
@@ -287,15 +281,14 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
               ),
             ),
             
-            // Оверлей для глубины
+            // УБРАНА СЕРАЯ ПЛАШКА - только легкий оверлей
             Positioned.fill(
-              child: DecoratedBox(
+              child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Colors.white.withOpacity(0.09),
+                      Colors.white.withOpacity(0.05),
                       Colors.transparent,
-                      Colors.black.withOpacity(0.12),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -304,7 +297,6 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
               ),
             ),
 
-            // Анимированные блобы
             Positioned(
               top: -90 + shiftA,
               right: -40,
@@ -350,7 +342,6 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
                 ),
               ),
             ),
-            // Дополнительный блоб снизу слева
             Positioned(
               bottom: -40 + shiftA * 0.5,
               left: -30,
@@ -367,7 +358,6 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
               ),
             ),
 
-            // Анимированные частицы и декоративные элементы
             ..._buildDecorElements(p),
           ],
         );
@@ -383,13 +373,13 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
       final animT = _decorationsController.value;
       final floatY = math.sin(animT * math.pi * 2 * el.speed + el.phase) * 25;
       final floatX = math.cos(animT * math.pi * 2 * el.speed * 0.7 + el.phase) * 15;
-      final pulse = 0.5 + 0.5 * math.sin(animT * math.pi * 2 * el.speed + el.phase + 1);
+      final pulse = (0.5 + 0.5 * math.sin(animT * math.pi * 2 * el.speed + el.phase + 1)).clamp(0.0, 1.0);
       
       return Positioned(
-        left: el.x * MediaQuery.of(context).size.width + floatX,
-        top: el.y * MediaQuery.of(context).size.height + floatY,
+        left: (el.x * MediaQuery.of(context).size.width + floatX).clamp(0, MediaQuery.of(context).size.width),
+        top: (el.y * MediaQuery.of(context).size.height + floatY).clamp(0, MediaQuery.of(context).size.height),
         child: Opacity(
-          opacity: el.opacity * (0.5 + pulse * 0.5),
+          opacity: (el.opacity * (0.5 + pulse * 0.5)).clamp(0.0, 1.0),
           child: el.isStar
               ? _buildStar(el.size * (0.8 + pulse * 0.4))
               : _buildCircle(el.size * (0.8 + pulse * 0.4)),
@@ -423,8 +413,6 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
         final pulse = _pulseController.value;
         final glowScale = 1.0 + (pulse * 0.22);
         final glowOpacity = 0.25 + ((1 - pulse) * 0.12);
-        
-        // Вращение для внешнего кольца
         final ringRotation = pulse * math.pi * 2;
 
         return FadeTransition(
@@ -447,7 +435,6 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Внешнее вращающееся кольцо
                   Transform.rotate(
                     angle: ringRotation * 0.5,
                     child: CustomPaint(
@@ -457,8 +444,6 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
                       ),
                     ),
                   ),
-                  
-                  // Главное свечение
                   Transform.scale(
                     scale: glowScale,
                     child: Container(
@@ -486,8 +471,6 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
                       ),
                     ),
                   ),
-                  
-                  // Внешний стеклянный круг
                   Container(
                     width: 152,
                     height: 152,
@@ -507,8 +490,6 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
                       ),
                     ),
                   ),
-                  
-                  // Внутренний градиентный круг
                   Container(
                     width: 124,
                     height: 124,
@@ -590,7 +571,7 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
       animation: _letterController,
       builder: (context, child) {
         final progress = _letterController.value;
-        final subtitleOpacity = (progress - 0.6).clamp(0.0, 1.0) * 2.5;
+        final subtitleOpacity = ((progress - 0.6) * 2.5).clamp(0.0, 1.0);
         final subtitleSlide = (1.0 - subtitleOpacity) * 12;
         
         return Opacity(
@@ -618,7 +599,7 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
       animation: _letterController,
       builder: (context, child) {
         final progress = _letterController.value;
-        final lineOpacity = (progress - 0.7).clamp(0.0, 1.0) * 2.0;
+        final lineOpacity = ((progress - 0.7) * 2.0).clamp(0.0, 1.0);
         
         return Opacity(
           opacity: lineOpacity,
@@ -694,7 +675,6 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
   }
 }
 
-// Класс для декоративных элементов фона
 class _DecorElement {
   final double x;
   final double y;
@@ -715,7 +695,6 @@ class _DecorElement {
   });
 }
 
-// Кастомный рисовальщик звезд
 class _StarPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -749,7 +728,6 @@ class _StarPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// Кастомный рисовальщик вращающегося кольца
 class _RotatingRingPainter extends CustomPainter {
   final double progress;
 
@@ -760,7 +738,6 @@ class _RotatingRingPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 4;
     
-    // Дуга 1
     final paint1 = Paint()
       ..color = Colors.white.withOpacity(0.35)
       ..style = PaintingStyle.stroke
@@ -775,7 +752,6 @@ class _RotatingRingPainter extends CustomPainter {
       paint1,
     );
 
-    // Дуга 2 (противоположная)
     final paint2 = Paint()
       ..color = const Color(0xFFFFA11D).withOpacity(0.45)
       ..style = PaintingStyle.stroke
@@ -790,7 +766,6 @@ class _RotatingRingPainter extends CustomPainter {
       paint2,
     );
 
-    // Маленькие точки
     final dotPaint = Paint()
       ..color = Colors.white.withOpacity(0.6)
       ..style = PaintingStyle.fill;
@@ -807,7 +782,7 @@ class _RotatingRingPainter extends CustomPainter {
 }
 
 // ==========================================
-// ОСТАЛЬНОЙ КОД (без изменений логики)
+// ОСТАЛЬНОЙ КОД БЕЗ ИЗМЕНЕНИЙ
 // ==========================================
 
 class _AppBootstrapScreen extends StatefulWidget {

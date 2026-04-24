@@ -1701,99 +1701,218 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     );
   }
 
+
   Widget _voiceBubble(bool mine, ChatMessage message) {
     final isPlaying = _playingVoiceMessageId == message.id;
     final totalSeconds = _voiceEffectiveDuration(message).round();
-    final playedSeconds = (_voiceCurrentSeconds[message.id] ?? 0).clamp(0, totalSeconds.toDouble()).round();
+    final playedSeconds = (_voiceCurrentSeconds[message.id] ?? 0)
+        .clamp(0, totalSeconds.toDouble())
+        .round();
     final progress = totalSeconds > 0 ? playedSeconds / totalSeconds : 0.0;
-
+    
+    // Генерация "волн" для визуализации
+    final waveHeights = _voiceWaveHeights(message, count: 40);
+    
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: mine ? Colors.white.withOpacity(0.2) : const Color(0xFFF0F4F8),
+        borderRadius: BorderRadius.circular(28),
+        gradient: mine
+            ? LinearGradient(
+                colors: [
+                  const Color(0xFF6366F1).withOpacity(0.95),
+                  const Color(0xFF8B5CF6).withOpacity(0.95),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : LinearGradient(
+                colors: [
+                  Colors.white.withOpacity(0.98),
+                  const Color(0xFFF0F4F8),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        border: Border.all(
+          color: mine
+              ? Colors.white.withOpacity(0.3)
+              : const Color(0xFFE7EEF0),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (mine ? const Color(0xFF6366F1) : Colors.black)
+                .withOpacity(mine ? 0.25 : 0.08),
+            blurRadius: mine ? 20 : 12,
+            offset: Offset(0, mine ? 8 : 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
+          // Кнопка Play/Pause с анимацией
           GestureDetector(
             onTap: () => _toggleInlineVoicePlayback(message),
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 40,
-              height: 40,
+              duration: const Duration(milliseconds: 250),
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: mine ? Colors.white : kChatBlue,
+                gradient: mine
+                    ? const LinearGradient(
+                        colors: [Colors.white, Color(0xFFF8F9FF)],
+                      )
+                    : const LinearGradient(
+                        colors: [kChatBlue, Color(0xFF6366F1)],
+                      ),
                 boxShadow: [
                   BoxShadow(
-                    color: (mine ? Colors.white : kChatBlue).withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: (mine ? Colors.white : kChatBlue).withOpacity(0.4),
+                    blurRadius: 12,
+                    spreadRadius: 2,
                   ),
                 ],
               ),
-              child: Icon(
-                isPlaying ? Icons.pause : Icons.play_arrow,
-                color: mine ? kChatBlue : Colors.white,
-                size: 20,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  key: ValueKey(isPlaying ? 'pause' : 'play'),
+                  color: mine ? kChatBlue : Colors.white,
+                  size: 22,
+                ),
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
+          
+          // Визуализация волны + прогресс
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Визуализация прогресса (волна) – упрощённая версия без AnimatedBuilder
-                Container(
-                  height: 36,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final barCount = 20;
-                      final barWidth = (constraints.maxWidth / barCount) - 2;
-                      final step = constraints.maxWidth / barCount;
-                      return Row(
-                        children: List.generate(barCount, (i) {
-                          final t = i / (barCount - 1);
-                          final isActive = t <= progress;
-                          final height = isPlaying
-                              ? (8 + 16 * (0.5 + 0.5 * math.sin(DateTime.now().millisecondsSinceEpoch / 200 + i)))
-                              : (8 + 12 * (1 - (t - progress).abs()).clamp(0.0, 1.0));
-                          return Container(
-                            width: barWidth,
-                            height: height,
-                            margin: EdgeInsets.only(right: 1),
-                            decoration: BoxDecoration(
-                              color: isActive
-                                  ? (mine ? Colors.white : kChatBlue)
-                                  : (mine ? Colors.white.withOpacity(0.4) : kChatBlue.withOpacity(0.4)),
-                              borderRadius: BorderRadius.circular(barWidth / 2),
-                            ),
-                          );
-                        }),
-                      );
-                    },
+                // Анимированная волна
+                GestureDetector(
+                  onTapDown: (details) => _seekVoiceMessageFromTap(message, details),
+                  child: Container(
+                    height: 42,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final barCount = 40;
+                        final barWidth = (constraints.maxWidth / barCount) - 1.5;
+                        
+                        return Row(
+                          children: List.generate(barCount, (i) {
+                            final t = i / (barCount - 1);
+                            final isActive = t <= progress;
+                            final baseHeight = waveHeights[i];
+                            
+                            // Анимация пульсации при воспроизведении
+                            final pulseHeight = isPlaying
+                                ? baseHeight * (0.8 + 0.4 * math.sin(
+                                    DateTime.now().millisecondsSinceEpoch / 150 + i * 0.5,
+                                  ))
+                                : baseHeight;
+                            
+                            // Плавный переход высоты
+                            final animatedHeight = isActive
+                                ? pulseHeight
+                                : baseHeight * 0.6;
+                            
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 100),
+                              width: barWidth,
+                              height: animatedHeight.clamp(6.0, 32.0),
+                              margin: const EdgeInsets.only(right: 1.5),
+                              decoration: BoxDecoration(
+                                color: isActive
+                                    ? (mine ? Colors.white : kChatBlue)
+                                    : (mine
+                                        ? Colors.white.withOpacity(0.45)
+                                        : kChatBlue.withOpacity(0.35)),
+                                borderRadius: BorderRadius.circular(barWidth / 2),
+                              ),
+                            );
+                          }),
+                        );
+                      },
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
+                
+                const SizedBox(height: 6),
+                
+                // Время + прогресс-бар
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      isPlaying ? _formatSeconds(playedSeconds) : _formatSeconds(totalSeconds),
+                    // Текущее время
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 150),
                       style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: mine ? Colors.white.withOpacity(0.8) : kChatInkSoft,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: mine
+                            ? Colors.white.withOpacity(0.9)
+                            : kChatInkSoft,
+                        fontFeatures: [const FontFeature.tabularFigures()],
+                      ),
+                      child: Text(
+                        isPlaying
+                            ? _formatSeconds(playedSeconds)
+                            : _formatSeconds(totalSeconds),
                       ),
                     ),
+                    
+                    // Прогресс-бар (тонкая линия)
+                    if (totalSeconds > 0)
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Stack(
+                            children: [
+                              Container(
+                                height: 3,
+                                decoration: BoxDecoration(
+                                  color: mine
+                                      ? Colors.white.withOpacity(0.3)
+                                      : kChatBlue.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                              ),
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 100),
+                                height: 3,
+                                width: MediaQuery.of(context).size.width * 0.3 * progress,
+                                decoration: BoxDecoration(
+                                  gradient: mine
+                                      ? const LinearGradient(
+                                          colors: [Colors.white, Color(0xFFE0E7FF)],
+                                        )
+                                      : const LinearGradient(
+                                          colors: [kChatBlue, Color(0xFF8B5CF6)],
+                                        ),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    
+                    // Общее время
                     if (totalSeconds > 0)
                       Text(
                         _formatSeconds(totalSeconds),
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w600,
-                          color: mine ? Colors.white.withOpacity(0.6) : kChatInkSoft.withOpacity(0.7),
+                          color: mine
+                              ? Colors.white.withOpacity(0.7)
+                              : kChatInkSoft.withOpacity(0.8),
+                          fontFeatures: [const FontFeature.tabularFigures()],
                         ),
                       ),
                   ],
@@ -2078,25 +2197,34 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     final fullUrl = _cacheSafeAttachmentUrl(message) ?? _fullUrl(message.attachmentUrl);
     if (fullUrl == null || fullUrl.isEmpty) return null;
 
-    AudioPlayer? player = _nativeVoicePlayers[message.id];
+    final AudioPlayer? existingPlayer = _nativeVoicePlayers[message.id];
+    final String? cachedPath = _nativeVoiceLoadedUrls[message.id];
 
-    if (player == null) {
-      player = AudioPlayer();
+    // Проверяем, есть ли уже локальный файл и работает ли он
+    if (existingPlayer != null && cachedPath != null && await File(cachedPath).exists()) {
+      // Если плеер уже существует и источник не совпадает, переустанавливаем
+      if (existingPlayer.source != UrlSource(cachedPath)) {
+        await existingPlayer.setSource(UrlSource(cachedPath));
+      }
+      return existingPlayer;
+    }
+
+    // Создаём новый плеер или используем старый, если он ещё не загрузил
+    final AudioPlayer player = existingPlayer ?? AudioPlayer();
+    if (existingPlayer == null) {
       _nativeVoicePlayers[message.id] = player;
 
       player.onDurationChanged.listen((duration) {
         if (!mounted) return;
         setState(() {
-          _voiceTotalSeconds[message.id] =
-              duration.inMilliseconds <= 0 ? 0 : duration.inMilliseconds / 1000.0;
+          _voiceTotalSeconds[message.id] = duration.inMilliseconds / 1000.0;
         });
       });
 
       player.onPositionChanged.listen((position) {
         if (!mounted) return;
         setState(() {
-          _voiceCurrentSeconds[message.id] =
-              position.inMilliseconds <= 0 ? 0 : position.inMilliseconds / 1000.0;
+          _voiceCurrentSeconds[message.id] = position.inMilliseconds / 1000.0;
         });
       });
 
@@ -2109,23 +2237,40 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       });
     }
 
-    final loadedUrl = _nativeVoiceLoadedUrls[message.id];
-    if (loadedUrl != fullUrl) {
+    // Если файла в кэше нет – скачиваем
+    if (cachedPath == null || !await File(cachedPath).exists()) {
       try {
-        await player.stop();
-      } catch (_) {}
+        final token = await _token();
+        final client = http.Client();
+        final request = http.Request('GET', Uri.parse(fullUrl));
+        request.headers['Authorization'] = 'Bearer $token';
+        final response = await client.send(request);
 
-      await player.setSource(UrlSource(fullUrl));
-      _nativeVoiceLoadedUrls[message.id] = fullUrl;
+        if (response.statusCode != 200) {
+          throw Exception('Failed to download audio: ${response.statusCode}');
+        }
 
-      if (mounted) {
-        setState(() {
-          _voiceCurrentSeconds[message.id] = 0;
-        });
+        final dir = await getTemporaryDirectory();
+        final fileName = 'voice_${message.id}_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        final file = File('${dir.path}/$fileName');
+        final sink = file.openWrite();
+        await sink.addStream(response.stream);
+        await sink.close();
+        client.close();
+
+        final localPath = file.path;
+        _nativeVoiceLoadedUrls[message.id] = localPath;
+        await player.setSource(UrlSource(localPath));
+        return player;
+      } catch (e) {
+        debugPrint('Error downloading audio: $e');
+        return null;
       }
+    } else {
+      // Файл уже есть в кэше
+      await player.setSource(UrlSource(cachedPath));
+      return player;
     }
-
-    return player;
   }
 
   double _safeAudioNumber(dynamic value) {
@@ -2206,9 +2351,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     final full = _fullUrl(raw);
     if (full == null || full.isEmpty) return null;
 
+    // Для голосовых: если URL через media-proxy, достаём прямую ссылку.
     String result = full;
-
-    // Для голосовых: если URL идет через media-proxy, достаем прямую ссылку.
     if (message.type == AttachmentType.voice &&
         result.contains('/api/v1/staff/chat/media-proxy?url=')) {
       try {
@@ -2220,7 +2364,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       } catch (_) {}
     }
 
-    // Для web добавляем cache-buster, для mobile не трогаем.
+    // Для веба добавляем cache-buster, для мобильных – нет
     if (!kIsWeb) return result;
 
     final seedSource = message.createdAt.trim().isNotEmpty
@@ -4985,3 +5129,101 @@ class _AnimatedTypingDots extends StatefulWidget {
       );
     }
   }
+
+class _VoiceProgressWave extends StatefulWidget {
+  final double progress;
+  final bool isPlaying;
+  final Color color;
+  final double height;
+
+  const _VoiceProgressWave({
+    required this.progress,
+    required this.isPlaying,
+    required this.color,
+    this.height = 28,
+  });
+
+  @override
+  State<_VoiceProgressWave> createState() => _VoiceProgressWaveState();
+}
+
+class _VoiceProgressWaveState extends State<_VoiceProgressWave> with SingleTickerProviderStateMixin {
+  late final AnimationController _animationController;
+  int _lastTick = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    if (widget.isPlaying) {
+      _animationController.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(_VoiceProgressWave oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isPlaying != oldWidget.isPlaying) {
+      if (widget.isPlaying) {
+        _animationController.repeat();
+      } else {
+        _animationController.stop();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  // Основной builder для волны
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: widget.height,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final barCount = 24;
+          final barWidth = (constraints.maxWidth / barCount) - 2;
+          final step = constraints.maxWidth / barCount;
+          final now = DateTime.now().millisecondsSinceEpoch;
+          return Row(
+            children: List.generate(barCount, (i) {
+              final t = i / (barCount - 1);
+              final isActive = t <= widget.progress;
+              // Высота столбика: базовая + анимация, если играет
+              double height;
+              if (widget.isPlaying) {
+                final int phase = (now ~/ 150 + i) % 360;
+                height = 10 + 12 * (0.5 + 0.5 * math.sin(phase * math.pi / 180));
+              } else {
+                // Неактивная часть или завершённая часть – линейное затухание
+                if (isActive) {
+                  height = 14 + 8 * (1 - (widget.progress - t).abs()).clamp(0.0, 1.0);
+                } else {
+                  height = 6;
+                }
+              }
+              height = height.clamp(4.0, widget.height - 4);
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 80),
+                width: barWidth,
+                height: height,
+                margin: const EdgeInsets.only(right: 1),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(barWidth / 2),
+                  color: isActive ? widget.color : widget.color.withOpacity(0.2),
+                ),
+              );
+            }),
+          );
+        },
+      ),
+    );
+  }
+}

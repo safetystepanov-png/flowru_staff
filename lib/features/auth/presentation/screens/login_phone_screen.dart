@@ -221,7 +221,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
         final rotate = math.sin(t * math.pi * 2) * 0.025;
         return Stack(children: [
           Container(decoration: const BoxDecoration(gradient: LinearGradient(colors: [kLoginMintTop, kLoginMintMid, kLoginMintBottom, kLoginMintDeep], begin: Alignment.topLeft, end: Alignment.bottomRight, stops: [0.0, 0.30, 0.70, 1.0]))),
-          Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.white.withOpacity(0.1), Colors.transparent, Colors.black.withOpacity(0.08)], begin: Alignment.topLeft, end: Alignment.bottomRight)))),
+          Positioned.fill(child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.white.withOpacity(0.05), Colors.transparent], begin: Alignment.topLeft, end: Alignment.bottomRight)))),
           Positioned(top: -90 + shiftA, right: -40 + shiftB, child: Transform.rotate(angle: rotate, child: _softBlob(width: 300, height: 300, colors: [Colors.white.withOpacity(0.22), kLoginAccent.withOpacity(0.14)]))),
           Positioned(left: -70, bottom: 70 - shiftB, child: Transform.rotate(angle: -rotate, child: _softBlob(width: 260, height: 260, colors: [kLoginBlue.withOpacity(0.18), Colors.white.withOpacity(0.1)]))),
           Positioned(top: 320 + shiftA, left: 90 + shiftB, child: Transform.rotate(angle: rotate * 0.8, child: _softBlob(width: 220, height: 220, colors: [kLoginPink.withOpacity(0.14), Colors.transparent]))),
@@ -229,10 +229,10 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
             final angle = (i / 6) * math.pi * 2 + t * math.pi * 0.3;
             final distance = 180 + 30 * math.sin(t * math.pi * 2 + i);
             final size = 4 + 2 * math.sin(p * math.pi * 2 + i);
-            final opacity = 0.15 + 0.1 * math.sin(p * math.pi * 2 + i * 0.5);
+            final opacity = (0.15 + 0.1 * math.sin(p * math.pi * 2 + i * 0.5)).clamp(0.0, 1.0);
             return Positioned(
-              left: MediaQuery.of(context).size.width / 2 + math.cos(angle) * distance - size / 2,
-              top: MediaQuery.of(context).size.height / 2 + math.sin(angle) * distance - size / 2,
+              left: (MediaQuery.of(context).size.width / 2 + math.cos(angle) * distance - size / 2).clamp(0, MediaQuery.of(context).size.width),
+              top: (MediaQuery.of(context).size.height / 2 + math.sin(angle) * distance - size / 2).clamp(0, MediaQuery.of(context).size.height),
               child: Opacity(opacity: opacity, child: Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, color: [kLoginBlue, kLoginPink, kLoginViolet, kLoginAccent][i % 4]))),
             );
           }),
@@ -274,51 +274,130 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
     );
   }
 
-  Widget _buildGlassInput({required TextEditingController controller, required String label, IconData? icon, TextInputType keyboardType = TextInputType.text, bool obscureText = false, Widget? suffixIcon, String? hintText}) {
+  Widget _buildGlassInput({
+    required TextEditingController controller,
+    required String label,
+    IconData? icon,
+    TextInputType keyboardType = TextInputType.text,
+    bool obscureText = false,
+    Widget? suffixIcon,
+    String? hintText,
+  }) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 400;
+    
     return Container(
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), color: Colors.white.withOpacity(0.94), border: Border.all(color: const Color(0xFFE7EEF0), width: 1.2)),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(isSmallScreen ? 18 : 22),
+        color: Colors.white.withOpacity(0.94),
+        border: Border.all(color: const Color(0xFFE7EEF0), width: 1.2),
+      ),
       child: TextField(
-        controller: controller, obscureText: obscureText, keyboardType: keyboardType,
-        style: const TextStyle(color: kLoginInk, fontSize: 16),
+        controller: controller,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        style: TextStyle(
+          color: kLoginInk,
+          fontSize: isSmallScreen ? 15 : 16,
+        ),
         decoration: InputDecoration(
-          prefixIcon: icon != null ? Icon(icon, color: kLoginInkSoft, size: 22) : null,
-          suffixIcon: suffixIcon, labelText: label, hintText: hintText,
-          labelStyle: const TextStyle(color: kLoginInkSoft, fontWeight: FontWeight.w600),
-          hintStyle: const TextStyle(color: Color(0xFF9AA5B1), fontWeight: FontWeight.w400),
+          prefixIcon: icon != null
+              ? Icon(
+                  icon,
+                  color: kLoginInkSoft,
+                  size: isSmallScreen ? 20 : 22,
+                )
+              : null,
+          suffixIcon: suffixIcon,
+          labelText: label,
+          hintText: hintText,
+          labelStyle: TextStyle(
+            color: kLoginInkSoft,
+            fontWeight: FontWeight.w600,
+            fontSize: isSmallScreen ? 14 : 15,
+          ),
+          hintStyle: const TextStyle(
+            color: Color(0xFF9AA5B1),
+            fontWeight: FontWeight.w400,
+          ),
           floatingLabelStyle: const TextStyle(color: kLoginViolet),
-          border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 19),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 18 : 22,
+            vertical: isSmallScreen ? 16 : 19,
+          ),
         ),
       ),
     );
   }
 
-  Widget _glassButton({required VoidCallback? onPressed, required String text, required bool isLoading}) {
+  Widget _glassButton({
+    required VoidCallback? onPressed,
+    required String text,
+    required bool isLoading,
+  }) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 400;
+    
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 26 : 30),
         gradient: const LinearGradient(colors: [kLoginBlue, kLoginViolet, kLoginPink]),
-        boxShadow: [BoxShadow(color: kLoginBlue.withOpacity(0.28), blurRadius: 22, offset: const Offset(0, 12))],
+        boxShadow: [
+          BoxShadow(
+            color: kLoginBlue.withOpacity(0.28),
+            blurRadius: isSmallScreen ? 16 : 22,
+            offset: Offset(0, isSmallScreen ? 8 : 12),
+          ),
+        ],
       ),
-      child: Material(color: Colors.transparent, child: InkWell(
-        onTap: onPressed, borderRadius: BorderRadius.circular(30),
-        child: Container(height: 60, alignment: Alignment.center, child: isLoading ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white)) : Text(text, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900))),
-      )),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(isSmallScreen ? 26 : 30),
+          child: Container(
+            height: isSmallScreen ? 54.0 : 60.0,
+            alignment: Alignment.center,
+            child: isLoading
+                ? SizedBox(
+                    width: isSmallScreen ? 20 : 24,
+                    height: isSmallScreen ? 20 : 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
+                      color: Colors.white,
+                    ),
+                  )
+                : Text(
+                    text,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: isSmallScreen ? 15 : 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+          ),
+        ),
+      ),
     );
   }
 
   Widget _outlineGlassButton({required String text, required VoidCallback onTap}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 400;
+    
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
       child: OutlinedButton(
         onPressed: onTap, 
         style: OutlinedButton.styleFrom(
           side: const BorderSide(color: kLoginViolet, width: 1.5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), 
-          padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 26 : 30)), 
+          padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 15 : 17, horizontal: isSmallScreen ? 16 : 24),
         ), 
         child: Text(
           text, 
-          style: const TextStyle(color: kLoginViolet, fontSize: 15, fontWeight: FontWeight.w800),
+          style: TextStyle(color: kLoginViolet, fontSize: isSmallScreen ? 14 : 15, fontWeight: FontWeight.w800),
         ),
       ),
     );
@@ -354,6 +433,24 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenWidth < 400;
+    final isMediumScreen = screenWidth >= 400 && screenWidth < 600;
+    
+    // Адаптивные размеры
+    final cardWidth = isSmallScreen 
+        ? screenWidth * 0.92 
+        : isMediumScreen 
+            ? screenWidth * 0.85 
+            : 520.0;
+    
+    final horizontalPadding = isSmallScreen ? 16.0 : 26.0;
+    final cardPadding = isSmallScreen ? 20.0 : 26.0;
+    final titleSize = isSmallScreen ? 26.0 : 33.0;
+    final subtitleSize = isSmallScreen ? 13.0 : 14.5;
+    final logoSize = isSmallScreen ? 80.0 : 100.0;
+
     return Scaffold(
       backgroundColor: kLoginMintTop,
       body: AnnotatedRegion<SystemUiOverlayStyle>(
@@ -364,64 +461,210 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
             child: Center(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 26),
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                 child: FadeTransition(
                   opacity: _fadeAnimation,
                   child: SlideTransition(
                     position: _slideAnimation,
                     child: Container(
-                      width: 520,
-                      padding: const EdgeInsets.fromLTRB(30, 30, 30, 34),
-                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(48), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.14), blurRadius: 36, offset: const Offset(0, 18))]),
+                      width: cardWidth,
+                      constraints: BoxConstraints(
+                        maxWidth: 520,
+                        minWidth: (screenWidth * 0.85).clamp(0.0, 520.0),  // ← Ограничиваем!
+                      ),
+                      padding: EdgeInsets.fromLTRB(cardPadding, cardPadding, cardPadding, cardPadding + 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(isSmallScreen ? 36 : 48),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.14),
+                            blurRadius: isSmallScreen ? 24 : 36,
+                            offset: Offset(0, isSmallScreen ? 12 : 18),
+                          ),
+                        ],
+                      ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(48),
+                        borderRadius: BorderRadius.circular(isSmallScreen ? 36 : 48),
                         child: BackdropFilter(
                           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                           child: Container(
-                            padding: const EdgeInsets.all(26),
+                            padding: EdgeInsets.all(isSmallScreen ? 18 : 26),
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(48),
-                              gradient: LinearGradient(colors: [kLoginCardStrong, kLoginCard], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                              borderRadius: BorderRadius.circular(isSmallScreen ? 36 : 48),
+                              gradient: LinearGradient(
+                                colors: [kLoginCardStrong, kLoginCard],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
                               border: Border.all(color: kLoginStroke),
                             ),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 _topBadge(),
-                                const SizedBox(height: 20),
-                                _logoOrb(),
-                                const SizedBox(height: 18),
-                                const Text('Вход сотрудника', style: TextStyle(fontSize: 33, fontWeight: FontWeight.w900, color: kLoginInk, letterSpacing: -0.9)),
-                                const SizedBox(height: 9),
-                                const Text('Введите номер телефона и пароль,\nчтобы открыть рабочее пространство.', textAlign: TextAlign.center, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: kLoginInkSoft, height: 1.42)),
-                                const SizedBox(height: 30),
+                                SizedBox(height: isSmallScreen ? 14 : 20),
+                                SizedBox(
+                                  width: logoSize,
+                                  height: logoSize,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Transform.scale(
+                                        scale: _pulseAnimation.value * 1.15,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: kLoginAccent.withOpacity(0.35),
+                                                blurRadius: isSmallScreen ? 35 : 50,
+                                                spreadRadius: isSmallScreen ? 8 : 12,
+                                              ),
+                                              BoxShadow(
+                                                color: kLoginBlue.withOpacity(0.2),
+                                                blurRadius: isSmallScreen ? 25 : 35,
+                                                spreadRadius: isSmallScreen ? 4 : 6,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      Container(
+                                        width: logoSize,
+                                        height: logoSize,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              Colors.white.withOpacity(0.28),
+                                              Colors.white.withOpacity(0.12),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      Container(
+                                        width: logoSize * 0.8,
+                                        height: logoSize * 0.8,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.white.withOpacity(0.96),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: kLoginBlue.withOpacity(0.14),
+                                              blurRadius: isSmallScreen ? 14 : 20,
+                                              offset: const Offset(0, 8),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        width: logoSize * 0.6,
+                                        height: logoSize * 0.6,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          gradient: const LinearGradient(
+                                            colors: [kLoginAccent, kLoginAccentSoft],
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: kLoginAccent.withOpacity(0.4),
+                                              blurRadius: isSmallScreen ? 18 : 26,
+                                              offset: Offset(0, isSmallScreen ? 6 : 10),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Center(
+                                          child: Image.asset(
+                                            'assets/images/flowru_logo.png',
+                                            width: logoSize * 0.4,
+                                            height: logoSize * 0.4,
+                                            fit: BoxFit.contain,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(height: isSmallScreen ? 14 : 18),
+                                Text(
+                                  'Вход сотрудника',
+                                  style: TextStyle(
+                                    fontSize: titleSize,
+                                    fontWeight: FontWeight.w900,
+                                    color: kLoginInk,
+                                    letterSpacing: -0.9,
+                                    height: 1.2,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                SizedBox(height: isSmallScreen ? 6 : 9),
+                                Text(
+                                  'Введите номер телефона и пароль,\nчтобы открыть рабочее пространство.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: subtitleSize,
+                                    fontWeight: FontWeight.w700,
+                                    color: kLoginInkSoft,
+                                    height: 1.42,
+                                  ),
+                                ),
+                                SizedBox(height: isSmallScreen ? 22 : 30),
                                 _buildGlassInput(
-                                  controller: _phoneController, 
-                                  label: 'Телефон', 
-                                  icon: Icons.phone_android_outlined, 
+                                  controller: _phoneController,
+                                  label: 'Телефон',
+                                  icon: Icons.phone_android_outlined,
                                   keyboardType: TextInputType.phone,
                                   hintText: '+7 978 547 30 14',
                                 ),
-                                const SizedBox(height: 18),
+                                SizedBox(height: isSmallScreen ? 14 : 18),
                                 _buildGlassInput(
-                                  controller: _passwordController, 
-                                  label: 'Пароль', 
-                                  icon: Icons.lock_outline_rounded, 
-                                  obscureText: !_showPassword, 
+                                  controller: _passwordController,
+                                  label: 'Пароль',
+                                  icon: Icons.lock_outline_rounded,
+                                  obscureText: !_showPassword,
                                   suffixIcon: IconButton(
-                                    icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility, color: kLoginInkSoft), 
+                                    icon: Icon(
+                                      _showPassword ? Icons.visibility_off : Icons.visibility,
+                                      color: kLoginInkSoft,
+                                      size: isSmallScreen ? 20 : 22,
+                                    ),
                                     onPressed: () => setState(() => _showPassword = !_showPassword),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
                                   ),
                                 ),
-                                if (_error != null) ...[const SizedBox(height: 18), _errorBox(_error!)],
-                                const SizedBox(height: 26),
-                                _glassButton(onPressed: _loading ? null : _submit, text: 'Войти', isLoading: _loading),
-                                const SizedBox(height: 16),
+                                if (_error != null) ...[
+                                  SizedBox(height: isSmallScreen ? 14 : 18),
+                                  _errorBox(_error!),
+                                ],
+                                SizedBox(height: isSmallScreen ? 20 : 26),
+                                _glassButton(
+                                  onPressed: _loading ? null : _submit,
+                                  text: 'Войти',
+                                  isLoading: _loading,
+                                ),
+                                SizedBox(height: isSmallScreen ? 12 : 16),
                                 _biometricButton(),
-                                const SizedBox(height: 12),
-                                TextButton(onPressed: _openRecoverySheet, child: const Text('Забыли пароль?', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: kLoginBlue))),
-                                const SizedBox(height: 8),
-                                _outlineGlassButton(text: 'Зарегистрироваться', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterScreen()))),
+                                SizedBox(height: isSmallScreen ? 8 : 12),
+                                TextButton(
+                                  onPressed: _openRecoverySheet,
+                                  child: Text(
+                                    'Забыли пароль?',
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 13.5 : 14.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: kLoginBlue,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: isSmallScreen ? 6 : 8),
+                                _outlineGlassButton(
+                                  text: 'Зарегистрироваться',
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
