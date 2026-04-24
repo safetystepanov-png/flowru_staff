@@ -24,6 +24,11 @@ class AuthStorage {
     await prefs.setString(_savedPhoneKey, phone);
   }
 
+  static Future<void> savePassword(String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_savedPasswordKey, password);
+  }
+
   static Future<void> clearSessionButKeepBiometric() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_accessTokenKey);

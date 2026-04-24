@@ -84,6 +84,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
   // === ЛОГИКА: автозаполнение телефона + биометрия ===
   Future<void> _initSavedLoginAndBiometric() async {
     final savedPhone = await AuthStorage.getSavedPhone();
+    final savedPassword = await AuthStorage.getSavedPassword();
     final biometricEnabled = await AuthStorage.isBiometricEnabled();
     final refreshToken = await AuthStorage.getRefreshToken();
     
@@ -93,17 +94,32 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
       _phoneController.text = savedPhone.trim();
     }
     
+    if (savedPassword != null && savedPassword.isNotEmpty) {
+      _passwordController.text = savedPassword;
+    }
+    
     final hasRefreshSession = refreshToken != null && refreshToken.trim().isNotEmpty;
     bool available = false;
+    
     if (!kIsWeb) {
       try {
         final canCheck = await _localAuth.canCheckBiometrics;
         final isSupported = await _localAuth.isDeviceSupported();
         available = canCheck || isSupported;
-      } catch (_) {
+        
+        print('🔐 BIOMETRIC CHECK:');
+        print('  canCheck: $canCheck');
+        print('  isSupported: $isSupported');
+        print('  biometricEnabled: $biometricEnabled');
+        print('  hasRefreshSession: $hasRefreshSession');
+        print('  available: $available');
+        
+      } catch (e) {
+        print('❌ BIOMETRIC ERROR: $e');
         available = false;
       }
     }
+    
     if (!mounted) return;
     setState(() {
       _biometricAvailable = available;
@@ -114,31 +130,69 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
   }
 
   Future<void> _enableBiometricIfPossible() async {
-    if (kIsWeb || !_biometricAvailable) return;
-    await AuthStorage.setBiometricEnabled(true);
-    if (!mounted) return;
-    setState(() => _biometricEnabled = true);
+    if (kIsWeb) {
+      print('⚠️ Web platform - biometric not available');
+      return;
+    }
+    
+    if (!_biometricAvailable) {
+      print('⚠️ Biometric not available on device');
+      return;
+    }
+    
+    try {
+      await AuthStorage.setBiometricEnabled(true);
+      print('✅ Biometric enabled successfully');
+      
+      if (!mounted) return;
+      setState(() => _biometricEnabled = true);
+    } catch (e) {
+      print('❌ Error enabling biometric: $e');
+    }
   }
 
-  Future<void> _submitWithCredentials({required String phone, required String password, bool saveCredentials = true}) async {
+  Future<void> _submitWithCredentials({
+    required String phone,
+    required String password,
+    bool saveCredentials = true,
+  }) async {
     if (phone.isEmpty) { setState(() => _error = 'Введите номер телефона'); return; }
     if (password.isEmpty) { setState(() => _error = 'Введите пароль'); return; }
+    
     setState(() { _loading = true; _error = null; });
+    
     late final AuthResult result;
     try {
-      result = await _userApi.login(phone: phone, password: password, deviceId: kIsWeb ? 'staff-web' : 'staff-mobile', platform: kIsWeb ? 'web' : 'mobile');
+      result = await _userApi.login(
+        phone: phone, 
+        password: password, 
+        deviceId: kIsWeb ? 'staff-web' : 'staff-mobile', 
+        platform: kIsWeb ? 'web' : 'mobile'
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() { _loading = false; _error = 'Ошибка входа: $e'; });
       return;
     }
+    
     if (!mounted) return;
-    if (!result.ok) { setState(() { _loading = false; _error = result.message; }); return; }
+    if (!result.ok) { 
+      setState(() { _loading = false; _error = result.message; }); 
+      return; 
+    }
+    
     try {
       await AuthStorage.saveAccessToken(result.accessToken);
       await AuthStorage.saveRefreshToken(result.refreshToken);
+      
       if (saveCredentials) {
-        await AuthStorage.savePhoneOnly(result.phone.isNotEmpty ? result.phone : phone);
+        final phoneToSave = result.phone.isNotEmpty ? result.phone : phone;
+        await AuthStorage.savePhoneOnly(phoneToSave);
+        print('✅ Phone saved: $phoneToSave');
+        
+        await AuthStorage.savePassword(password);
+        print('✅ Password saved');
+        
         await _enableBiometricIfPossible();
       }
     } catch (e) {
@@ -146,42 +200,119 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
       setState(() { _loading = false; _error = 'Ошибка сохранения сессии: $e'; });
       return;
     }
+    
     if (!mounted) return;
     setState(() { _loading = false; _hasRefreshSession = true; });
-    Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const StaffEstablishmentsScreen()), (route) => false);
-  }
+    
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const StaffEstablishmentsScreen()), 
+      (route) => false
+    );
+  } // ✅ ДОБАВЛЕНА ЗАКРЫВАЮЩАЯ СКОБКА
 
   Future<void> _submit() async => await _submitWithCredentials(phone: _phoneController.text.trim(), password: _passwordController.text, saveCredentials: true);
 
   Future<void> _loginWithBiometric() async {
-    if (kIsWeb) { setState(() => _error = 'Биометрия в web-версии не поддерживается'); return; }
-    if (_loading || _biometricLoading) return;
+    if (kIsWeb) { 
+      setState(() => _error = 'Биометрия в web-версии не поддерживается'); 
+      return; 
+    }
+    
+    if (_loading || _biometricLoading) {
+      print('⚠️ Already loading');
+      return;
+    }
+    
     final refreshToken = await AuthStorage.getRefreshToken();
-    if (refreshToken == null || refreshToken.trim().isEmpty) { setState(() => _error = 'Нет сохранённой сессии для входа'); return; }
+    if (refreshToken == null || refreshToken.trim().isEmpty) { 
+      setState(() => _error = 'Нет сохранённой сессии для входа'); 
+      print('❌ No refresh token');
+      return; 
+    }
+    
+    print('🔐 Starting biometric authentication...');
     setState(() { _biometricLoading = true; _error = null; });
+    
     try {
-      final authenticated = await _localAuth.authenticate(localizedReason: 'Войдите в Flowru Staff', biometricOnly: true, persistAcrossBackgrounding: true);
-      if (!authenticated) { if (!mounted) return; setState(() => _biometricLoading = false); return; }
-      final result = await _userApi.refresh(refreshToken: refreshToken.trim(), deviceId: kIsWeb ? 'staff-web' : 'staff-mobile', platform: kIsWeb ? 'web' : 'mobile');
+      final authenticated = await _localAuth.authenticate(
+        localizedReason: 'Войдите в Flowru Staff',
+        biometricOnly: true,
+        persistAcrossBackgrounding: true,
+      );
+      
+      print('🔐 Authentication result: $authenticated');
+      
+      if (!authenticated) { 
+        if (!mounted) return; 
+        setState(() => _biometricLoading = false); 
+        print('❌ User cancelled biometric');
+        return; 
+      }
+      
+      final result = await _userApi.refresh(
+        refreshToken: refreshToken.trim(), 
+        deviceId: kIsWeb ? 'staff-web' : 'staff-mobile', 
+        platform: kIsWeb ? 'web' : 'mobile'
+      );
+      
       if (!mounted) return;
-      if (!result.ok) { await AuthStorage.clearSessionButKeepBiometric(); setState(() { _biometricLoading = false; _hasRefreshSession = false; _error = result.message; }); return; }
+      
+      if (!result.ok) { 
+        await AuthStorage.clearSessionButKeepBiometric(); 
+        setState(() { 
+          _biometricLoading = false; 
+          _hasRefreshSession = false; 
+          _error = result.message; 
+        });
+        print('❌ Refresh failed: ${result.message}');
+        return; 
+      }
+      
       await AuthStorage.saveAccessToken(result.accessToken);
       await AuthStorage.saveRefreshToken(result.refreshToken);
       await AuthStorage.setBiometricEnabled(true);
+      
       if (!mounted) return;
-      setState(() { _biometricLoading = false; _biometricEnabled = true; _hasRefreshSession = true; });
-      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const StaffEstablishmentsScreen()), (route) => false);
+      
+      setState(() { 
+        _biometricLoading = false; 
+        _biometricEnabled = true; 
+        _hasRefreshSession = true; 
+      });
+      
+      print('✅ Biometric login successful!');
+      
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const StaffEstablishmentsScreen()), 
+        (route) => false
+      );
+      
     } on PlatformException catch (e) {
+      print('❌ PlatformException: ${e.code} - ${e.message}');
+      
       String message = 'Не удалось выполнить вход по биометрии';
       final code = e.code.toLowerCase();
-      if (code.contains('notavailable') || code.contains('not_available')) message = 'Биометрия недоступна на этом устройстве';
-      else if (code.contains('notenrolled')) message = 'В устройстве не настроен Face ID / Touch ID';
-      else if (code.contains('lockedout')) message = 'Биометрия временно заблокирована';
+      
+      if (code.contains('notavailable') || code.contains('not_available')) {
+        message = 'Биометрия недоступна на этом устройстве';
+      } else if (code.contains('notenrolled')) {
+        message = 'В устройстве не настроен Face ID / Touch ID';
+      } else if (code.contains('lockedout')) {
+        message = 'Биометрия временно заблокирована';
+      } else if (code.contains('userfallback')) {
+        message = 'Пользователь выбрал ввод пароля';
+      }
+      
       if (!mounted) return;
       setState(() { _biometricLoading = false; _error = message; });
-    } catch (_) {
+      
+    } catch (e) {
+      print('❌ General error: $e');
       if (!mounted) return;
-      setState(() { _biometricLoading = false; _error = 'Не удалось выполнить вход по Face ID / Touch ID'; });
+      setState(() { 
+        _biometricLoading = false; 
+        _error = 'Не удалось выполнить вход по Face ID / Touch ID'; 
+      });
     }
   }
 
@@ -283,10 +414,10 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
   }) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 400;
-    
+
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(isSmallScreen ? 18 : 22),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 22),
         color: Colors.white.withOpacity(0.94),
         border: Border.all(color: const Color(0xFFE7EEF0), width: 1.2),
       ),
@@ -296,14 +427,14 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
         keyboardType: keyboardType,
         style: TextStyle(
           color: kLoginInk,
-          fontSize: isSmallScreen ? 15 : 16,
+          fontSize: isSmallScreen ? 14 : 16,
         ),
         decoration: InputDecoration(
           prefixIcon: icon != null
               ? Icon(
                   icon,
                   color: kLoginInkSoft,
-                  size: isSmallScreen ? 20 : 22,
+                  size: isSmallScreen ? 18 : 20,
                 )
               : null,
           suffixIcon: suffixIcon,
@@ -312,7 +443,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
           labelStyle: TextStyle(
             color: kLoginInkSoft,
             fontWeight: FontWeight.w600,
-            fontSize: isSmallScreen ? 14 : 15,
+            fontSize: isSmallScreen ? 13 : 15,
           ),
           hintStyle: const TextStyle(
             color: Color(0xFF9AA5B1),
@@ -321,8 +452,8 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
           floatingLabelStyle: const TextStyle(color: kLoginViolet),
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(
-            horizontal: isSmallScreen ? 18 : 22,
-            vertical: isSmallScreen ? 16 : 19,
+            horizontal: isSmallScreen ? 16 : 22,
+            vertical: isSmallScreen ? 12 : 19,
           ),
         ),
       ),
@@ -336,16 +467,16 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
   }) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 400;
-    
+
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(isSmallScreen ? 26 : 30),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 24 : 30),
         gradient: const LinearGradient(colors: [kLoginBlue, kLoginViolet, kLoginPink]),
         boxShadow: [
           BoxShadow(
             color: kLoginBlue.withOpacity(0.28),
-            blurRadius: isSmallScreen ? 16 : 22,
-            offset: Offset(0, isSmallScreen ? 8 : 12),
+            blurRadius: isSmallScreen ? 14 : 22,
+            offset: Offset(0, isSmallScreen ? 6 : 12),
           ),
         ],
       ),
@@ -353,14 +484,14 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
         color: Colors.transparent,
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(isSmallScreen ? 26 : 30),
+          borderRadius: BorderRadius.circular(isSmallScreen ? 24 : 30),
           child: Container(
-            height: isSmallScreen ? 54.0 : 60.0,
+            height: isSmallScreen ? 48.0 : 60.0,
             alignment: Alignment.center,
             child: isLoading
                 ? SizedBox(
-                    width: isSmallScreen ? 20 : 24,
-                    height: isSmallScreen ? 20 : 24,
+                    width: isSmallScreen ? 18 : 24,
+                    height: isSmallScreen ? 18 : 24,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.4,
                       color: Colors.white,
@@ -370,7 +501,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                     text,
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: isSmallScreen ? 15 : 16,
+                      fontSize: isSmallScreen ? 14 : 16,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -417,7 +548,9 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
   }
 
   bool get _shouldShowBiometricButton {
-    if (_biometricChecking || !_biometricAvailable || !_hasRefreshSession) return false;
+    if (_biometricChecking) return false;
+    if (!_biometricAvailable) return false;
+    if (!_hasRefreshSession) return false;
     return _biometricEnabled || _hasRefreshSession;
   }
 
@@ -433,30 +566,30 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    
+
     final isVerySmall = screenWidth < 360 || screenHeight < 640;
     final isSmallScreen = screenWidth < 400 || screenHeight < 700;
     final isMediumScreen = screenWidth >= 400 && screenWidth < 600;
-    
-    final cardWidth = isVerySmall 
-        ? screenWidth * 0.95 
-        : isSmallScreen 
-            ? screenWidth * 0.92 
-            : isMediumScreen 
-                ? screenWidth * 0.85 
-                : 520.0;
-    
-    final horizontalPadding = isVerySmall ? 12.0 : isSmallScreen ? 16.0 : 26.0;
-    final cardPadding = isVerySmall ? 14.0 : isSmallScreen ? 18.0 : 26.0;
-    final innerPadding = isVerySmall ? 12.0 : isSmallScreen ? 16.0 : 26.0;
-    
-    final titleSize = isVerySmall ? 22.0 : isSmallScreen ? 24.0 : 33.0;
-    final subtitleSize = isVerySmall ? 11.5 : isSmallScreen ? 12.5 : 14.5;
-    final logoSize = isVerySmall ? 64.0 : isSmallScreen ? 72.0 : 100.0;
-    
-    final gapSmall = isVerySmall ? 4.0 : isSmallScreen ? 6.0 : 9.0;
-    final gapMedium = isVerySmall ? 8.0 : isSmallScreen ? 12.0 : 18.0;
-    final gapLarge = isVerySmall ? 14.0 : isSmallScreen ? 18.0 : 30.0;
+
+    final cardWidth = isVerySmall
+        ? screenWidth * 0.94
+        : isSmallScreen
+            ? screenWidth * 0.92
+            : isMediumScreen
+                ? screenWidth * 0.85
+                : 500.0;
+
+    final horizontalPadding = isVerySmall ? 12.0 : isSmallScreen ? 14.0 : 24.0;
+    final cardPadding = isVerySmall ? 12.0 : isSmallScreen ? 16.0 : 24.0;
+    final innerPadding = isVerySmall ? 10.0 : isSmallScreen ? 14.0 : 24.0;
+
+    final titleSize = isVerySmall ? 20.0 : isSmallScreen ? 22.0 : 30.0;
+    final subtitleSize = isVerySmall ? 10.5 : isSmallScreen ? 11.5 : 14.0;
+    final logoSize = isVerySmall ? 56.0 : isSmallScreen ? 64.0 : 88.0;
+
+    final gapSmall = isVerySmall ? 3.0 : isSmallScreen ? 4.0 : 8.0;
+    final gapMedium = isVerySmall ? 6.0 : isSmallScreen ? 8.0 : 14.0;
+    final gapLarge = isVerySmall ? 10.0 : isSmallScreen ? 14.0 : 24.0;
 
     return Scaffold(
       backgroundColor: kLoginMintTop,
@@ -476,28 +609,28 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                     child: Container(
                       width: cardWidth,
                       constraints: BoxConstraints(
-                        maxWidth: 520,
-                        minWidth: (screenWidth * 0.85).clamp(0.0, 520.0),
+                        maxWidth: 500,
+                        minWidth: (screenWidth * 0.85).clamp(0.0, 500.0),
                       ),
-                      padding: EdgeInsets.fromLTRB(cardPadding, cardPadding, cardPadding, cardPadding + 8),
+                      padding: EdgeInsets.fromLTRB(cardPadding, cardPadding, cardPadding, cardPadding + 4),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(isVerySmall ? 28 : isSmallScreen ? 36 : 48),
+                        borderRadius: BorderRadius.circular(isVerySmall ? 26 : isSmallScreen ? 32 : 44),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.14),
-                            blurRadius: isVerySmall ? 18 : isSmallScreen ? 24 : 36,
-                            offset: Offset(0, isVerySmall ? 8 : isSmallScreen ? 12 : 18),
+                            color: Colors.black.withOpacity(0.12),
+                            blurRadius: isVerySmall ? 16 : isSmallScreen ? 20 : 32,
+                            offset: Offset(0, isVerySmall ? 6 : isSmallScreen ? 10 : 16),
                           ),
                         ],
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(isVerySmall ? 28 : isSmallScreen ? 36 : 48),
+                        borderRadius: BorderRadius.circular(isVerySmall ? 26 : isSmallScreen ? 32 : 44),
                         child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                           child: Container(
                             padding: EdgeInsets.all(innerPadding),
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(isVerySmall ? 28 : isSmallScreen ? 36 : 48),
+                              borderRadius: BorderRadius.circular(isVerySmall ? 26 : isSmallScreen ? 32 : 44),
                               gradient: LinearGradient(
                                 colors: [kLoginCardStrong, kLoginCard],
                                 begin: Alignment.topLeft,
@@ -509,7 +642,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 _topBadge(),
-                                SizedBox(height: isVerySmall ? 10 : gapMedium),
+                                SizedBox(height: isVerySmall ? 6 : gapMedium),
                                 SizedBox(
                                   width: logoSize,
                                   height: logoSize,
@@ -524,13 +657,13 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                             boxShadow: [
                                               BoxShadow(
                                                 color: kLoginAccent.withOpacity(0.35),
-                                                blurRadius: isVerySmall ? 24 : isSmallScreen ? 35 : 50,
-                                                spreadRadius: isVerySmall ? 4 : isSmallScreen ? 8 : 12,
+                                                blurRadius: isVerySmall ? 20 : isSmallScreen ? 30 : 45,
+                                                spreadRadius: isVerySmall ? 2 : isSmallScreen ? 6 : 10,
                                               ),
                                               BoxShadow(
                                                 color: kLoginBlue.withOpacity(0.2),
-                                                blurRadius: isVerySmall ? 18 : isSmallScreen ? 25 : 35,
-                                                spreadRadius: isVerySmall ? 2 : isSmallScreen ? 4 : 6,
+                                                blurRadius: isVerySmall ? 16 : isSmallScreen ? 22 : 32,
+                                                spreadRadius: isVerySmall ? 1 : isSmallScreen ? 3 : 5,
                                               ),
                                             ],
                                           ),
@@ -558,7 +691,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                           boxShadow: [
                                             BoxShadow(
                                               color: kLoginBlue.withOpacity(0.14),
-                                              blurRadius: isVerySmall ? 10 : isSmallScreen ? 14 : 20,
+                                              blurRadius: isVerySmall ? 8 : isSmallScreen ? 12 : 18,
                                               offset: const Offset(0, 4),
                                             ),
                                           ],
@@ -575,8 +708,8 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                           boxShadow: [
                                             BoxShadow(
                                               color: kLoginAccent.withOpacity(0.4),
-                                              blurRadius: isVerySmall ? 12 : isSmallScreen ? 18 : 26,
-                                              offset: Offset(0, isVerySmall ? 4 : isSmallScreen ? 6 : 10),
+                                              blurRadius: isVerySmall ? 10 : isSmallScreen ? 16 : 24,
+                                              offset: Offset(0, isVerySmall ? 3 : isSmallScreen ? 5 : 8),
                                             ),
                                           ],
                                         ),
@@ -592,19 +725,19 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                     ],
                                   ),
                                 ),
-                                SizedBox(height: isVerySmall ? 8 : gapMedium),
+                                SizedBox(height: isVerySmall ? 4 : gapMedium),
                                 Text(
                                   'Вход сотрудника',
                                   style: TextStyle(
                                     fontSize: titleSize,
                                     fontWeight: FontWeight.w900,
                                     color: kLoginInk,
-                                    letterSpacing: -0.9,
-                                    height: 1.15,
+                                    letterSpacing: -0.8,
+                                    height: 1.1,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
-                                SizedBox(height: isVerySmall ? 3 : gapSmall),
+                                SizedBox(height: isVerySmall ? 2 : gapSmall),
                                 Text(
                                   'Введите номер телефона и пароль,\nчтобы открыть рабочее пространство.',
                                   textAlign: TextAlign.center,
@@ -612,10 +745,10 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                     fontSize: subtitleSize,
                                     fontWeight: FontWeight.w700,
                                     color: kLoginInkSoft,
-                                    height: 1.35,
+                                    height: 1.3,
                                   ),
                                 ),
-                                SizedBox(height: isVerySmall ? 16 : gapLarge),
+                                SizedBox(height: isVerySmall ? 12 : gapLarge),
                                 _buildGlassInput(
                                   controller: _phoneController,
                                   label: 'Телефон',
@@ -623,7 +756,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                   keyboardType: TextInputType.phone,
                                   hintText: '+7 978 547 30 14',
                                 ),
-                                SizedBox(height: isVerySmall ? 10 : gapMedium),
+                                SizedBox(height: isVerySmall ? 8 : gapMedium),
                                 _buildGlassInput(
                                   controller: _passwordController,
                                   label: 'Пароль',
@@ -633,7 +766,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                     icon: Icon(
                                       _showPassword ? Icons.visibility_off : Icons.visibility,
                                       color: kLoginInkSoft,
-                                      size: isVerySmall ? 18 : isSmallScreen ? 20 : 22,
+                                      size: isVerySmall ? 16 : isSmallScreen ? 18 : 20,
                                     ),
                                     onPressed: () => setState(() => _showPassword = !_showPassword),
                                     padding: EdgeInsets.zero,
@@ -641,30 +774,30 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                   ),
                                 ),
                                 if (_error != null) ...[
-                                  SizedBox(height: isVerySmall ? 10 : gapMedium),
+                                  SizedBox(height: isVerySmall ? 8 : gapMedium),
                                   _errorBox(_error!),
                                 ],
-                                SizedBox(height: isVerySmall ? 14 : gapLarge),
+                                SizedBox(height: isVerySmall ? 10 : gapLarge),
                                 _glassButton(
                                   onPressed: _loading ? null : _submit,
                                   text: 'Войти',
                                   isLoading: _loading,
                                 ),
-                                SizedBox(height: isVerySmall ? 8 : 12),
+                                SizedBox(height: isVerySmall ? 6 : 10),
                                 _biometricButton(),
-                                SizedBox(height: isVerySmall ? 6 : 8),
+                                SizedBox(height: isVerySmall ? 4 : 6),
                                 TextButton(
                                   onPressed: _openRecoverySheet,
                                   child: Text(
                                     'Забыли пароль?',
                                     style: TextStyle(
-                                      fontSize: isVerySmall ? 12.5 : isSmallScreen ? 13.5 : 14.5,
+                                      fontSize: isVerySmall ? 11.5 : isSmallScreen ? 12.5 : 14,
                                       fontWeight: FontWeight.w800,
                                       color: kLoginBlue,
                                     ),
                                   ),
                                 ),
-                                SizedBox(height: isVerySmall ? 4 : 6),
+                                SizedBox(height: isVerySmall ? 2 : 4),
                                 _outlineGlassButton(
                                   text: 'Зарегистрироваться',
                                   onTap: () => Navigator.push(
