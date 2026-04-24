@@ -101,7 +101,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   final Map<String, double> _voiceCurrentSeconds = <String, double>{};
   final Map<String, double> _voiceTotalSeconds = <String, double>{};
   final Map<String, AudioPlayer> _nativeVoicePlayers = <String, AudioPlayer>{};
-  final Map<String, String> _nativeVoiceLoadedUrls = <String, String>{};
+  final Map<String, String> _nativeVoiceLocalPaths = <String, String>{};
   Timer? _voiceProgressTimer;
   String? _playingVoiceMessageId;
 
@@ -230,7 +230,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       } catch (_) {}
     }
     _nativeVoicePlayers.clear();
-    _nativeVoiceLoadedUrls.clear();
+    _nativeVoiceLocalPaths.clear();
 
     _audioRecorder.dispose();
     _chatCubit.close();
@@ -2002,6 +2002,10 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     }
 
     final player = await _ensureNativeVoicePlayer(message);
+    debugPrint('VOICE TAP -> messageId=${message.id}');
+    debugPrint('VOICE TAP -> attachmentUrl=${message.attachmentUrl}');
+    debugPrint('VOICE TAP -> preparedLocalPath=${_nativeVoiceLocalPaths[message.id]}');
+    debugPrint('VOICE TAP -> currentSeconds=${_voiceCurrentSeconds[message.id]}');
     if (player == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2044,9 +2048,25 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     }
 
     final current = _voiceCurrentSeconds[message.id] ?? 0;
+
     if (current <= 0.05) {
-      await player.play(UrlSource(fullUrl));
-      _nativeVoiceLoadedUrls[message.id] = fullUrl;
+      try {
+        await player.stop();
+      } catch (_) {}
+
+      final preparedPlayer = await _ensureNativeVoicePlayer(message);
+      if (preparedPlayer == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Не удалось подготовить голосовое'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      await preparedPlayer.resume();
     } else {
       await player.resume();
     }
@@ -2194,37 +2214,29 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   Future<AudioPlayer?> _ensureNativeVoicePlayer(ChatMessage message) async {
-    final fullUrl = _cacheSafeAttachmentUrl(message) ?? _fullUrl(message.attachmentUrl);
+    final fullUrl =
+        _cacheSafeAttachmentUrl(message) ?? _fullUrl(message.attachmentUrl);
     if (fullUrl == null || fullUrl.isEmpty) return null;
 
-    final AudioPlayer? existingPlayer = _nativeVoicePlayers[message.id];
-    final String? cachedPath = _nativeVoiceLoadedUrls[message.id];
+    AudioPlayer? player = _nativeVoicePlayers[message.id];
 
-    // Проверяем, есть ли уже локальный файл и работает ли он
-    if (existingPlayer != null && cachedPath != null && await File(cachedPath).exists()) {
-      // Если плеер уже существует и источник не совпадает, переустанавливаем
-      if (existingPlayer.source != UrlSource(cachedPath)) {
-        await existingPlayer.setSource(UrlSource(cachedPath));
-      }
-      return existingPlayer;
-    }
-
-    // Создаём новый плеер или используем старый, если он ещё не загрузил
-    final AudioPlayer player = existingPlayer ?? AudioPlayer();
-    if (existingPlayer == null) {
+    if (player == null) {
+      player = AudioPlayer();
       _nativeVoicePlayers[message.id] = player;
 
       player.onDurationChanged.listen((duration) {
         if (!mounted) return;
         setState(() {
-          _voiceTotalSeconds[message.id] = duration.inMilliseconds / 1000.0;
+          _voiceTotalSeconds[message.id] =
+              duration.inMilliseconds <= 0 ? 0 : duration.inMilliseconds / 1000.0;
         });
       });
 
       player.onPositionChanged.listen((position) {
         if (!mounted) return;
         setState(() {
-          _voiceCurrentSeconds[message.id] = position.inMilliseconds / 1000.0;
+          _voiceCurrentSeconds[message.id] =
+              position.inMilliseconds <= 0 ? 0 : position.inMilliseconds / 1000.0;
         });
       });
 
@@ -2237,40 +2249,44 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       });
     }
 
-    // Если файла в кэше нет – скачиваем
-    if (cachedPath == null || !await File(cachedPath).exists()) {
-      try {
-        final token = await _token();
-        final client = http.Client();
-        final request = http.Request('GET', Uri.parse(fullUrl));
-        request.headers['Authorization'] = 'Bearer $token';
-        final response = await client.send(request);
-
-        if (response.statusCode != 200) {
-          throw Exception('Failed to download audio: ${response.statusCode}');
-        }
-
-        final dir = await getTemporaryDirectory();
-        final fileName = 'voice_${message.id}_${DateTime.now().millisecondsSinceEpoch}.m4a';
-        final file = File('${dir.path}/$fileName');
-        final sink = file.openWrite();
-        await sink.addStream(response.stream);
-        await sink.close();
-        client.close();
-
-        final localPath = file.path;
-        _nativeVoiceLoadedUrls[message.id] = localPath;
-        await player.setSource(UrlSource(localPath));
-        return player;
-      } catch (e) {
-        debugPrint('Error downloading audio: $e');
-        return null;
-      }
-    } else {
-      // Файл уже есть в кэше
-      await player.setSource(UrlSource(cachedPath));
+    if (kIsWeb) {
+      await player.setSource(UrlSource(fullUrl));
       return player;
     }
+
+    String? localPath = _nativeVoiceLocalPaths[message.id];
+
+    if (localPath != null) {
+      final cachedFile = File(localPath);
+      if (!await cachedFile.exists()) {
+        localPath = null;
+        _nativeVoiceLocalPaths.remove(message.id);
+      }
+    }
+
+    if (localPath == null) {
+      debugPrint('VOICE DOWNLOAD START -> $fullUrl');
+      final response = await http.get(Uri.parse(fullUrl));
+      if (response.statusCode != 200) {
+        debugPrint('VOICE DOWNLOAD STATUS -> ${response.statusCode}');
+        debugPrint('VOICE DOWNLOAD ERROR: ${response.statusCode}');
+        return null;
+      }
+
+      final dir = await getTemporaryDirectory();
+      final safeId = message.id.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+      final filePath = '${dir.path}/voice_$safeId.m4a';
+      final file = File(filePath);
+
+      await file.writeAsBytes(response.bodyBytes, flush: true);
+      debugPrint('VOICE DOWNLOADED TO -> ${file.path}');
+      debugPrint('VOICE DOWNLOADED BYTES -> ${response.bodyBytes.length}');
+      localPath = file.path;
+      _nativeVoiceLocalPaths[message.id] = localPath;
+    }
+
+    await player.setSource(DeviceFileSource(localPath));
+    return player;
   }
 
   double _safeAudioNumber(dynamic value) {

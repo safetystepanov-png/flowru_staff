@@ -89,7 +89,6 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
     
     if (!mounted) return;
     
-    // Автозаполнение телефона если сохранён
     if (savedPhone != null && savedPhone.trim().isNotEmpty) {
       _phoneController.text = savedPhone.trim();
     }
@@ -139,7 +138,6 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
       await AuthStorage.saveAccessToken(result.accessToken);
       await AuthStorage.saveRefreshToken(result.refreshToken);
       if (saveCredentials) {
-        // Сохраняем только телефон (без пароля — безопаснее)
         await AuthStorage.savePhoneOnly(result.phone.isNotEmpty ? result.phone : phone);
         await _enableBiometricIfPossible();
       }
@@ -435,21 +433,30 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    final isSmallScreen = screenWidth < 400;
+    
+    final isVerySmall = screenWidth < 360 || screenHeight < 640;
+    final isSmallScreen = screenWidth < 400 || screenHeight < 700;
     final isMediumScreen = screenWidth >= 400 && screenWidth < 600;
     
-    // Адаптивные размеры
-    final cardWidth = isSmallScreen 
-        ? screenWidth * 0.92 
-        : isMediumScreen 
-            ? screenWidth * 0.85 
-            : 520.0;
+    final cardWidth = isVerySmall 
+        ? screenWidth * 0.95 
+        : isSmallScreen 
+            ? screenWidth * 0.92 
+            : isMediumScreen 
+                ? screenWidth * 0.85 
+                : 520.0;
     
-    final horizontalPadding = isSmallScreen ? 16.0 : 26.0;
-    final cardPadding = isSmallScreen ? 20.0 : 26.0;
-    final titleSize = isSmallScreen ? 26.0 : 33.0;
-    final subtitleSize = isSmallScreen ? 13.0 : 14.5;
-    final logoSize = isSmallScreen ? 80.0 : 100.0;
+    final horizontalPadding = isVerySmall ? 12.0 : isSmallScreen ? 16.0 : 26.0;
+    final cardPadding = isVerySmall ? 14.0 : isSmallScreen ? 18.0 : 26.0;
+    final innerPadding = isVerySmall ? 12.0 : isSmallScreen ? 16.0 : 26.0;
+    
+    final titleSize = isVerySmall ? 22.0 : isSmallScreen ? 24.0 : 33.0;
+    final subtitleSize = isVerySmall ? 11.5 : isSmallScreen ? 12.5 : 14.5;
+    final logoSize = isVerySmall ? 64.0 : isSmallScreen ? 72.0 : 100.0;
+    
+    final gapSmall = isVerySmall ? 4.0 : isSmallScreen ? 6.0 : 9.0;
+    final gapMedium = isVerySmall ? 8.0 : isSmallScreen ? 12.0 : 18.0;
+    final gapLarge = isVerySmall ? 14.0 : isSmallScreen ? 18.0 : 30.0;
 
     return Scaffold(
       backgroundColor: kLoginMintTop,
@@ -470,27 +477,27 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                       width: cardWidth,
                       constraints: BoxConstraints(
                         maxWidth: 520,
-                        minWidth: (screenWidth * 0.85).clamp(0.0, 520.0),  // ← Ограничиваем!
+                        minWidth: (screenWidth * 0.85).clamp(0.0, 520.0),
                       ),
                       padding: EdgeInsets.fromLTRB(cardPadding, cardPadding, cardPadding, cardPadding + 8),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(isSmallScreen ? 36 : 48),
+                        borderRadius: BorderRadius.circular(isVerySmall ? 28 : isSmallScreen ? 36 : 48),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.14),
-                            blurRadius: isSmallScreen ? 24 : 36,
-                            offset: Offset(0, isSmallScreen ? 12 : 18),
+                            blurRadius: isVerySmall ? 18 : isSmallScreen ? 24 : 36,
+                            offset: Offset(0, isVerySmall ? 8 : isSmallScreen ? 12 : 18),
                           ),
                         ],
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(isSmallScreen ? 36 : 48),
+                        borderRadius: BorderRadius.circular(isVerySmall ? 28 : isSmallScreen ? 36 : 48),
                         child: BackdropFilter(
                           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                           child: Container(
-                            padding: EdgeInsets.all(isSmallScreen ? 18 : 26),
+                            padding: EdgeInsets.all(innerPadding),
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(isSmallScreen ? 36 : 48),
+                              borderRadius: BorderRadius.circular(isVerySmall ? 28 : isSmallScreen ? 36 : 48),
                               gradient: LinearGradient(
                                 colors: [kLoginCardStrong, kLoginCard],
                                 begin: Alignment.topLeft,
@@ -502,7 +509,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 _topBadge(),
-                                SizedBox(height: isSmallScreen ? 14 : 20),
+                                SizedBox(height: isVerySmall ? 10 : gapMedium),
                                 SizedBox(
                                   width: logoSize,
                                   height: logoSize,
@@ -517,13 +524,13 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                             boxShadow: [
                                               BoxShadow(
                                                 color: kLoginAccent.withOpacity(0.35),
-                                                blurRadius: isSmallScreen ? 35 : 50,
-                                                spreadRadius: isSmallScreen ? 8 : 12,
+                                                blurRadius: isVerySmall ? 24 : isSmallScreen ? 35 : 50,
+                                                spreadRadius: isVerySmall ? 4 : isSmallScreen ? 8 : 12,
                                               ),
                                               BoxShadow(
                                                 color: kLoginBlue.withOpacity(0.2),
-                                                blurRadius: isSmallScreen ? 25 : 35,
-                                                spreadRadius: isSmallScreen ? 4 : 6,
+                                                blurRadius: isVerySmall ? 18 : isSmallScreen ? 25 : 35,
+                                                spreadRadius: isVerySmall ? 2 : isSmallScreen ? 4 : 6,
                                               ),
                                             ],
                                           ),
@@ -551,8 +558,8 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                           boxShadow: [
                                             BoxShadow(
                                               color: kLoginBlue.withOpacity(0.14),
-                                              blurRadius: isSmallScreen ? 14 : 20,
-                                              offset: const Offset(0, 8),
+                                              blurRadius: isVerySmall ? 10 : isSmallScreen ? 14 : 20,
+                                              offset: const Offset(0, 4),
                                             ),
                                           ],
                                         ),
@@ -568,8 +575,8 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                           boxShadow: [
                                             BoxShadow(
                                               color: kLoginAccent.withOpacity(0.4),
-                                              blurRadius: isSmallScreen ? 18 : 26,
-                                              offset: Offset(0, isSmallScreen ? 6 : 10),
+                                              blurRadius: isVerySmall ? 12 : isSmallScreen ? 18 : 26,
+                                              offset: Offset(0, isVerySmall ? 4 : isSmallScreen ? 6 : 10),
                                             ),
                                           ],
                                         ),
@@ -585,7 +592,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                     ],
                                   ),
                                 ),
-                                SizedBox(height: isSmallScreen ? 14 : 18),
+                                SizedBox(height: isVerySmall ? 8 : gapMedium),
                                 Text(
                                   'Вход сотрудника',
                                   style: TextStyle(
@@ -593,11 +600,11 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                     fontWeight: FontWeight.w900,
                                     color: kLoginInk,
                                     letterSpacing: -0.9,
-                                    height: 1.2,
+                                    height: 1.15,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
-                                SizedBox(height: isSmallScreen ? 6 : 9),
+                                SizedBox(height: isVerySmall ? 3 : gapSmall),
                                 Text(
                                   'Введите номер телефона и пароль,\nчтобы открыть рабочее пространство.',
                                   textAlign: TextAlign.center,
@@ -605,10 +612,10 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                     fontSize: subtitleSize,
                                     fontWeight: FontWeight.w700,
                                     color: kLoginInkSoft,
-                                    height: 1.42,
+                                    height: 1.35,
                                   ),
                                 ),
-                                SizedBox(height: isSmallScreen ? 22 : 30),
+                                SizedBox(height: isVerySmall ? 16 : gapLarge),
                                 _buildGlassInput(
                                   controller: _phoneController,
                                   label: 'Телефон',
@@ -616,7 +623,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                   keyboardType: TextInputType.phone,
                                   hintText: '+7 978 547 30 14',
                                 ),
-                                SizedBox(height: isSmallScreen ? 14 : 18),
+                                SizedBox(height: isVerySmall ? 10 : gapMedium),
                                 _buildGlassInput(
                                   controller: _passwordController,
                                   label: 'Пароль',
@@ -626,7 +633,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                     icon: Icon(
                                       _showPassword ? Icons.visibility_off : Icons.visibility,
                                       color: kLoginInkSoft,
-                                      size: isSmallScreen ? 20 : 22,
+                                      size: isVerySmall ? 18 : isSmallScreen ? 20 : 22,
                                     ),
                                     onPressed: () => setState(() => _showPassword = !_showPassword),
                                     padding: EdgeInsets.zero,
@@ -634,30 +641,30 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                   ),
                                 ),
                                 if (_error != null) ...[
-                                  SizedBox(height: isSmallScreen ? 14 : 18),
+                                  SizedBox(height: isVerySmall ? 10 : gapMedium),
                                   _errorBox(_error!),
                                 ],
-                                SizedBox(height: isSmallScreen ? 20 : 26),
+                                SizedBox(height: isVerySmall ? 14 : gapLarge),
                                 _glassButton(
                                   onPressed: _loading ? null : _submit,
                                   text: 'Войти',
                                   isLoading: _loading,
                                 ),
-                                SizedBox(height: isSmallScreen ? 12 : 16),
+                                SizedBox(height: isVerySmall ? 8 : 12),
                                 _biometricButton(),
-                                SizedBox(height: isSmallScreen ? 8 : 12),
+                                SizedBox(height: isVerySmall ? 6 : 8),
                                 TextButton(
                                   onPressed: _openRecoverySheet,
                                   child: Text(
                                     'Забыли пароль?',
                                     style: TextStyle(
-                                      fontSize: isSmallScreen ? 13.5 : 14.5,
+                                      fontSize: isVerySmall ? 12.5 : isSmallScreen ? 13.5 : 14.5,
                                       fontWeight: FontWeight.w800,
                                       color: kLoginBlue,
                                     ),
                                   ),
                                 ),
-                                SizedBox(height: isSmallScreen ? 6 : 8),
+                                SizedBox(height: isVerySmall ? 4 : 6),
                                 _outlineGlassButton(
                                   text: 'Зарегистрироваться',
                                   onTap: () => Navigator.push(
