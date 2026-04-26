@@ -770,11 +770,8 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                         label: 'Телефон',
                                         icon: Icons.phone_android_outlined,
                                         keyboardType: TextInputType.phone,
-                                        hintText: '+7 978 547 30 14',
-                                        autofillHints: const [
-                                          AutofillHints.username,
-                                          AutofillHints.telephoneNumber,
-                                        ],
+                                        hintText: '+7 999 555 30 55',
+                                        autofillHints: const [AutofillHints.username],
                                         textInputAction: TextInputAction.next,
                                         enableSuggestions: false,
                                         autocorrect: false,
