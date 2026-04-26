@@ -105,7 +105,9 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
       try {
         final canCheck = await _localAuth.canCheckBiometrics;
         final isSupported = await _localAuth.isDeviceSupported();
-        available = canCheck || isSupported;
+        final availableBiometrics = await _localAuth.getAvailableBiometrics();
+
+        available = isSupported && (canCheck || availableBiometrics.isNotEmpty);
         
         print('🔐 BIOMETRIC CHECK:');
         print('  canCheck: $canCheck');
@@ -184,6 +186,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
     try {
       await AuthStorage.saveAccessToken(result.accessToken);
       await AuthStorage.saveRefreshToken(result.refreshToken);
+      TextInput.finishAutofillContext(shouldSave: true);
       
       if (saveCredentials) {
         final phoneToSave = result.phone.isNotEmpty ? result.phone : phone;
@@ -236,8 +239,11 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
     try {
       final authenticated = await _localAuth.authenticate(
         localizedReason: 'Войдите в Flowru Staff',
-        biometricOnly: true,
-        persistAcrossBackgrounding: true,
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+          stickyAuth: true,
+          useErrorDialogs: true,
+        ),
       );
       
       print('🔐 Authentication result: $authenticated');
@@ -411,6 +417,11 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
     bool obscureText = false,
     Widget? suffixIcon,
     String? hintText,
+    Iterable<String>? autofillHints,
+    TextInputAction? textInputAction,
+    bool enableSuggestions = true,
+    bool autocorrect = false,
+    ValueChanged<String>? onSubmitted,
   }) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 400;
@@ -425,6 +436,11 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
         controller: controller,
         obscureText: obscureText,
         keyboardType: keyboardType,
+        autofillHints: autofillHints,
+        textInputAction: textInputAction,
+        enableSuggestions: enableSuggestions,
+        autocorrect: autocorrect,
+        onSubmitted: onSubmitted,
         style: TextStyle(
           color: kLoginInk,
           fontSize: isSmallScreen ? 14 : 16,
@@ -749,28 +765,46 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                   ),
                                 ),
                                 SizedBox(height: isVerySmall ? 12 : gapLarge),
-                                _buildGlassInput(
-                                  controller: _phoneController,
-                                  label: 'Телефон',
-                                  icon: Icons.phone_android_outlined,
-                                  keyboardType: TextInputType.phone,
-                                  hintText: '+7 978 547 30 14',
-                                ),
-                                SizedBox(height: isVerySmall ? 8 : gapMedium),
-                                _buildGlassInput(
-                                  controller: _passwordController,
-                                  label: 'Пароль',
-                                  icon: Icons.lock_outline_rounded,
-                                  obscureText: !_showPassword,
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      _showPassword ? Icons.visibility_off : Icons.visibility,
-                                      color: kLoginInkSoft,
-                                      size: isVerySmall ? 16 : isSmallScreen ? 18 : 20,
-                                    ),
-                                    onPressed: () => setState(() => _showPassword = !_showPassword),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
+                                AutofillGroup(
+                                  child: Column(
+                                    children: [
+                                      _buildGlassInput(
+                                        controller: _phoneController,
+                                        label: 'Телефон',
+                                        icon: Icons.phone_android_outlined,
+                                        keyboardType: TextInputType.phone,
+                                        hintText: '+7 978 547 30 14',
+                                        autofillHints: const [
+                                          AutofillHints.username,
+                                          AutofillHints.telephoneNumber,
+                                        ],
+                                        textInputAction: TextInputAction.next,
+                                        enableSuggestions: false,
+                                        autocorrect: false,
+                                      ),
+                                      SizedBox(height: isVerySmall ? 8 : gapMedium),
+                                      _buildGlassInput(
+                                        controller: _passwordController,
+                                        label: 'Пароль',
+                                        icon: Icons.lock_outline_rounded,
+                                        obscureText: !_showPassword,
+                                        autofillHints: const [AutofillHints.password],
+                                        textInputAction: TextInputAction.done,
+                                        enableSuggestions: false,
+                                        autocorrect: false,
+                                        onSubmitted: (_) => _submit(),
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            _showPassword ? Icons.visibility_off : Icons.visibility,
+                                            color: kLoginInkSoft,
+                                            size: isVerySmall ? 16 : isSmallScreen ? 18 : 20,
+                                          ),
+                                          onPressed: () => setState(() => _showPassword = !_showPassword),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                                 if (_error != null) ...[

@@ -198,6 +198,8 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     await AuthStorage.saveAccessToken(result.accessToken);
     await AuthStorage.saveRefreshToken(result.refreshToken);
+    await AuthStorage.saveLoginCredentials(phone: phone, password: password);
+    TextInput.finishAutofillContext(shouldSave: true);
 
     if (!mounted) return;
 
