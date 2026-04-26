@@ -49,7 +49,7 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
   late final AnimationController _particlesController;
   late final AnimationController _letterController;
   late final AnimationController _decorationsController;
-  
+
   final List<Animation<double>> _letterAnimations = [];
   final List<Animation<double>> _letterScales = [];
   final List<_DecorElement> _decorElements = [];
@@ -93,26 +93,29 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
       duration: const Duration(milliseconds: 6000),
     )..repeat();
 
-    // Инициализация побуквенных анимаций - ИСПРАВЛЕНО
+    // Инициализация побуквенных анимаций — логика сохранена.
     final letters = 'FLOWRU STAFF';
     for (int i = 0; i < letters.length; i++) {
       final delay = i * 0.08;
       final start = (0.01 + delay * 0.7).clamp(0.01, 0.70);
       final end = (start + 0.15).clamp(0.02, 0.95);
-      
-      // Гарантируем что веса всегда > 0 и сумма = 1.0
+
       final weight1 = start.clamp(0.01, 0.98);
       final weight2 = (end - start).clamp(0.01, 0.50);
       final weight3 = (1.0 - end).clamp(0.01, 0.98);
-      
+
       _letterAnimations.add(
         TweenSequence<double>([
           TweenSequenceItem(
-            tween: Tween<double>(begin: 0.0, end: 0.0).chain(CurveTween(curve: Curves.easeOutCubic)),
+            tween: Tween<double>(begin: 0.0, end: 0.0).chain(
+              CurveTween(curve: Curves.easeOutCubic),
+            ),
             weight: weight1,
           ),
           TweenSequenceItem(
-            tween: Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeOutCubic)),
+            tween: Tween<double>(begin: 0.0, end: 1.0).chain(
+              CurveTween(curve: Curves.easeOutCubic),
+            ),
             weight: weight2,
           ),
           TweenSequenceItem(
@@ -121,7 +124,7 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
           ),
         ]).animate(_letterController),
       );
-      
+
       _letterScales.add(
         TweenSequence<double>([
           TweenSequenceItem(
@@ -129,7 +132,9 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
             weight: weight1,
           ),
           TweenSequenceItem(
-            tween: Tween<double>(begin: 0.3, end: 1.0).chain(CurveTween(curve: Curves.easeOutBack)),
+            tween: Tween<double>(begin: 0.3, end: 1.0).chain(
+              CurveTween(curve: Curves.easeOutBack),
+            ),
             weight: weight2,
           ),
           TweenSequenceItem(
@@ -140,19 +145,18 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
       );
     }
 
-    // Запуск анимаций с вибрацией
+    // Запуск анимаций с вибрацией — логика сохранена.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // Легкая вибрация при загрузке
       await HapticFeedback.lightImpact();
       await Future.delayed(const Duration(milliseconds: 50));
       await HapticFeedback.selectionClick();
-      
+
       await _logoController.forward();
       if (!mounted) return;
-      
+
       await Future.delayed(const Duration(milliseconds: 200));
       if (!mounted) return;
-      
+
       await _letterController.forward();
     });
 
@@ -161,16 +165,18 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
 
   void _initDecorElements() {
     final random = math.Random(42);
-    for (int i = 0; i < 18; i++) {
-      _decorElements.add(_DecorElement(
-        x: random.nextDouble(),
-        y: random.nextDouble(),
-        size: 2 + random.nextDouble() * 6,
-        speed: 0.3 + random.nextDouble() * 0.7,
-        phase: random.nextDouble() * math.pi * 2,
-        opacity: 0.1 + random.nextDouble() * 0.4,
-        isStar: random.nextBool(),
-      ));
+    for (int i = 0; i < 22; i++) {
+      _decorElements.add(
+        _DecorElement(
+          x: random.nextDouble(),
+          y: random.nextDouble(),
+          size: 2 + random.nextDouble() * 6,
+          speed: 0.3 + random.nextDouble() * 0.7,
+          phase: random.nextDouble() * math.pi * 2,
+          opacity: 0.10 + random.nextDouble() * 0.34,
+          isStar: random.nextBool(),
+        ),
+      );
     }
   }
 
@@ -222,7 +228,7 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
     required double width,
     required double height,
     required List<Color> colors,
-    double blur = 18,
+    double blur = 26,
   }) {
     return IgnorePointer(
       child: ImageFiltered(
@@ -231,11 +237,9 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
           width: width,
           height: height,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(width),
-            gradient: LinearGradient(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
               colors: colors,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
             ),
           ),
         ),
@@ -248,136 +252,136 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
       animation: Listenable.merge([_ambientController, _particlesController]),
       builder: (context, child) {
         final t = _ambientController.value;
-        final p = _particlesController.value;
-        
         final shiftA = math.sin(t * math.pi * 2) * 22;
         final shiftB = math.cos(t * math.pi * 2) * 18;
         final shiftC = math.sin(t * math.pi * 2 + 1.5) * 15;
-        final rotate = math.sin(t * math.pi * 2) * 0.035;
 
         return Stack(
           children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color.lerp(
-                      const Color(0xFF0CB7B3),
-                      const Color(0xFF0898AB),
-                      (math.sin(t * math.pi) * 0.5 + 0.5).clamp(0.0, 1.0),
-                    )!,
-                    const Color(0xFF08A9AB),
-                    const Color(0xFF067D87),
-                    Color.lerp(
-                      const Color(0xFF055E66),
-                      const Color(0xFF074D5A),
-                      (math.cos(t * math.pi) * 0.5 + 0.5).clamp(0.0, 1.0),
-                    )!,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  stops: const [0.0, 0.35, 0.70, 1.0],
-                ),
-              ),
-            ),
-            
-            // УБРАНА СЕРАЯ ПЛАШКА - только легкий оверлей
             Positioned.fill(
-              child: Container(
+              child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Colors.white.withOpacity(0.05),
-                      Colors.transparent,
+                      Color.lerp(
+                        const Color(0xFF32DDC6),
+                        const Color(0xFF10B4BA),
+                        (math.sin(t * math.pi) * 0.5 + 0.5).clamp(0.0, 1.0),
+                      )!,
+                      const Color(0xFF0CA9AE),
+                      const Color(0xFF078592),
+                      Color.lerp(
+                        const Color(0xFF055E66),
+                        const Color(0xFF063F51),
+                        (math.cos(t * math.pi) * 0.5 + 0.5).clamp(0.0, 1.0),
+                      )!,
                     ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                    stops: const [0.0, 0.36, 0.68, 1.0],
                   ),
                 ),
               ),
             ),
-
-            Positioned(
-              top: -90 + shiftA,
-              right: -40,
-              child: Transform.rotate(
-                angle: rotate,
-                child: _softBlob(
-                  width: 280,
-                  height: 280,
-                  colors: [
-                    Colors.white.withOpacity(0.20),
-                    const Color(0xFFFFA11D).withOpacity(0.14),
-                  ],
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(0.65, -0.96),
+                    radius: 1.12,
+                    colors: [
+                      const Color(0xFFE9FFD7).withOpacity(0.42),
+                      const Color(0xFF7AF4DF).withOpacity(0.20),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.32, 1.0],
+                  ),
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(-0.95, 1.0),
+                    radius: 1.12,
+                    colors: [
+                      const Color(0xFF042F43).withOpacity(0.38),
+                      Colors.transparent,
+                    ],
+                  ),
                 ),
               ),
             ),
             Positioned(
-              left: -70,
-              top: 200 + shiftB,
-              child: Transform.rotate(
-                angle: -rotate * 1.2,
-                child: _softBlob(
-                  width: 240,
-                  height: 240,
-                  colors: [
-                    Colors.white.withOpacity(0.12),
-                    const Color(0xFF7D63FF).withOpacity(0.14),
-                  ],
-                ),
+              top: -105 + shiftA,
+              right: -70,
+              child: _softBlob(
+                width: 340,
+                height: 340,
+                colors: [
+                  Colors.white.withOpacity(0.22),
+                  const Color(0xFFFFC45E).withOpacity(0.10),
+                  Colors.transparent,
+                ],
+                blur: 36,
               ),
             ),
             Positioned(
-              bottom: 20 - shiftC,
-              right: -20,
-              child: Transform.rotate(
-                angle: rotate * 0.8,
-                child: _softBlob(
-                  width: 240,
-                  height: 240,
-                  colors: [
-                    const Color(0xFFFFC45E).withOpacity(0.12),
-                    Colors.white.withOpacity(0.06),
-                  ],
-                ),
+              left: -85,
+              top: 205 + shiftB,
+              child: _softBlob(
+                width: 270,
+                height: 270,
+                colors: [
+                  Colors.white.withOpacity(0.12),
+                  const Color(0xFF7D63FF).withOpacity(0.13),
+                  Colors.transparent,
+                ],
+                blur: 36,
               ),
             ),
             Positioned(
-              bottom: -40 + shiftA * 0.5,
-              left: -30,
-              child: Transform.rotate(
-                angle: -rotate * 0.6,
-                child: _softBlob(
-                  width: 200,
-                  height: 200,
-                  colors: [
-                    const Color(0xFF7D63FF).withOpacity(0.10),
-                    Colors.white.withOpacity(0.08),
-                  ],
-                ),
+              bottom: 22 - shiftC,
+              right: -60,
+              child: _softBlob(
+                width: 300,
+                height: 300,
+                colors: [
+                  const Color(0xFFFFC45E).withOpacity(0.12),
+                  Colors.white.withOpacity(0.07),
+                  Colors.transparent,
+                ],
+                blur: 38,
               ),
             ),
-
-            ..._buildDecorElements(p),
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _BackgroundRingPainter(progress: _ambientController.value),
+              ),
+            ),
+            ..._buildDecorElements(),
           ],
         );
       },
     );
   }
 
-  List<Widget> _buildDecorElements(double p) {
-    return _decorElements.asMap().entries.map((entry) {
-      final i = entry.key;
-      final el = entry.value;
-      
-      final animT = _decorationsController.value;
+  List<Widget> _buildDecorElements() {
+    final mediaSize = MediaQuery.of(context).size;
+    final animT = _decorationsController.value;
+
+    return _decorElements.map((el) {
       final floatY = math.sin(animT * math.pi * 2 * el.speed + el.phase) * 25;
-      final floatX = math.cos(animT * math.pi * 2 * el.speed * 0.7 + el.phase) * 15;
-      final pulse = (0.5 + 0.5 * math.sin(animT * math.pi * 2 * el.speed + el.phase + 1)).clamp(0.0, 1.0);
-      
+      final floatX =
+          math.cos(animT * math.pi * 2 * el.speed * 0.7 + el.phase) * 15;
+      final pulse = (0.5 +
+              0.5 * math.sin(animT * math.pi * 2 * el.speed + el.phase + 1))
+          .clamp(0.0, 1.0);
+
       return Positioned(
-        left: (el.x * MediaQuery.of(context).size.width + floatX).clamp(0, MediaQuery.of(context).size.width),
-        top: (el.y * MediaQuery.of(context).size.height + floatY).clamp(0, MediaQuery.of(context).size.height),
+        left: (el.x * mediaSize.width + floatX).clamp(0.0, mediaSize.width),
+        top: (el.y * mediaSize.height + floatY).clamp(0.0, mediaSize.height),
         child: Opacity(
           opacity: (el.opacity * (0.5 + pulse * 0.5)).clamp(0.0, 1.0),
           child: el.isStar
@@ -401,19 +405,26 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white,
+        color: Colors.white.withOpacity(0.96),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.white.withOpacity(0.24),
+            blurRadius: 12,
+            spreadRadius: 2,
+          ),
+        ],
       ),
     );
   }
 
   Widget _logoCore() {
     return AnimatedBuilder(
-      animation: Listenable.merge([_logoController, _pulseController]),
+      animation: Listenable.merge([_logoController, _pulseController, _decorationsController]),
       builder: (context, child) {
         final pulse = _pulseController.value;
-        final glowScale = 1.0 + (pulse * 0.22);
+        final glowScale = 1.0 + (pulse * 0.08);
         final glowOpacity = 0.25 + ((1 - pulse) * 0.12);
-        final ringRotation = pulse * math.pi * 2;
+        final ringRotation = _decorationsController.value * math.pi * 2;
 
         return FadeTransition(
           opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -430,92 +441,97 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
               ),
             ),
             child: SizedBox(
-              width: 180,
-              height: 180,
+              width: 246,
+              height: 246,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  Transform.rotate(
-                    angle: ringRotation * 0.5,
-                    child: CustomPaint(
-                      size: const Size(170, 170),
-                      painter: _RotatingRingPainter(
-                        progress: _pulseController.value,
-                      ),
-                    ),
-                  ),
                   Transform.scale(
                     scale: glowScale,
                     child: Container(
-                      width: 140,
-                      height: 140,
+                      width: 184,
+                      height: 184,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFFFA11D).withOpacity(glowOpacity),
-                            blurRadius: 50,
-                            spreadRadius: 12,
+                            color: const Color(0xFFFFC45E).withOpacity(glowOpacity),
+                            blurRadius: 76,
+                            spreadRadius: 18,
                           ),
                           BoxShadow(
-                            color: Colors.white.withOpacity(0.12),
-                            blurRadius: 30,
-                            spreadRadius: 5,
+                            color: Colors.white.withOpacity(0.14),
+                            blurRadius: 46,
+                            spreadRadius: 10,
                           ),
                           BoxShadow(
-                            color: const Color(0xFF7D63FF).withOpacity(glowOpacity * 0.5),
-                            blurRadius: 35,
+                            color: const Color(0xFF7D63FF).withOpacity(glowOpacity * 0.42),
+                            blurRadius: 40,
                             spreadRadius: 8,
                           ),
                         ],
                       ),
                     ),
                   ),
+                  Transform.rotate(
+                    angle: ringRotation * 0.18,
+                    child: CustomPaint(
+                      size: const Size(220, 220),
+                      painter: _RotatingRingPainter(
+                        progress: _decorationsController.value,
+                      ),
+                    ),
+                  ),
                   Container(
-                    width: 152,
-                    height: 152,
+                    width: 176,
+                    height: 176,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
                         colors: [
-                          Colors.white.withOpacity(0.28),
-                          Colors.white.withOpacity(0.10),
+                          Colors.white.withOpacity(0.26),
+                          Colors.white.withOpacity(0.08),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.28),
-                        width: 1.5,
+                        color: Colors.white.withOpacity(0.34),
+                        width: 1.3,
                       ),
                     ),
                   ),
                   Container(
-                    width: 124,
-                    height: 124,
+                    width: 154,
+                    height: 154,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: const LinearGradient(
                         colors: [
-                          Color(0xFFFFA11D),
-                          Color(0xFFFFC45E),
+                          Color(0xFFFFD861),
+                          Color(0xFFFFB22E),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFFFA11D).withOpacity(0.38),
-                          blurRadius: 28,
-                          offset: const Offset(0, 12),
+                          color: const Color(0xFFFFA11D).withOpacity(0.42),
+                          blurRadius: 34,
+                          offset: const Offset(0, 15),
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.12),
+                          blurRadius: 18,
+                          offset: const Offset(0, 10),
                         ),
                       ],
                     ),
                     child: Center(
                       child: Image.asset(
                         'assets/images/flowru_logo.png',
-                        width: 66,
-                        height: 66,
+                        width: 88,
+                        height: 88,
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -531,38 +547,49 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
 
   Widget _titleBlock() {
     final letters = 'FLOWRU STAFF';
-    
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(letters.length, (index) {
-        final char = letters[index];
-        
-        return AnimatedBuilder(
-          animation: _letterController,
-          builder: (context, child) {
-            final opacity = _letterAnimations[index].value;
-            final scale = _letterScales[index].value;
-            
-            return Transform.scale(
-              scale: scale,
-              child: Opacity(
-                opacity: opacity,
-                child: char == ' '
-                    ? const SizedBox(width: 8)
-                    : Text(
-                        char,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.4,
-                          color: Colors.white,
+
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(letters.length, (index) {
+          final char = letters[index];
+
+          return AnimatedBuilder(
+            animation: _letterController,
+            builder: (context, child) {
+              final opacity = _letterAnimations[index].value;
+              final scale = _letterScales[index].value;
+
+              return Transform.scale(
+                scale: scale,
+                child: Opacity(
+                  opacity: opacity,
+                  child: char == ' '
+                      ? const SizedBox(width: 12)
+                      : Text(
+                          char,
+                          style: const TextStyle(
+                            fontSize: 39,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.6,
+                            color: Colors.white,
+                            height: 1.0,
+                            shadows: [
+                              Shadow(
+                                color: Color(0x33000000),
+                                blurRadius: 18,
+                                offset: Offset(0, 6),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-              ),
-            );
-          },
-        );
-      }),
+                ),
+              );
+            },
+          );
+        }),
+      ),
     );
   }
 
@@ -573,7 +600,7 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
         final progress = _letterController.value;
         final subtitleOpacity = ((progress - 0.6) * 2.5).clamp(0.0, 1.0);
         final subtitleSlide = (1.0 - subtitleOpacity) * 12;
-        
+
         return Opacity(
           opacity: subtitleOpacity,
           child: Transform.translate(
@@ -581,11 +608,20 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
             child: Text(
               'Система лояльности для команды заведения',
               textAlign: TextAlign.center,
+              maxLines: 2,
               style: TextStyle(
-                fontSize: 14,
-                height: 1.4,
-                fontWeight: FontWeight.w600,
-                color: Colors.white.withOpacity(0.82),
+                fontSize: 21,
+                height: 1.22,
+                fontWeight: FontWeight.w500,
+                letterSpacing: -0.2,
+                color: Colors.white.withOpacity(0.84),
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withOpacity(0.18),
+                    blurRadius: 16,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
               ),
             ),
           ),
@@ -600,43 +636,71 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
       builder: (context, child) {
         final progress = _letterController.value;
         final lineOpacity = ((progress - 0.7) * 2.0).clamp(0.0, 1.0);
-        
+
         return Opacity(
           opacity: lineOpacity,
-          child: Container(
-            width: 140,
-            height: 5,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              color: Colors.white.withOpacity(0.14),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: TweenAnimationBuilder<double>(
-                tween: Tween<double>(begin: 0, end: 1),
-                duration: const Duration(milliseconds: 1300),
-                curve: Curves.easeOutCubic,
-                builder: (context, value, child) {
-                  return Align(
-                    alignment: Alignment.centerLeft,
-                    child: FractionallySizedBox(
-                      widthFactor: value.clamp(0.0, 1.0),
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Color(0xFFFFA11D),
-                              Color(0xFFFFC45E),
-                              Color(0xFFFFA11D),
-                            ],
-                            stops: [0.0, 0.5, 1.0],
+          child: SizedBox(
+            width: 420,
+            height: 18,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  height: 7,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    color: Colors.white.withOpacity(0.13),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 1300),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, child) {
+                        return FractionallySizedBox(
+                          widthFactor: value.clamp(0.0, 1.0),
+                          child: Container(
+                            height: 7,
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Color(0xFFFFA11D),
+                                  Color(0xFFFFD861),
+                                  Color(0xFFFFA11D),
+                                ],
+                                stops: [0.0, 0.52, 1.0],
+                              ),
+                            ),
                           ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 178,
+                  child: IgnorePointer(
+                    child: Container(
+                      width: 72,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(999),
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.transparent,
+                            Colors.white.withOpacity(0.46),
+                            Colors.transparent,
+                          ],
                         ),
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -655,15 +719,24 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 28),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    _logoCore(),
-                    const SizedBox(height: 32),
+                    Transform.translate(
+                      offset: const Offset(0, -18),
+                      child: _logoCore(),
+                    ),
+                    const SizedBox(height: 22),
                     _titleBlock(),
-                    const SizedBox(height: 12),
-                    _subtitleBlock(),
-                    const SizedBox(height: 32),
-                    _loaderLine(),
+                    const SizedBox(height: 16),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: _subtitleBlock(),
+                    ),
+                    const SizedBox(height: 78),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 430),
+                      child: _loaderLine(),
+                    ),
                   ],
                 ),
               ),
@@ -705,7 +778,7 @@ class _StarPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final outerRadius = size.width / 2;
     final innerRadius = outerRadius * 0.4;
-    final points = 4;
+    const points = 4;
 
     final path = Path();
     for (int i = 0; i < points * 2; i++) {
@@ -713,7 +786,7 @@ class _StarPainter extends CustomPainter {
       final angle = (i * math.pi) / points - math.pi / 2;
       final x = center.dx + radius * math.cos(angle);
       final y = center.dy + radius * math.sin(angle);
-      
+
       if (i == 0) {
         path.moveTo(x, y);
       } else {
@@ -736,48 +809,125 @@ class _RotatingRingPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 4;
-    
-    final paint1 = Paint()
-      ..color = Colors.white.withOpacity(0.35)
+    final radius = size.width / 2 - 8;
+
+    final basePaint = Paint()
+      ..color = Colors.white.withOpacity(0.31)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
+      ..strokeWidth = 2.7
       ..strokeCap = StrokeCap.round;
-    
+
+    final goldPaint = Paint()
+      ..color = const Color(0xFFFFC45E).withOpacity(0.68)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.9
+      ..strokeCap = StrokeCap.round;
+
+    final softPaint = Paint()
+      ..color = Colors.white.withOpacity(0.18)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round;
+
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
-      progress * math.pi * 2,
-      math.pi * 0.6,
+      progress * math.pi * 2 + 0.25,
+      math.pi * 1.15,
       false,
-      paint1,
+      basePaint,
     );
 
-    final paint2 = Paint()
-      ..color = const Color(0xFFFFA11D).withOpacity(0.45)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
-      ..strokeCap = StrokeCap.round;
-    
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius - 16),
+      progress * math.pi * 2 + 1.45,
+      math.pi * 0.95,
+      false,
+      softPaint,
+    );
+
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
-      progress * math.pi * 2 + math.pi,
-      math.pi * 0.4,
+      progress * math.pi * 2 + math.pi + 0.18,
+      math.pi * 0.46,
       false,
-      paint2,
+      goldPaint,
     );
 
-    final dotPaint = Paint()
-      ..color = Colors.white.withOpacity(0.6)
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      progress * math.pi * 2 - 0.86,
+      math.pi * 0.32,
+      false,
+      goldPaint,
+    );
+
+    final whiteDotPaint = Paint()
+      ..color = Colors.white.withOpacity(0.86)
       ..style = PaintingStyle.fill;
-    
-    final dotAngle = progress * math.pi * 2;
-    final dotX = center.dx + radius * math.cos(dotAngle);
-    final dotY = center.dy + radius * math.sin(dotAngle);
-    canvas.drawCircle(Offset(dotX, dotY), 3.5, dotPaint);
+
+    final goldDotPaint = Paint()
+      ..color = const Color(0xFFFFC45E).withOpacity(0.94)
+      ..style = PaintingStyle.fill;
+
+    void drawDot(double angle, Paint paint, double dotRadius) {
+      final x = center.dx + radius * math.cos(angle);
+      final y = center.dy + radius * math.sin(angle);
+      canvas.drawCircle(Offset(x, y), dotRadius, paint);
+    }
+
+    drawDot(progress * math.pi * 2 + 0.18, whiteDotPaint, 4.4);
+    drawDot(progress * math.pi * 2 + math.pi + 0.64, goldDotPaint, 4.1);
+    drawDot(progress * math.pi * 2 - 0.54, goldDotPaint, 3.2);
   }
 
   @override
-  bool shouldRepaint(covariant _RotatingRingPainter oldDelegate) => 
+  bool shouldRepaint(covariant _RotatingRingPainter oldDelegate) =>
+      oldDelegate.progress != progress;
+}
+
+class _BackgroundRingPainter extends CustomPainter {
+  final double progress;
+
+  _BackgroundRingPainter({required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final ringPaint = Paint()
+      ..color = Colors.white.withOpacity(0.055)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+
+    final centerA = Offset(size.width * 0.86, size.height * 0.28);
+    final centerB = Offset(size.width * 0.18, size.height * 0.72);
+
+    canvas.drawArc(
+      Rect.fromCircle(center: centerA, radius: 118),
+      progress * math.pi * 2,
+      math.pi * 0.72,
+      false,
+      ringPaint,
+    );
+
+    canvas.drawArc(
+      Rect.fromCircle(center: centerA, radius: 150),
+      progress * math.pi * 2 + 1.2,
+      math.pi * 0.56,
+      false,
+      ringPaint,
+    );
+
+    canvas.drawArc(
+      Rect.fromCircle(center: centerB, radius: 132),
+      -progress * math.pi * 2 + 0.8,
+      math.pi * 0.62,
+      false,
+      ringPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _BackgroundRingPainter oldDelegate) =>
       oldDelegate.progress != progress;
 }
 
