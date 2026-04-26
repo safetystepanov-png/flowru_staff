@@ -1757,7 +1757,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         children: [
           Row(
             children: [
-              // ----- КНОПКА PLAY / PAUSE с индикатором загрузки -----
+              // ----- КНОПКА PLAY / PAUSE с жёлтым индикатором загрузки -----
               GestureDetector(
                 onTap: isLoading ? null : () => _toggleInlineVoicePlayback(message),
                 child: AnimatedContainer(
@@ -1782,12 +1782,12 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                     ],
                   ),
                   child: isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 24,
                           height: 24,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            color: Colors.white,
+                            valueColor: AlwaysStoppedAnimation<Color>(kChatAccent), // ЖЁЛТЫЙ
                           ),
                         )
                       : AnimatedSwitcher(
@@ -1923,7 +1923,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                               ),
                             ),
                             const SizedBox(width: 4),
-                            _statusIcon(message, mine),   // ← статус "прочитано"
+                            _statusIcon(message, mine),   // ← галочки "прочитано"
                           ],
                         ),
                       ],
@@ -2796,204 +2796,330 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                           }
                         },
                         onSecondaryTap: () => _openMessageActions(message),
-                        child: Container(
-                          padding: const EdgeInsets.fromLTRB(13, 11, 13, 9),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(showAuthor ? 24 : 18),
-                              topRight: Radius.circular(showAuthor ? 24 : 18),
-                              bottomLeft: Radius.circular(mine ? 24 : 8),
-                              bottomRight: Radius.circular(mine ? 8 : 24),
-                            ),
-                            gradient: mine
-                                ? const LinearGradient(
-                                    colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  )
-                                : LinearGradient(
-                                    colors: [
-                                      Colors.white.withOpacity(0.95),
-                                      Colors.white.withOpacity(0.85),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                            border: mine
-                                ? Border.all(
-                                    color: isSelected
-                                        ? kChatAccentSoft.withOpacity(0.90)
-                                        : isHighlighted
-                                            ? Colors.white.withOpacity(0.45)
-                                            : Colors.transparent,
-                                    width: isSelected ? 1.6 : (isHighlighted ? 1.2 : 0),
-                                  )
-                                : Border.all(
-                                    color: isSelected
-                                        ? kChatAmber.withOpacity(0.90)
-                                        : isHighlighted
-                                            ? kChatBlue.withOpacity(0.55)
-                                            : Colors.white.withOpacity(0.94),
-                                    width: isSelected ? 1.6 : (isHighlighted ? 1.4 : 1),
-                                  ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: (mine ? const Color(0xFF6366F1) : Colors.black).withOpacity(0.15),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                              BoxShadow(
-                                color: (mine ? Colors.black : Colors.white).withOpacity(0.05),
-                                blurRadius: 2,
-                                offset: const Offset(0, 1),
-                              ),
-                              if (isHighlighted)
-                                BoxShadow(
-                                  color: kChatBlue.withOpacity(0.14),
-                                  blurRadius: 18,
-                                  offset: const Offset(0, 4),
-                                ),
-                              if (isSelected)
-                                BoxShadow(
-                                  color: kChatAmber.withOpacity(0.14),
-                                  blurRadius: 18,
-                                  offset: const Offset(0, 4),
-                                ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (!mine && showAuthor)
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 6),
-                                  child: Text(
-                                    message.senderName.isEmpty ? 'Сотрудник' : message.senderName,
-                                    style: const TextStyle(
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w900,
-                                      color: kChatInkSoft,
-                                    ),
-                                  ),
-                                ),
-                              if ((message.replyText ?? '').trim().isNotEmpty ||
-                                  (message.replySenderName ?? '').trim().isNotEmpty)
-                                GestureDetector(
-                                  onTap: () => _scrollToMessageById(message.replyToMessageId),
-                                  child: Container(
-                                    margin: const EdgeInsets.only(bottom: 8),
-                                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(14),
-                                      color: mine
-                                          ? Colors.white.withOpacity(0.16)
-                                          : kChatBlue.withOpacity(0.08),
-                                      border: Border.all(
-                                        color: mine
-                                            ? Colors.white.withOpacity(0.18)
-                                            : kChatBlue.withOpacity(0.14),
+                        child: message.type == AttachmentType.voice
+                            ? Column(   // для голосовых — без внешней плашки
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Автор (если не моё и showAuthor)
+                                  if (!mine && showAuthor)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 6),
+                                      child: Text(
+                                        message.senderName.isEmpty ? 'Сотрудник' : message.senderName,
+                                        style: const TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w900,
+                                          color: kChatInkSoft,
+                                        ),
                                       ),
                                     ),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Container(
-                                          width: 3,
-                                          height: 30,
-                                          margin: const EdgeInsets.only(top: 1, right: 8),
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(99),
-                                            color: mine ? Colors.white : kChatBlue,
+                                  // Reply (если есть)
+                                  if ((message.replyText ?? '').trim().isNotEmpty ||
+                                      (message.replySenderName ?? '').trim().isNotEmpty)
+                                    GestureDetector(
+                                      onTap: () => _scrollToMessageById(message.replyToMessageId),
+                                      child: Container(
+                                        margin: const EdgeInsets.only(bottom: 8),
+                                        padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(14),
+                                          color: mine
+                                              ? Colors.white.withOpacity(0.16)
+                                              : kChatBlue.withOpacity(0.08),
+                                          border: Border.all(
+                                            color: mine
+                                                ? Colors.white.withOpacity(0.18)
+                                                : kChatBlue.withOpacity(0.14),
                                           ),
                                         ),
-                                        Expanded(
-                                          child: Column(
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Container(
+                                              width: 3,
+                                              height: 30,
+                                              margin: const EdgeInsets.only(top: 1, right: 8),
+                                              decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.circular(99),
+                                                color: mine ? Colors.white : kChatBlue,
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    (message.replySenderName ?? 'Сотрудник').trim().isEmpty
+                                                        ? 'Сотрудник'
+                                                        : message.replySenderName!.trim(),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      fontSize: 12.5,
+                                                      fontWeight: FontWeight.w900,
+                                                      color: mine ? Colors.white : kChatBlue,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    (message.replyText ?? '').trim().isEmpty
+                                                        ? 'Сообщение'
+                                                        : message.replyText!.trim(),
+                                                    maxLines: 2,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      fontSize: 12.5,
+                                                      height: 1.25,
+                                                      fontWeight: FontWeight.w700,
+                                                      color: mine
+                                                          ? Colors.white.withOpacity(0.86)
+                                                          : kChatInkSoft,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  // Само голосовое сообщение
+                                  _voiceBubble(mine, message),
+                                  if (message.messageText.trim().isNotEmpty) const SizedBox(height: 8),
+                                  if (!message.isDeleted &&
+                                      message.messageText.trim().isNotEmpty &&
+                                      _shouldShowVoiceTranscript(message))
+                                    _messageBodyText(message, mine),
+                                  const SizedBox(height: 7),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (message.isPinned) ...[
+                                        Icon(CupertinoIcons.pin_fill, size: 12,
+                                            color: mine ? Colors.white.withOpacity(0.82) : kChatBlue),
+                                        const SizedBox(width: 4),
+                                      ],
+                                      Text(
+                                        _formatMessageTime(message.createdAt),
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: mine ? Colors.white.withOpacity(0.86) : kChatInkSoft,
+                                        ),
+                                      ),
+                                      _statusIcon(message, mine),
+                                      if (message.isEdited && !message.isDeleted) ...[
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'изменено',
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: mine ? Colors.white.withOpacity(0.80) : kChatInkSoft,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ],
+                              )
+                            : Container(   // для всех остальных типов (текст, фото, файл) — оставляем старую красивую плашку
+                                padding: const EdgeInsets.fromLTRB(13, 11, 13, 9),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(showAuthor ? 24 : 18),
+                                    topRight: Radius.circular(showAuthor ? 24 : 18),
+                                    bottomLeft: Radius.circular(mine ? 24 : 8),
+                                    bottomRight: Radius.circular(mine ? 8 : 24),
+                                  ),
+                                  gradient: mine
+                                      ? const LinearGradient(
+                                          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        )
+                                      : LinearGradient(
+                                          colors: [
+                                            Colors.white.withOpacity(0.95),
+                                            Colors.white.withOpacity(0.85),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                  border: mine
+                                      ? Border.all(
+                                          color: isSelected
+                                              ? kChatAccentSoft.withOpacity(0.90)
+                                              : isHighlighted
+                                                  ? Colors.white.withOpacity(0.45)
+                                                  : Colors.transparent,
+                                          width: isSelected ? 1.6 : (isHighlighted ? 1.2 : 0),
+                                        )
+                                      : Border.all(
+                                          color: isSelected
+                                              ? kChatAmber.withOpacity(0.90)
+                                              : isHighlighted
+                                                  ? kChatBlue.withOpacity(0.55)
+                                                  : Colors.white.withOpacity(0.94),
+                                          width: isSelected ? 1.6 : (isHighlighted ? 1.4 : 1),
+                                        ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: (mine ? const Color(0xFF6366F1) : Colors.black).withOpacity(0.15),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                    BoxShadow(
+                                      color: (mine ? Colors.black : Colors.white).withOpacity(0.05),
+                                      blurRadius: 2,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                    if (isHighlighted)
+                                      BoxShadow(
+                                        color: kChatBlue.withOpacity(0.14),
+                                        blurRadius: 18,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    if (isSelected)
+                                      BoxShadow(
+                                        color: kChatAmber.withOpacity(0.14),
+                                        blurRadius: 18,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (!mine && showAuthor)
+                                      Padding(
+                                        padding: const EdgeInsets.only(bottom: 6),
+                                        child: Text(
+                                          message.senderName.isEmpty ? 'Сотрудник' : message.senderName,
+                                          style: const TextStyle(
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w900,
+                                            color: kChatInkSoft,
+                                          ),
+                                        ),
+                                      ),
+                                    if ((message.replyText ?? '').trim().isNotEmpty ||
+                                        (message.replySenderName ?? '').trim().isNotEmpty)
+                                      GestureDetector(
+                                        onTap: () => _scrollToMessageById(message.replyToMessageId),
+                                        child: Container(
+                                          margin: const EdgeInsets.only(bottom: 8),
+                                          padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(14),
+                                            color: mine
+                                                ? Colors.white.withOpacity(0.16)
+                                                : kChatBlue.withOpacity(0.08),
+                                            border: Border.all(
+                                              color: mine
+                                                  ? Colors.white.withOpacity(0.18)
+                                                  : kChatBlue.withOpacity(0.14),
+                                            ),
+                                          ),
+                                          child: Row(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                (message.replySenderName ?? 'Сотрудник').trim().isEmpty
-                                                    ? 'Сотрудник'
-                                                    : message.replySenderName!.trim(),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  fontSize: 12.5,
-                                                  fontWeight: FontWeight.w900,
+                                              Container(
+                                                width: 3,
+                                                height: 30,
+                                                margin: const EdgeInsets.only(top: 1, right: 8),
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(99),
                                                   color: mine ? Colors.white : kChatBlue,
                                                 ),
                                               ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                (message.replyText ?? '').trim().isEmpty
-                                                    ? 'Сообщение'
-                                                    : message.replyText!.trim(),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  fontSize: 12.5,
-                                                  height: 1.25,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: mine
-                                                      ? Colors.white.withOpacity(0.86)
-                                                      : kChatInkSoft,
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      (message.replySenderName ?? 'Сотрудник').trim().isEmpty
+                                                          ? 'Сотрудник'
+                                                          : message.replySenderName!.trim(),
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontSize: 12.5,
+                                                        fontWeight: FontWeight.w900,
+                                                        color: mine ? Colors.white : kChatBlue,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      (message.replyText ?? '').trim().isEmpty
+                                                          ? 'Сообщение'
+                                                          : message.replyText!.trim(),
+                                                      maxLines: 2,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontSize: 12.5,
+                                                        height: 1.25,
+                                                        fontWeight: FontWeight.w700,
+                                                        color: mine
+                                                            ? Colors.white.withOpacity(0.86)
+                                                            : kChatInkSoft,
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
                                             ],
                                           ),
                                         ),
+                                      ),
+                                    if (message.type == AttachmentType.image) ...[
+                                      _messageImage(message),
+                                      if (_shouldShowVoiceTranscript(message)) const SizedBox(height: 8),
+                                    ],
+                                    if (message.type == AttachmentType.file) ...[
+                                      _fileBubble(mine, message),
+                                      if (message.messageText.trim().isNotEmpty) const SizedBox(height: 8),
+                                    ],
+                                    if (message.type != AttachmentType.voice &&
+                                        message.type != AttachmentType.image &&
+                                        message.type != AttachmentType.file &&
+                                        !message.isDeleted &&
+                                        message.messageText.trim().isNotEmpty)
+                                      _messageBodyText(message, mine),
+                                    const SizedBox(height: 7),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (message.isPinned) ...[
+                                          Icon(CupertinoIcons.pin_fill, size: 12,
+                                              color: mine ? Colors.white.withOpacity(0.82) : kChatBlue),
+                                          const SizedBox(width: 4),
+                                        ],
+                                        Text(
+                                          _formatMessageTime(message.createdAt),
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: mine ? Colors.white.withOpacity(0.86) : kChatInkSoft,
+                                          ),
+                                        ),
+                                        _statusIcon(message, mine),
+                                        if (message.isEdited && !message.isDeleted) ...[
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'изменено',
+                                            style: TextStyle(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: mine ? Colors.white.withOpacity(0.80) : kChatInkSoft,
+                                            ),
+                                          ),
+                                        ],
                                       ],
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              if (message.type == AttachmentType.image) ...[
-                                _messageImage(message),
-                                if (_shouldShowVoiceTranscript(message)) const SizedBox(height: 8),
-                              ],
-                              if (message.type == AttachmentType.voice) ...[
-                                _voiceBubble(mine, message),
-                                if (message.messageText.trim().isNotEmpty) const SizedBox(height: 8),
-                              ],
-                              if (message.type == AttachmentType.file) ...[
-                                _fileBubble(mine, message),
-                                if (message.messageText.trim().isNotEmpty) const SizedBox(height: 8),
-                              ],
-                              if (!message.isDeleted &&
-                                  message.messageText.trim().isNotEmpty &&
-                                  (message.type != AttachmentType.voice || _shouldShowVoiceTranscript(message)))
-                                _messageBodyText(message, mine),
-                              const SizedBox(height: 7),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (message.isPinned) ...[
-                                    Icon(CupertinoIcons.pin_fill, size: 12, color: mine ? Colors.white.withOpacity(0.82) : kChatBlue),
-                                    const SizedBox(width: 4),
-                                  ],
-                                  Text(
-                                    _formatMessageTime(message.createdAt),
-                                    style: TextStyle(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w800,
-                                      color: mine ? Colors.white.withOpacity(0.86) : kChatInkSoft,
-                                    ),
-                                  ),
-                                  _statusIcon(message, mine),
-                                  if (message.isEdited && !message.isDeleted) ...[
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'изменено',
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: mine ? Colors.white.withOpacity(0.80) : kChatInkSoft,
-                                      ),
-                                    ),
-                                  ],
-                                ],
                               ),
-                            ],
-                          ),
-                        ),
                       ),
                       _reactionRow(message, mine),
                     ],
