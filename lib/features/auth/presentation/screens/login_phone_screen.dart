@@ -16,24 +16,23 @@ import '../../data/user_api.dart';
 import 'register_screen.dart';
 
 // === ЦВЕТОВАЯ ПАЛИТРА ===
-const Color kLoginMintTop = Color(0xFF0C8795);
-const Color kLoginMintMid = Color(0xFF21C7B6);
-const Color kLoginMintBottom = Color(0xFF03717D);
-const Color kLoginMintDeep = Color(0xFF024D5C);
-const Color kLoginAccent = Color(0xFFFFA51E);
-const Color kLoginAccentSoft = Color(0xFFFFD75F);
-const Color kLoginCard = Color(0xDDF7FEFF);
-const Color kLoginCardStrong = Color(0xF4FFFFFF);
-const Color kLoginStroke = Color(0xBFFFFFFF);
-const Color kLoginInk = Color(0xFF082F45);
-const Color kLoginInkSoft = Color(0xFF55768B);
-const Color kLoginBlue = Color(0xFF2E73FF);
-const Color kLoginPink = Color(0xFFFF4B9A);
-const Color kLoginViolet = Color(0xFF7B55FF);
+const Color kLoginMintTop = Color(0xFF0CB7B3);
+const Color kLoginMintMid = Color(0xFF08A9AB);
+const Color kLoginMintBottom = Color(0xFF067D87);
+const Color kLoginMintDeep = Color(0xFF055E66);
+const Color kLoginAccent = Color(0xFFFFA11D);
+const Color kLoginAccentSoft = Color(0xFFFFC45E);
+const Color kLoginCard = Color(0xCCFFFFFF);
+const Color kLoginCardStrong = Color(0xE8FFFFFF);
+const Color kLoginStroke = Color(0xA6FFFFFF);
+const Color kLoginInk = Color(0xFF103238);
+const Color kLoginInkSoft = Color(0xFF58767D);
+const Color kLoginBlue = Color(0xFF4E7CFF);
+const Color kLoginPink = Color(0xFFFF5F8F);
+const Color kLoginViolet = Color(0xFF7A63FF);
 
 class LoginPhoneScreen extends StatefulWidget {
   const LoginPhoneScreen({super.key});
-
   @override
   State<LoginPhoneScreen> createState() => _LoginPhoneScreenState();
 }
@@ -88,20 +87,20 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
     final savedPassword = await AuthStorage.getSavedPassword();
     final biometricEnabled = await AuthStorage.isBiometricEnabled();
     final refreshToken = await AuthStorage.getRefreshToken();
-
+    
     if (!mounted) return;
-
+    
     if (savedPhone != null && savedPhone.trim().isNotEmpty) {
       _phoneController.text = savedPhone.trim();
     }
-
+    
     if (savedPassword != null && savedPassword.isNotEmpty) {
       _passwordController.text = savedPassword;
     }
-
+    
     final hasRefreshSession = refreshToken != null && refreshToken.trim().isNotEmpty;
     bool available = false;
-
+    
     if (!kIsWeb) {
       try {
         final canCheck = await _localAuth.canCheckBiometrics;
@@ -109,19 +108,20 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
         final availableBiometrics = await _localAuth.getAvailableBiometrics();
 
         available = isSupported && (canCheck || availableBiometrics.isNotEmpty);
-
+        
         print('🔐 BIOMETRIC CHECK:');
         print('  canCheck: $canCheck');
         print('  isSupported: $isSupported');
         print('  biometricEnabled: $biometricEnabled');
         print('  hasRefreshSession: $hasRefreshSession');
         print('  available: $available');
+        
       } catch (e) {
         print('❌ BIOMETRIC ERROR: $e');
         available = false;
       }
     }
-
+    
     if (!mounted) return;
     setState(() {
       _biometricAvailable = available;
@@ -136,16 +136,16 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
       print('⚠️ Web platform - biometric not available');
       return;
     }
-
+    
     if (!_biometricAvailable) {
       print('⚠️ Biometric not available on device');
       return;
     }
-
+    
     try {
       await AuthStorage.setBiometricEnabled(true);
       print('✅ Biometric enabled successfully');
-
+      
       if (!mounted) return;
       setState(() => _biometricEnabled = true);
     } catch (e) {
@@ -158,171 +158,144 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
     required String password,
     bool saveCredentials = true,
   }) async {
-    if (phone.isEmpty) {
-      setState(() => _error = 'Введите номер телефона');
-      return;
-    }
-    if (password.isEmpty) {
-      setState(() => _error = 'Введите пароль');
-      return;
-    }
-
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
+    if (phone.isEmpty) { setState(() => _error = 'Введите номер телефона'); return; }
+    if (password.isEmpty) { setState(() => _error = 'Введите пароль'); return; }
+    
+    setState(() { _loading = true; _error = null; });
+    
     late final AuthResult result;
     try {
       result = await _userApi.login(
-        phone: phone,
-        password: password,
-        deviceId: kIsWeb ? 'staff-web' : 'staff-mobile',
-        platform: kIsWeb ? 'web' : 'mobile',
+        phone: phone, 
+        password: password, 
+        deviceId: kIsWeb ? 'staff-web' : 'staff-mobile', 
+        platform: kIsWeb ? 'web' : 'mobile'
       );
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = 'Ошибка входа: $e';
-      });
+      setState(() { _loading = false; _error = 'Ошибка входа: $e'; });
       return;
     }
-
+    
     if (!mounted) return;
-    if (!result.ok) {
-      setState(() {
-        _loading = false;
-        _error = result.message;
-      });
-      return;
+    if (!result.ok) { 
+      setState(() { _loading = false; _error = result.message; }); 
+      return; 
     }
-
+    
     try {
       await AuthStorage.saveAccessToken(result.accessToken);
       await AuthStorage.saveRefreshToken(result.refreshToken);
       TextInput.finishAutofillContext(shouldSave: true);
-
+      
       if (saveCredentials) {
         final phoneToSave = result.phone.isNotEmpty ? result.phone : phone;
         await AuthStorage.savePhoneOnly(phoneToSave);
         print('✅ Phone saved: $phoneToSave');
-
+        
         await AuthStorage.savePassword(password);
         print('✅ Password saved');
-
+        
         await _enableBiometricIfPossible();
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = 'Ошибка сохранения сессии: $e';
-      });
+      setState(() { _loading = false; _error = 'Ошибка сохранения сессии: $e'; });
       return;
     }
-
+    
     if (!mounted) return;
-    setState(() {
-      _loading = false;
-      _hasRefreshSession = true;
-    });
-
+    setState(() { _loading = false; _hasRefreshSession = true; });
+    
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const StaffEstablishmentsScreen()),
-      (route) => false,
+      MaterialPageRoute(builder: (_) => const StaffEstablishmentsScreen()), 
+      (route) => false
     );
-  }
+  } // ✅ ДОБАВЛЕНА ЗАКРЫВАЮЩАЯ СКОБКА
 
-  Future<void> _submit() async => await _submitWithCredentials(
-        phone: _phoneController.text.trim(),
-        password: _passwordController.text,
-        saveCredentials: true,
-      );
+  Future<void> _submit() async => await _submitWithCredentials(phone: _phoneController.text.trim(), password: _passwordController.text, saveCredentials: true);
 
   Future<void> _loginWithBiometric() async {
-    if (kIsWeb) {
-      setState(() => _error = 'Биометрия в web-версии не поддерживается');
-      return;
+    if (kIsWeb) { 
+      setState(() => _error = 'Биометрия в web-версии не поддерживается'); 
+      return; 
     }
-
+    
     if (_loading || _biometricLoading) {
       print('⚠️ Already loading');
       return;
     }
-
+    
     final refreshToken = await AuthStorage.getRefreshToken();
-    if (refreshToken == null || refreshToken.trim().isEmpty) {
-      setState(() => _error = 'Нет сохранённой сессии для входа');
+    if (refreshToken == null || refreshToken.trim().isEmpty) { 
+      setState(() => _error = 'Нет сохранённой сессии для входа'); 
       print('❌ No refresh token');
-      return;
+      return; 
     }
-
+    
     print('🔐 Starting biometric authentication...');
-    setState(() {
-      _biometricLoading = true;
-      _error = null;
-    });
-
+    setState(() { _biometricLoading = true; _error = null; });
+    
     try {
       final authenticated = await _localAuth.authenticate(
         localizedReason: 'Войдите в Flowru Staff',
         biometricOnly: true,
         persistAcrossBackgrounding: true,
       );
-
+      
       print('🔐 Authentication result: $authenticated');
-
-      if (!authenticated) {
-        if (!mounted) return;
-        setState(() => _biometricLoading = false);
+      
+      if (!authenticated) { 
+        if (!mounted) return; 
+        setState(() => _biometricLoading = false); 
         print('❌ User cancelled biometric');
-        return;
+        return; 
       }
-
+      
       final result = await _userApi.refresh(
-        refreshToken: refreshToken.trim(),
-        deviceId: kIsWeb ? 'staff-web' : 'staff-mobile',
-        platform: kIsWeb ? 'web' : 'mobile',
+        refreshToken: refreshToken.trim(), 
+        deviceId: kIsWeb ? 'staff-web' : 'staff-mobile', 
+        platform: kIsWeb ? 'web' : 'mobile'
       );
-
+      
       if (!mounted) return;
-
-      if (!result.ok) {
-        await AuthStorage.clearSessionButKeepBiometric();
-        setState(() {
-          _biometricLoading = false;
-          _hasRefreshSession = false;
-          _error = result.message;
+      
+      if (!result.ok) { 
+        await AuthStorage.clearSessionButKeepBiometric(); 
+        setState(() { 
+          _biometricLoading = false; 
+          _hasRefreshSession = false; 
+          _error = result.message; 
         });
         print('❌ Refresh failed: ${result.message}');
-        return;
+        return; 
       }
-
+      
       await AuthStorage.saveAccessToken(result.accessToken);
       await AuthStorage.saveRefreshToken(result.refreshToken);
       await AuthStorage.setBiometricEnabled(true);
-
+      
       if (!mounted) return;
-
-      setState(() {
-        _biometricLoading = false;
-        _biometricEnabled = true;
-        _hasRefreshSession = true;
+      
+      setState(() { 
+        _biometricLoading = false; 
+        _biometricEnabled = true; 
+        _hasRefreshSession = true; 
       });
-
+      
       print('✅ Biometric login successful!');
-
+      
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const StaffEstablishmentsScreen()),
-        (route) => false,
+        MaterialPageRoute(builder: (_) => const StaffEstablishmentsScreen()), 
+        (route) => false
       );
+      
     } on PlatformException catch (e) {
       print('❌ PlatformException: ${e.code} - ${e.message}');
-
+      
       String message = 'Не удалось выполнить вход по биометрии';
       final code = e.code.toLowerCase();
-
+      
       if (code.contains('notavailable') || code.contains('not_available')) {
         message = 'Биометрия недоступна на этом устройстве';
       } else if (code.contains('notenrolled')) {
@@ -332,36 +305,27 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
       } else if (code.contains('userfallback')) {
         message = 'Пользователь выбрал ввод пароля';
       }
-
+      
       if (!mounted) return;
-      setState(() {
-        _biometricLoading = false;
-        _error = message;
-      });
+      setState(() { _biometricLoading = false; _error = message; });
+      
     } catch (e) {
       print('❌ General error: $e');
       if (!mounted) return;
-      setState(() {
-        _biometricLoading = false;
-        _error = 'Не удалось выполнить вход по Face ID / Touch ID';
+      setState(() { 
+        _biometricLoading = false; 
+        _error = 'Не удалось выполнить вход по Face ID / Touch ID'; 
       });
     }
   }
 
   Future<void> _openRecoverySheet() async {
-    final recoveredPhone = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _PasswordRecoverySheet(),
-    );
+    final recoveredPhone = await showModalBottomSheet<String>(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (_) => const _PasswordRecoverySheet());
     if (!mounted) return;
     if (recoveredPhone != null && recoveredPhone.trim().isNotEmpty) {
       _phoneController.text = recoveredPhone.trim();
       _passwordController.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Пароль обновлён. Войдите с новым паролем.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Пароль обновлён. Войдите с новым паролем.')));
     }
   }
 
@@ -371,12 +335,8 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
       child: ImageFiltered(
         imageFilter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
         child: Container(
-          width: width,
-          height: height,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(width),
-            gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
-          ),
+          width: width, height: height,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(width), gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight)),
         ),
       ),
     );
@@ -386,252 +346,60 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
     return AnimatedBuilder(
       animation: Listenable.merge([_ambientController, _pulseController]),
       builder: (context, child) {
-        final size = MediaQuery.of(context).size;
         final t = _ambientController.value;
         final p = _pulseController.value;
-        final shiftA = math.sin(t * math.pi * 2) * 28;
-        final shiftB = math.cos(t * math.pi * 2) * 22;
-
-        return Stack(
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFF056D85),
-                    Color(0xFF17BFB5),
-                    Color(0xFFD8FFE0),
-                    Color(0xFF0799A6),
-                    Color(0xFF044B62),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  stops: [0.0, 0.30, 0.52, 0.72, 1.0],
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(0.62, -0.92),
-                    radius: 1.15,
-                    colors: [
-                      Colors.white.withOpacity(0.58),
-                      Colors.white.withOpacity(0.10),
-                      Colors.transparent,
-                    ],
-                    stops: const [0.0, 0.36, 1.0],
-                  ),
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(-0.92, 0.98),
-                    radius: 0.95,
-                    colors: [
-                      kLoginBlue.withOpacity(0.26),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: -105 + shiftA,
-              right: -70 + shiftB,
-              child: _softBlob(
-                width: 330,
-                height: 330,
-                colors: [Colors.white.withOpacity(0.42), kLoginAccentSoft.withOpacity(0.18)],
-              ),
-            ),
-            Positioned(
-              left: -100 - shiftB,
-              bottom: 24 + shiftA,
-              child: _softBlob(
-                width: 310,
-                height: 310,
-                colors: [kLoginBlue.withOpacity(0.30), Colors.white.withOpacity(0.12)],
-              ),
-            ),
-            Positioned(
-              top: size.height * 0.36 + shiftB,
-              left: size.width * 0.06 + shiftA,
-              child: _softBlob(
-                width: 190,
-                height: 190,
-                colors: [kLoginPink.withOpacity(0.12), Colors.transparent],
-              ),
-            ),
-            Positioned(
-              right: -46,
-              bottom: size.height * 0.26,
-              child: Opacity(
-                opacity: 0.22,
-                child: Container(
-                  width: 118,
-                  height: 118,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withOpacity(0.32), width: 2),
-                  ),
-                ),
-              ),
-            ),
-            ...List.generate(16, (i) {
-              final angle = (i / 16) * math.pi * 2 + t * math.pi * 0.28;
-              final distance = 145 + 110 * ((i % 5) / 5) + 20 * math.sin(t * math.pi * 2 + i);
-              final sizeDot = 3.0 + (i % 4) * 1.4 + 1.2 * math.sin(p * math.pi * 2 + i);
-              final opacity = (0.15 + 0.22 * math.sin(p * math.pi * 2 + i * 0.45).abs()).clamp(0.08, 0.36);
-              final dotColor = [Colors.white, kLoginAccentSoft, const Color(0xFFC9FFF0)][i % 3];
-
-              return Positioned(
-                left: (size.width / 2 + math.cos(angle) * distance - sizeDot / 2).clamp(0, size.width),
-                top: (size.height / 2 + math.sin(angle) * distance - sizeDot / 2).clamp(0, size.height),
-                child: Opacity(
-                  opacity: opacity,
-                  child: Container(
-                    width: sizeDot,
-                    height: sizeDot,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: dotColor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: dotColor.withOpacity(0.48),
-                          blurRadius: 10,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ],
-        );
+        final shiftA = math.sin(t * math.pi * 2) * 24;
+        final shiftB = math.cos(t * math.pi * 2) * 18;
+        final rotate = math.sin(t * math.pi * 2) * 0.025;
+        return Stack(children: [
+          Container(decoration: const BoxDecoration(gradient: LinearGradient(colors: [kLoginMintTop, kLoginMintMid, kLoginMintBottom, kLoginMintDeep], begin: Alignment.topLeft, end: Alignment.bottomRight, stops: [0.0, 0.30, 0.70, 1.0]))),
+          Positioned.fill(child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.white.withOpacity(0.05), Colors.transparent], begin: Alignment.topLeft, end: Alignment.bottomRight)))),
+          Positioned(top: -90 + shiftA, right: -40 + shiftB, child: Transform.rotate(angle: rotate, child: _softBlob(width: 300, height: 300, colors: [Colors.white.withOpacity(0.22), kLoginAccent.withOpacity(0.14)]))),
+          Positioned(left: -70, bottom: 70 - shiftB, child: Transform.rotate(angle: -rotate, child: _softBlob(width: 260, height: 260, colors: [kLoginBlue.withOpacity(0.18), Colors.white.withOpacity(0.1)]))),
+          Positioned(top: 320 + shiftA, left: 90 + shiftB, child: Transform.rotate(angle: rotate * 0.8, child: _softBlob(width: 220, height: 220, colors: [kLoginPink.withOpacity(0.14), Colors.transparent]))),
+          ...List.generate(6, (i) {
+            final angle = (i / 6) * math.pi * 2 + t * math.pi * 0.3;
+            final distance = 180 + 30 * math.sin(t * math.pi * 2 + i);
+            final size = 4 + 2 * math.sin(p * math.pi * 2 + i);
+            final opacity = (0.15 + 0.1 * math.sin(p * math.pi * 2 + i * 0.5)).clamp(0.0, 1.0);
+            return Positioned(
+              left: (MediaQuery.of(context).size.width / 2 + math.cos(angle) * distance - size / 2).clamp(0, MediaQuery.of(context).size.width),
+              top: (MediaQuery.of(context).size.height / 2 + math.sin(angle) * distance - size / 2).clamp(0, MediaQuery.of(context).size.height),
+              child: Opacity(opacity: opacity, child: Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, color: [kLoginBlue, kLoginPink, kLoginViolet, kLoginAccent][i % 4]))),
+            );
+          }),
+        ]);
       },
     );
   }
 
   Widget _topBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFF9E16), Color(0xFFFFD65C)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-        border: Border.all(color: Colors.white.withOpacity(0.58), width: 1.1),
-        boxShadow: [
-          BoxShadow(color: kLoginAccent.withOpacity(0.42), blurRadius: 20, offset: const Offset(0, 9)),
-          BoxShadow(color: Colors.white.withOpacity(0.58), blurRadius: 10, offset: const Offset(0, -2)),
-        ],
+        gradient: const LinearGradient(colors: [kLoginAccent, kLoginAccentSoft]),
+        boxShadow: [BoxShadow(color: kLoginAccent.withOpacity(0.32), blurRadius: 16, offset: const Offset(0, 7))],
       ),
-      child: const Text(
-        'FLOWRU STAFF',
-        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 2.2, color: Colors.white),
-      ),
+      child: const Text('FLOWRU STAFF', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1, color: Colors.white)),
     );
   }
 
-  Widget _orbitDot(Color color, double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withOpacity(0.82),
-        border: Border.all(color: Colors.white.withOpacity(0.65), width: 1),
-        boxShadow: [BoxShadow(color: color.withOpacity(0.45), blurRadius: 12, spreadRadius: 1)],
-      ),
-    );
-  }
-
-  Widget _logoOrb({double size = 122}) {
+  Widget _logoOrb() {
     return AnimatedBuilder(
-      animation: Listenable.merge([_pulseController, _ambientController]),
+      animation: _pulseController,
       builder: (context, child) {
         final pulse = _pulseAnimation.value;
-        final t = _ambientController.value;
-
-        return SizedBox(
-          width: size + 62,
-          height: size + 62,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Transform.rotate(
-                angle: t * math.pi * 2,
-                child: Container(
-                  width: size + 48,
-                  height: size + 48,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withOpacity(0.42), width: 1.2),
-                  ),
-                ),
-              ),
-              Transform.rotate(
-                angle: -t * math.pi * 2,
-                child: Container(
-                  width: size + 32,
-                  height: size + 32,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: kLoginAccentSoft.withOpacity(0.55), width: 1.1),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 15 + math.sin(t * math.pi * 2) * 7,
-                left: 42,
-                child: _orbitDot(kLoginAccentSoft, 7),
-              ),
-              Positioned(
-                right: 28,
-                top: 38 + math.cos(t * math.pi * 2) * 7,
-                child: _orbitDot(Colors.white, 9),
-              ),
-              Positioned(
-                right: 44,
-                bottom: 28 + math.sin(t * math.pi * 2) * 5,
-                child: _orbitDot(Colors.white, 8),
-              ),
-              Transform.scale(
-                scale: pulse,
-                child: Container(
-                  width: size,
-                  height: size,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const RadialGradient(
-                      colors: [Color(0xFFFFF07A), Color(0xFFFFC533), Color(0xFFFFA51E)],
-                      stops: [0.0, 0.62, 1.0],
-                    ),
-                    border: Border.all(color: Colors.white.withOpacity(0.62), width: 1.4),
-                    boxShadow: [
-                      BoxShadow(color: kLoginAccentSoft.withOpacity(0.58), blurRadius: 34, spreadRadius: 8),
-                      BoxShadow(color: kLoginAccent.withOpacity(0.32), blurRadius: 30, offset: const Offset(0, 14)),
-                    ],
-                  ),
-                  child: Center(
-                    child: Image.asset(
-                      'assets/images/flowru_logo.png',
-                      width: size * 0.58,
-                      height: size * 0.58,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+        return Transform.scale(
+          scale: pulse,
+          child: SizedBox(
+            width: 100, height: 100,
+            child: Stack(alignment: Alignment.center, children: [
+              Transform.scale(scale: pulse * 1.15, child: Container(decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: kLoginAccent.withOpacity(0.35), blurRadius: 50, spreadRadius: 12), BoxShadow(color: kLoginBlue.withOpacity(0.2), blurRadius: 35, spreadRadius: 6)]))),
+              Container(width: 100, height: 100, decoration: BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [Colors.white.withOpacity(0.28), Colors.white.withOpacity(0.12)]))),
+              Container(width: 80, height: 80, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.96), boxShadow: [BoxShadow(color: kLoginBlue.withOpacity(0.14), blurRadius: 20, offset: const Offset(0, 12))])),
+              Container(width: 60, height: 60, decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [kLoginAccent, kLoginAccentSoft]), boxShadow: [BoxShadow(color: kLoginAccent.withOpacity(0.4), blurRadius: 26, offset: const Offset(0, 10))]), child: Center(child: Image.asset('assets/images/flowru_logo.png', width: 40, height: 40, fit: BoxFit.contain))),
+            ]),
           ),
         );
       },
@@ -657,60 +425,48 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
 
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(isSmallScreen ? 22 : 25),
-        color: Colors.white.withOpacity(0.52),
-        border: Border.all(color: Colors.white.withOpacity(0.92), width: 1.8),
-        boxShadow: [
-          BoxShadow(color: Colors.white.withOpacity(0.42), blurRadius: 12, offset: const Offset(0, -2)),
-          BoxShadow(color: const Color(0xFF0D5A73).withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 10)),
-        ],
+        borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 22),
+        color: Colors.white.withOpacity(0.94),
+        border: Border.all(color: const Color(0xFFE7EEF0), width: 1.2),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(isSmallScreen ? 22 : 25),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-          child: TextField(
-            controller: controller,
-            obscureText: obscureText,
-            keyboardType: keyboardType,
-            autofillHints: autofillHints,
-            textInputAction: textInputAction,
-            enableSuggestions: enableSuggestions,
-            autocorrect: autocorrect,
-            onSubmitted: onSubmitted,
-            style: TextStyle(
-              color: kLoginInk,
-              fontSize: isSmallScreen ? 18 : 22,
-              fontWeight: FontWeight.w700,
-            ),
-            decoration: InputDecoration(
-              prefixIcon: icon != null
-                  ? Padding(
-                      padding: const EdgeInsets.only(left: 14, right: 8),
-                      child: Icon(icon, color: kLoginInkSoft, size: isSmallScreen ? 24 : 28),
-                    )
-                  : null,
-              prefixIconConstraints: const BoxConstraints(minWidth: 56),
-              suffixIcon: suffixIcon,
-              labelText: label,
-              hintText: hintText,
-              labelStyle: TextStyle(
-                color: kLoginInkSoft.withOpacity(0.90),
-                fontWeight: FontWeight.w700,
-                fontSize: isSmallScreen ? 18 : 22,
-              ),
-              hintStyle: TextStyle(
-                color: kLoginInkSoft.withOpacity(0.52),
-                fontWeight: FontWeight.w600,
-                fontSize: isSmallScreen ? 16 : 18,
-              ),
-              floatingLabelStyle: const TextStyle(color: kLoginViolet, fontWeight: FontWeight.w800),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: isSmallScreen ? 18 : 24,
-                vertical: isSmallScreen ? 18 : 24,
-              ),
-            ),
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        autofillHints: autofillHints,
+        textInputAction: textInputAction,
+        enableSuggestions: enableSuggestions,
+        autocorrect: autocorrect,
+        onSubmitted: onSubmitted,
+        style: TextStyle(
+          color: kLoginInk,
+          fontSize: isSmallScreen ? 14 : 16,
+        ),
+        decoration: InputDecoration(
+          prefixIcon: icon != null
+              ? Icon(
+                  icon,
+                  color: kLoginInkSoft,
+                  size: isSmallScreen ? 18 : 20,
+                )
+              : null,
+          suffixIcon: suffixIcon,
+          labelText: label,
+          hintText: hintText,
+          labelStyle: TextStyle(
+            color: kLoginInkSoft,
+            fontWeight: FontWeight.w600,
+            fontSize: isSmallScreen ? 13 : 15,
+          ),
+          hintStyle: const TextStyle(
+            color: Color(0xFF9AA5B1),
+            fontWeight: FontWeight.w400,
+          ),
+          floatingLabelStyle: const TextStyle(color: kLoginViolet),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 16 : 22,
+            vertical: isSmallScreen ? 12 : 19,
           ),
         ),
       ),
@@ -727,40 +483,39 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2877FF), Color(0xFF7A4CFF), Color(0xFFFF4E96)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-        border: Border.all(color: Colors.white.withOpacity(0.55), width: 1.1),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 24 : 30),
+        gradient: const LinearGradient(colors: [kLoginBlue, kLoginViolet, kLoginPink]),
         boxShadow: [
-          BoxShadow(color: kLoginBlue.withOpacity(0.30), blurRadius: 24, offset: const Offset(0, 13)),
-          BoxShadow(color: kLoginPink.withOpacity(0.25), blurRadius: 24, offset: const Offset(0, 13)),
-          BoxShadow(color: Colors.white.withOpacity(0.50), blurRadius: 8, offset: const Offset(0, -2)),
+          BoxShadow(
+            color: kLoginBlue.withOpacity(0.28),
+            blurRadius: isSmallScreen ? 14 : 22,
+            offset: Offset(0, isSmallScreen ? 6 : 12),
+          ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(isSmallScreen ? 24 : 30),
           child: Container(
-            height: isSmallScreen ? 56.0 : 64.0,
+            height: isSmallScreen ? 48.0 : 60.0,
             alignment: Alignment.center,
             child: isLoading
                 ? SizedBox(
-                    width: isSmallScreen ? 20 : 24,
-                    height: isSmallScreen ? 20 : 24,
-                    child: const CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
+                    width: isSmallScreen ? 18 : 24,
+                    height: isSmallScreen ? 18 : 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
+                      color: Colors.white,
+                    ),
                   )
                 : Text(
                     text,
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: isSmallScreen ? 22 : 26,
+                      fontSize: isSmallScreen ? 14 : 16,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: 0.2,
                     ),
                   ),
           ),
@@ -772,26 +527,19 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
   Widget _outlineGlassButton({required String text, required VoidCallback onTap}) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 400;
-
+    
     return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 20 : 34),
+      padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
       child: OutlinedButton(
-        onPressed: onTap,
+        onPressed: onTap, 
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: kLoginViolet, width: 1.8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-          padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 16 : 18, horizontal: isSmallScreen ? 16 : 24),
-          backgroundColor: Colors.white.withOpacity(0.18),
-        ),
+          side: const BorderSide(color: kLoginViolet, width: 1.5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 26 : 30)), 
+          padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 15 : 17, horizontal: isSmallScreen ? 16 : 24),
+        ), 
         child: Text(
-          text,
-          style: TextStyle(
-            color: kLoginViolet,
-            fontSize: isSmallScreen ? 18 : 21,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.1,
-          ),
+          text, 
+          style: TextStyle(color: kLoginViolet, fontSize: isSmallScreen ? 14 : 15, fontWeight: FontWeight.w800),
         ),
       ),
     );
@@ -803,15 +551,9 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
       firstChild: const SizedBox.shrink(),
       secondChild: OutlinedButton.icon(
         onPressed: _biometricLoading ? null : _loginWithBiometric,
-        icon: _biometricLoading
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.1, color: kLoginBlue))
-            : const Icon(Icons.fingerprint, color: kLoginBlue),
+        icon: _biometricLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.1, color: kLoginBlue)) : const Icon(Icons.fingerprint, color: kLoginBlue),
         label: const Text('Войти по Face ID / Touch ID', style: TextStyle(color: kLoginBlue, fontSize: 15, fontWeight: FontWeight.w700)),
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: kLoginBlue),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-          padding: const EdgeInsets.symmetric(vertical: 15),
-        ),
+        style: OutlinedButton.styleFrom(side: const BorderSide(color: kLoginBlue), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), padding: const EdgeInsets.symmetric(vertical: 15)),
       ),
       crossFadeState: _shouldShowBiometricButton ? CrossFadeState.showSecond : CrossFadeState.showFirst,
       duration: const Duration(milliseconds: 300),
@@ -827,20 +569,9 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
 
   Widget _errorBox(String message) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: const Color(0xFFFFF4F2).withOpacity(0.98),
-        border: Border.all(color: const Color(0xFFFFD7D0)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: Color(0xFFE85B63), size: 19),
-          const SizedBox(width: 9),
-          Expanded(child: Text(message, style: const TextStyle(color: Color(0xFFE85B63), fontWeight: FontWeight.w800))),
-        ],
-      ),
+      width: double.infinity, padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), color: const Color(0xFFFFF4F2).withOpacity(0.98), border: Border.all(color: const Color(0xFFFFD7D0))),
+      child: Row(children: [const Icon(Icons.error_outline, color: Color(0xFFE85B63), size: 19), const SizedBox(width: 9), Expanded(child: Text(message, style: const TextStyle(color: Color(0xFFE85B63), fontWeight: FontWeight.w800)))]),
     );
   }
 
@@ -856,187 +587,253 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
     final cardWidth = isVerySmall
         ? screenWidth * 0.94
         : isSmallScreen
-            ? screenWidth * 0.91
+            ? screenWidth * 0.92
             : isMediumScreen
-                ? screenWidth * 0.84
+                ? screenWidth * 0.85
                 : 500.0;
 
-    final horizontalPadding = isVerySmall ? 10.0 : isSmallScreen ? 14.0 : 24.0;
-    final cardPadding = 0.0;
-    final innerPadding = isVerySmall ? 24.0 : isSmallScreen ? 28.0 : 40.0;
+    final horizontalPadding = isVerySmall ? 12.0 : isSmallScreen ? 14.0 : 24.0;
+    final cardPadding = isVerySmall ? 12.0 : isSmallScreen ? 16.0 : 24.0;
+    final innerPadding = isVerySmall ? 10.0 : isSmallScreen ? 14.0 : 24.0;
 
-    final titleSize = isVerySmall ? 34.0 : isSmallScreen ? 40.0 : 50.0;
-    final subtitleSize = isVerySmall ? 17.0 : isSmallScreen ? 19.0 : 24.0;
-    final logoSize = isVerySmall ? 94.0 : isSmallScreen ? 108.0 : 126.0;
+    final titleSize = isVerySmall ? 20.0 : isSmallScreen ? 22.0 : 30.0;
+    final subtitleSize = isVerySmall ? 10.5 : isSmallScreen ? 11.5 : 14.0;
+    final logoSize = isVerySmall ? 56.0 : isSmallScreen ? 64.0 : 88.0;
 
-    final gapSmall = isVerySmall ? 8.0 : isSmallScreen ? 10.0 : 14.0;
-    final gapMedium = isVerySmall ? 12.0 : isSmallScreen ? 16.0 : 20.0;
-    final gapLarge = isVerySmall ? 20.0 : isSmallScreen ? 26.0 : 34.0;
+    final gapSmall = isVerySmall ? 3.0 : isSmallScreen ? 4.0 : 8.0;
+    final gapMedium = isVerySmall ? 6.0 : isSmallScreen ? 8.0 : 14.0;
+    final gapLarge = isVerySmall ? 10.0 : isSmallScreen ? 14.0 : 24.0;
 
     return Scaffold(
       backgroundColor: kLoginMintTop,
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.light,
-        child: Stack(
-          children: [
-            _background(),
-            SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: isVerySmall ? 12 : 20),
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: SlideTransition(
-                      position: _slideAnimation,
-                      child: Container(
-                        width: cardWidth,
-                        constraints: BoxConstraints(
-                          maxWidth: 500,
-                          minWidth: (screenWidth * 0.85).clamp(0.0, 500.0),
-                        ),
-                        padding: EdgeInsets.fromLTRB(cardPadding, cardPadding, cardPadding, cardPadding),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(isVerySmall ? 34 : isSmallScreen ? 42 : 52),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.white.withOpacity(0.26),
-                              blurRadius: isVerySmall ? 18 : isSmallScreen ? 24 : 34,
-                              spreadRadius: 1,
-                              offset: const Offset(0, 0),
-                            ),
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.10),
-                              blurRadius: isVerySmall ? 18 : isSmallScreen ? 26 : 40,
-                              offset: Offset(0, isVerySmall ? 10 : isSmallScreen ? 14 : 20),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(isVerySmall ? 34 : isSmallScreen ? 42 : 52),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                            child: Container(
-                              padding: EdgeInsets.all(innerPadding),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(isVerySmall ? 34 : isSmallScreen ? 42 : 52),
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.white.withOpacity(0.90),
-                                    const Color(0xFFEFFFFF).withOpacity(0.78),
-                                    Colors.white.withOpacity(0.68),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                border: Border.all(color: Colors.white.withOpacity(0.86), width: 1.6),
-                                boxShadow: [
-                                  BoxShadow(color: Colors.white.withOpacity(0.34), blurRadius: 20, offset: const Offset(0, -3)),
-                                ],
+        child: Stack(children: [
+          _background(),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: SlideTransition(
+                    position: _slideAnimation,
+                    child: Container(
+                      width: cardWidth,
+                      constraints: BoxConstraints(
+                        maxWidth: 500,
+                        minWidth: (screenWidth * 0.85).clamp(0.0, 500.0),
+                      ),
+                      padding: EdgeInsets.fromLTRB(cardPadding, cardPadding, cardPadding, cardPadding + 4),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(isVerySmall ? 26 : isSmallScreen ? 32 : 44),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.12),
+                            blurRadius: isVerySmall ? 16 : isSmallScreen ? 20 : 32,
+                            offset: Offset(0, isVerySmall ? 6 : isSmallScreen ? 10 : 16),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(isVerySmall ? 26 : isSmallScreen ? 32 : 44),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                          child: Container(
+                            padding: EdgeInsets.all(innerPadding),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(isVerySmall ? 26 : isSmallScreen ? 32 : 44),
+                              gradient: LinearGradient(
+                                colors: [kLoginCardStrong, kLoginCard],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _topBadge(),
-                                  SizedBox(height: isVerySmall ? 8 : gapMedium),
-                                  _logoOrb(size: logoSize),
-                                  SizedBox(height: isVerySmall ? 0 : gapSmall),
-                                  Text(
-                                    'Вход сотрудника',
-                                    style: TextStyle(
-                                      fontSize: titleSize,
-                                      fontWeight: FontWeight.w900,
-                                      color: kLoginInk,
-                                      letterSpacing: -1.5,
-                                      height: 1.02,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  SizedBox(height: gapSmall),
-                                  Text(
-                                    'Введите номер телефона и пароль,\nчтобы открыть рабочее\nпространство.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: subtitleSize,
-                                      fontWeight: FontWeight.w700,
-                                      color: kLoginInkSoft,
-                                      height: 1.34,
-                                    ),
-                                  ),
-                                  SizedBox(height: gapLarge),
-                                  AutofillGroup(
-                                    child: Column(
-                                      children: [
-                                        _buildGlassInput(
-                                          controller: _phoneController,
-                                          label: 'Телефон',
-                                          icon: Icons.phone_android_outlined,
-                                          keyboardType: TextInputType.phone,
-                                          hintText: '+7 999 555 30 55',
-                                          autofillHints: const [AutofillHints.username],
-                                          textInputAction: TextInputAction.next,
-                                          enableSuggestions: false,
-                                          autocorrect: false,
-                                        ),
-                                        SizedBox(height: gapMedium),
-                                        _buildGlassInput(
-                                          controller: _passwordController,
-                                          label: 'Пароль',
-                                          icon: Icons.lock_outline_rounded,
-                                          obscureText: !_showPassword,
-                                          autofillHints: const [AutofillHints.password],
-                                          textInputAction: TextInputAction.done,
-                                          enableSuggestions: false,
-                                          autocorrect: false,
-                                          onSubmitted: (_) => _submit(),
-                                          suffixIcon: IconButton(
-                                            icon: Icon(
-                                              _showPassword ? Icons.visibility_off : Icons.visibility,
-                                              color: kLoginInkSoft,
-                                              size: isVerySmall ? 24 : isSmallScreen ? 26 : 30,
-                                            ),
-                                            onPressed: () => setState(() => _showPassword = !_showPassword),
-                                            padding: EdgeInsets.zero,
-                                            constraints: const BoxConstraints(),
+                              border: Border.all(color: kLoginStroke),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _topBadge(),
+                                SizedBox(height: isVerySmall ? 6 : gapMedium),
+                                SizedBox(
+                                  width: logoSize,
+                                  height: logoSize,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Transform.scale(
+                                        scale: _pulseAnimation.value * 1.15,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: kLoginAccent.withOpacity(0.35),
+                                                blurRadius: isVerySmall ? 20 : isSmallScreen ? 30 : 45,
+                                                spreadRadius: isVerySmall ? 2 : isSmallScreen ? 6 : 10,
+                                              ),
+                                              BoxShadow(
+                                                color: kLoginBlue.withOpacity(0.2),
+                                                blurRadius: isVerySmall ? 16 : isSmallScreen ? 22 : 32,
+                                                spreadRadius: isVerySmall ? 1 : isSmallScreen ? 3 : 5,
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (_error != null) ...[
-                                    SizedBox(height: gapMedium),
-                                    _errorBox(_error!),
-                                  ],
-                                  SizedBox(height: gapLarge),
-                                  _glassButton(
-                                    onPressed: _loading ? null : _submit,
-                                    text: 'Войти',
-                                    isLoading: _loading,
-                                  ),
-                                  SizedBox(height: isVerySmall ? 8 : 12),
-                                  _biometricButton(),
-                                  SizedBox(height: isVerySmall ? 4 : 6),
-                                  TextButton(
-                                    onPressed: _openRecoverySheet,
-                                    child: Text(
-                                      'Забыли пароль?',
-                                      style: TextStyle(
-                                        fontSize: isVerySmall ? 18 : isSmallScreen ? 19 : 21,
-                                        fontWeight: FontWeight.w900,
-                                        color: kLoginBlue,
                                       ),
-                                    ),
+                                      Container(
+                                        width: logoSize,
+                                        height: logoSize,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              Colors.white.withOpacity(0.28),
+                                              Colors.white.withOpacity(0.12),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      Container(
+                                        width: logoSize * 0.8,
+                                        height: logoSize * 0.8,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.white.withOpacity(0.96),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: kLoginBlue.withOpacity(0.14),
+                                              blurRadius: isVerySmall ? 8 : isSmallScreen ? 12 : 18,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        width: logoSize * 0.6,
+                                        height: logoSize * 0.6,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          gradient: const LinearGradient(
+                                            colors: [kLoginAccent, kLoginAccentSoft],
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: kLoginAccent.withOpacity(0.4),
+                                              blurRadius: isVerySmall ? 10 : isSmallScreen ? 16 : 24,
+                                              offset: Offset(0, isVerySmall ? 3 : isSmallScreen ? 5 : 8),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Center(
+                                          child: Image.asset(
+                                            'assets/images/flowru_logo.png',
+                                            width: logoSize * 0.4,
+                                            height: logoSize * 0.4,
+                                            fit: BoxFit.contain,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  SizedBox(height: isVerySmall ? 6 : 8),
-                                  _outlineGlassButton(
-                                    text: 'Зарегистрироваться',
-                                    onTap: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                                    ),
+                                ),
+                                SizedBox(height: isVerySmall ? 4 : gapMedium),
+                                Text(
+                                  'Вход сотрудника',
+                                  style: TextStyle(
+                                    fontSize: titleSize,
+                                    fontWeight: FontWeight.w900,
+                                    color: kLoginInk,
+                                    letterSpacing: -0.8,
+                                    height: 1.1,
                                   ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                SizedBox(height: isVerySmall ? 2 : gapSmall),
+                                Text(
+                                  'Введите номер телефона и пароль,\nчтобы открыть рабочее пространство.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: subtitleSize,
+                                    fontWeight: FontWeight.w700,
+                                    color: kLoginInkSoft,
+                                    height: 1.3,
+                                  ),
+                                ),
+                                SizedBox(height: isVerySmall ? 12 : gapLarge),
+                                AutofillGroup(
+                                  child: Column(
+                                    children: [
+                                      _buildGlassInput(
+                                        controller: _phoneController,
+                                        label: 'Телефон',
+                                        icon: Icons.phone_android_outlined,
+                                        keyboardType: TextInputType.phone,
+                                        hintText: '+7 999 555 30 55',
+                                        autofillHints: const [AutofillHints.username],
+                                        textInputAction: TextInputAction.next,
+                                        enableSuggestions: false,
+                                        autocorrect: false,
+                                      ),
+                                      SizedBox(height: isVerySmall ? 8 : gapMedium),
+                                      _buildGlassInput(
+                                        controller: _passwordController,
+                                        label: 'Пароль',
+                                        icon: Icons.lock_outline_rounded,
+                                        obscureText: !_showPassword,
+                                        autofillHints: const [AutofillHints.password],
+                                        textInputAction: TextInputAction.done,
+                                        enableSuggestions: false,
+                                        autocorrect: false,
+                                        onSubmitted: (_) => _submit(),
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            _showPassword ? Icons.visibility_off : Icons.visibility,
+                                            color: kLoginInkSoft,
+                                            size: isVerySmall ? 16 : isSmallScreen ? 18 : 20,
+                                          ),
+                                          onPressed: () => setState(() => _showPassword = !_showPassword),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (_error != null) ...[
+                                  SizedBox(height: isVerySmall ? 8 : gapMedium),
+                                  _errorBox(_error!),
                                 ],
-                              ),
+                                SizedBox(height: isVerySmall ? 10 : gapLarge),
+                                _glassButton(
+                                  onPressed: _loading ? null : _submit,
+                                  text: 'Войти',
+                                  isLoading: _loading,
+                                ),
+                                SizedBox(height: isVerySmall ? 6 : 10),
+                                _biometricButton(),
+                                SizedBox(height: isVerySmall ? 4 : 6),
+                                TextButton(
+                                  onPressed: _openRecoverySheet,
+                                  child: Text(
+                                    'Забыли пароль?',
+                                    style: TextStyle(
+                                      fontSize: isVerySmall ? 11.5 : isSmallScreen ? 12.5 : 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: kLoginBlue,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: isVerySmall ? 2 : 4),
+                                _outlineGlassButton(
+                                  text: 'Зарегистрироваться',
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -1046,8 +843,8 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ]),
       ),
     );
   }
@@ -1056,7 +853,6 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
 // ========== ВОССТАНОВЛЕНИЕ ПАРОЛЯ ==========
 class _PasswordRecoverySheet extends StatefulWidget {
   const _PasswordRecoverySheet();
-
   @override
   State<_PasswordRecoverySheet> createState() => _PasswordRecoverySheetState();
 }
@@ -1097,18 +893,8 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
 
   Future<void> _requestCode() async {
     final phone = _phoneController.text.trim();
-    if (phone.isEmpty) {
-      setState(() {
-        _requestSuccess = false;
-        _requestMessage = 'Введите номер телефона';
-      });
-      return;
-    }
-    setState(() {
-      _requestingCode = true;
-      _requestMessage = null;
-      _requestSuccess = false;
-    });
+    if (phone.isEmpty) { setState(() { _requestSuccess = false; _requestMessage = 'Введите номер телефона'; }); return; }
+    setState(() { _requestingCode = true; _requestMessage = null; _requestSuccess = false; });
     try {
       final response = await http.post(
         Uri.parse('${AppConfig.baseUrl}/api/v1/auth/password-reset/request'),
@@ -1122,25 +908,13 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
           final decoded = jsonDecode(response.body);
           if (decoded is Map<String, dynamic> && decoded['message'] is String) message = decoded['message'];
         } catch (_) {}
-        setState(() {
-          _requestingCode = false;
-          _requestSuccess = true;
-          _requestMessage = message;
-        });
+        setState(() { _requestingCode = false; _requestSuccess = true; _requestMessage = message; });
         return;
       }
-      setState(() {
-        _requestingCode = false;
-        _requestSuccess = false;
-        _requestMessage = _extractErrorMessage(response);
-      });
+      setState(() { _requestingCode = false; _requestSuccess = false; _requestMessage = _extractErrorMessage(response); });
     } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _requestingCode = false;
-        _requestSuccess = false;
-        _requestMessage = 'Не удалось запросить код';
-      });
+      setState(() { _requestingCode = false; _requestSuccess = false; _requestMessage = 'Не удалось запросить код'; });
     }
   }
 
@@ -1149,39 +923,11 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
     final code = _codeController.text.trim();
     final newPassword = _newPasswordController.text;
     final confirmPassword = _confirmPasswordController.text;
-    if (phone.isEmpty) {
-      setState(() {
-        _confirmSuccess = false;
-        _confirmMessage = 'Введите номер телефона';
-      });
-      return;
-    }
-    if (code.isEmpty) {
-      setState(() {
-        _confirmSuccess = false;
-        _confirmMessage = 'Введите код из Telegram';
-      });
-      return;
-    }
-    if (newPassword.isEmpty) {
-      setState(() {
-        _confirmSuccess = false;
-        _confirmMessage = 'Введите новый пароль';
-      });
-      return;
-    }
-    if (confirmPassword.isEmpty) {
-      setState(() {
-        _confirmSuccess = false;
-        _confirmMessage = 'Подтвердите новый пароль';
-      });
-      return;
-    }
-    setState(() {
-      _confirming = true;
-      _confirmMessage = null;
-      _confirmSuccess = false;
-    });
+    if (phone.isEmpty) { setState(() { _confirmSuccess = false; _confirmMessage = 'Введите номер телефона'; }); return; }
+    if (code.isEmpty) { setState(() { _confirmSuccess = false; _confirmMessage = 'Введите код из Telegram'; }); return; }
+    if (newPassword.isEmpty) { setState(() { _confirmSuccess = false; _confirmMessage = 'Введите новый пароль'; }); return; }
+    if (confirmPassword.isEmpty) { setState(() { _confirmSuccess = false; _confirmMessage = 'Подтвердите новый пароль'; }); return; }
+    setState(() { _confirming = true; _confirmMessage = null; _confirmSuccess = false; });
     try {
       final response = await http.post(
         Uri.parse('${AppConfig.baseUrl}/api/v1/auth/password-reset/confirm'),
@@ -1190,28 +936,16 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
       );
       if (!mounted) return;
       if (response.statusCode == 200) {
-        setState(() {
-          _confirming = false;
-          _confirmSuccess = true;
-          _confirmMessage = 'Пароль успешно изменён';
-        });
+        setState(() { _confirming = false; _confirmSuccess = true; _confirmMessage = 'Пароль успешно изменён'; });
         await Future.delayed(const Duration(milliseconds: 500));
         if (!mounted) return;
         Navigator.of(context).pop(phone);
         return;
       }
-      setState(() {
-        _confirming = false;
-        _confirmSuccess = false;
-        _confirmMessage = _extractErrorMessage(response);
-      });
+      setState(() { _confirming = false; _confirmSuccess = false; _confirmMessage = _extractErrorMessage(response); });
     } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _confirming = false;
-        _confirmSuccess = false;
-        _confirmMessage = 'Не удалось изменить пароль';
-      });
+      setState(() { _confirming = false; _confirmSuccess = false; _confirmMessage = 'Не удалось изменить пароль'; });
     }
   }
 
@@ -1377,7 +1111,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                 TextField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
-                  decoration: _inputDecoration('Телефон сотрудника', hint: '+7 999 777 30 77'),
+                  decoration: _inputDecoration('Телефон сотрудника', hint: '+7 978 547 30 14'),
                 ),
                 const SizedBox(height: 13),
                 DecoratedBox(

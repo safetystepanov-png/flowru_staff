@@ -20,26 +20,26 @@ import 'staff_establishment_history_screen.dart';
 import 'staff_establishments_screen.dart';
 import 'staff_work_schedule_screen.dart';
 
-const Color kHomeMintTop = Color(0xFF0A8798);
-const Color kHomeMintMid = Color(0xFF16C7B5);
-const Color kHomeMintBottom = Color(0xFF047B8A);
-const Color kHomeMintDeep = Color(0xFF034C61);
+const Color kHomeMintTop = Color(0xFF0CB7B3);
+const Color kHomeMintMid = Color(0xFF08A9AB);
+const Color kHomeMintBottom = Color(0xFF067D87);
+const Color kHomeMintDeep = Color(0xFF055E66);
 
-const Color kHomeAccent = Color(0xFFFFA51E);
-const Color kHomeAccentSoft = Color(0xFFFFD65A);
+const Color kHomeAccent = Color(0xFFFFA11D);
+const Color kHomeAccentSoft = Color(0xFFFFC45E);
 const Color kHomeAccentRed = Color(0xFFFF6A5E);
 
-const Color kHomeCard = Color(0xDDF7FEFF);
-const Color kHomeCardStrong = Color(0xF4FFFFFF);
-const Color kHomeStroke = Color(0xBFFFFFFF);
+const Color kHomeCard = Color(0xCCFFFFFF);
+const Color kHomeCardStrong = Color(0xE8FFFFFF);
+const Color kHomeStroke = Color(0xA6FFFFFF);
 
-const Color kHomeInk = Color(0xFF082F45);
-const Color kHomeInkSoft = Color(0xFF55768B);
+const Color kHomeInk = Color(0xFF103238);
+const Color kHomeInkSoft = Color(0xFF58767D);
 const Color kHomeShadow = Color(0x22062E36);
 
-const Color kHomeBlue = Color(0xFF2E73FF);
-const Color kHomePink = Color(0xFFFF4B9A);
-const Color kHomeViolet = Color(0xFF7B55FF);
+const Color kHomeBlue = Color(0xFF4E7CFF);
+const Color kHomePink = Color(0xFFFF5F8F);
+const Color kHomeViolet = Color(0xFF7A63FF);
 const Color kHomePulseGreen = Color(0xFF22C55E);
 
 class StaffHomeScreen extends StatefulWidget {
@@ -58,7 +58,8 @@ class StaffHomeScreen extends StatefulWidget {
   State<StaffHomeScreen> createState() => _StaffHomeScreenState();
 }
 
-class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderStateMixin {
+class _StaffHomeScreenState extends State<StaffHomeScreen>
+    with TickerProviderStateMixin {
   bool _loading = true;
   String? _error;
 
@@ -90,7 +91,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
 
   int get _heroSlidesCount => 1 + _pinnedAnnouncements.length;
 
-  String get _announcementsSeenKey => 'staff_announcements_seen_marker_${widget.establishmentId}';
+  String get _announcementsSeenKey =>
+      'staff_announcements_seen_marker_${widget.establishmentId}';
 
   @override
   void initState() {
@@ -163,7 +165,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
     for (final raw in annItems) {
       if (raw is! Map) continue;
       final map = Map<String, dynamic>.from(raw as Map);
-      final id = map['announcement_id']?.toString() ?? map['id']?.toString() ?? '';
+      final id =
+          map['announcement_id']?.toString() ?? map['id']?.toString() ?? '';
       final createdAt = map['created_at']?.toString() ?? '';
       if (id.isEmpty && createdAt.isEmpty) continue;
 
@@ -298,7 +301,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
       List<dynamic> chatItems;
       if (chatDecoded is List) {
         chatItems = chatDecoded;
-      } else if (chatDecoded is Map<String, dynamic> && chatDecoded['items'] is List) {
+      } else if (chatDecoded is Map<String, dynamic> &&
+          chatDecoded['items'] is List) {
         chatItems = chatDecoded['items'] as List<dynamic>;
       } else {
         chatItems = [];
@@ -307,7 +311,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
       List<dynamic> annItems;
       if (annDecoded is List) {
         annItems = annDecoded;
-      } else if (annDecoded is Map<String, dynamic> && annDecoded['items'] is List) {
+      } else if (annDecoded is Map<String, dynamic> &&
+          annDecoded['items'] is List) {
         annItems = annDecoded['items'] as List<dynamic>;
       } else {
         annItems = [];
@@ -316,7 +321,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
       List<dynamic> pinnedItems;
       if (pinnedDecoded is List) {
         pinnedItems = pinnedDecoded;
-      } else if (pinnedDecoded is Map<String, dynamic> && pinnedDecoded['items'] is List) {
+      } else if (pinnedDecoded is Map<String, dynamic> &&
+          pinnedDecoded['items'] is List) {
         pinnedItems = pinnedDecoded['items'] as List<dynamic>;
       } else {
         pinnedItems = [];
@@ -331,7 +337,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
 
       final latestMarker = _buildLatestAnnouncementMarker(annItems);
       final seenMarker = await _getSeenAnnouncementsMarker();
-      final hasNewAnnouncements = latestMarker.isNotEmpty && latestMarker != seenMarker;
+      final hasNewAnnouncements =
+          latestMarker.isNotEmpty && latestMarker != seenMarker;
 
       if (!mounted) return;
 
@@ -563,11 +570,10 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
     return AnimatedBuilder(
       animation: _ambientController,
       builder: (context, child) {
-        final size = MediaQuery.of(context).size;
         final t = _ambientController.value;
-        final shiftA = math.sin(t * math.pi * 2) * 26;
-        final shiftB = math.cos(t * math.pi * 2) * 18;
-        final rotate = math.sin(t * math.pi * 2) * 0.035;
+        final shiftA = math.sin(t * math.pi * 2) * 18;
+        final shiftB = math.cos(t * math.pi * 2) * 12;
+        final rotate = math.sin(t * math.pi * 2) * 0.03;
 
         return Stack(
           children: [
@@ -575,15 +581,14 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Color(0xFF056D85),
-                    Color(0xFF17BFB5),
-                    Color(0xFFD8FFE0),
-                    Color(0xFF0799A6),
-                    Color(0xFF044B62),
+                    kHomeMintTop,
+                    kHomeMintMid,
+                    kHomeMintBottom,
+                    kHomeMintDeep,
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  stops: [0.0, 0.30, 0.52, 0.72, 1.0],
+                  stops: [0.0, 0.40, 0.78, 1.0],
                 ),
               ),
             ),
@@ -591,123 +596,64 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
               child: IgnorePointer(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: const Alignment(0.70, -0.95),
-                      radius: 1.16,
+                    gradient: LinearGradient(
                       colors: [
-                        Colors.white.withOpacity(0.58),
-                        Colors.white.withOpacity(0.10),
+                        Colors.white.withOpacity(0.07),
                         Colors.transparent,
+                        Colors.black.withOpacity(0.10),
                       ],
-                      stops: const [0.0, 0.36, 1.0],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: const Alignment(-0.96, 0.88),
-                      radius: 0.95,
-                      colors: [
-                        kHomeBlue.withOpacity(0.26),
-                        Colors.transparent,
-                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
                   ),
                 ),
               ),
             ),
             Positioned(
-              top: -105 + shiftA,
-              right: -70 + shiftB,
+              top: -90 + shiftA,
+              right: -40,
               child: Transform.rotate(
                 angle: rotate,
                 child: _softBlob(
-                  width: 340,
-                  height: 340,
+                  width: 280,
+                  height: 280,
                   colors: [
-                    Colors.white.withOpacity(0.42),
-                    kHomeAccentSoft.withOpacity(0.18),
+                    Colors.white.withOpacity(0.16),
+                    kHomeAccent.withOpacity(0.12),
                   ],
                 ),
               ),
             ),
             Positioned(
-              left: -105 - shiftB,
-              bottom: 30 + shiftA,
+              top: 210 + shiftB,
+              left: -70,
               child: Transform.rotate(
                 angle: -rotate * 0.9,
                 child: _softBlob(
-                  width: 310,
-                  height: 310,
+                  width: 220,
+                  height: 220,
                   colors: [
-                    kHomeBlue.withOpacity(0.30),
-                    Colors.white.withOpacity(0.12),
+                    Colors.white.withOpacity(0.10),
+                    kHomeBlue.withOpacity(0.06),
                   ],
                 ),
               ),
             ),
             Positioned(
-              top: size.height * 0.36 + shiftB,
-              left: size.width * 0.06 + shiftA,
-              child: _softBlob(
-                width: 190,
-                height: 190,
-                colors: [
-                  kHomePink.withOpacity(0.12),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-            Positioned(
-              right: -46,
-              bottom: size.height * 0.30,
-              child: Opacity(
-                opacity: 0.22,
-                child: Container(
-                  width: 118,
-                  height: 118,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withOpacity(0.32), width: 2),
-                  ),
+              bottom: 60 - shiftA,
+              right: -20,
+              child: Transform.rotate(
+                angle: rotate,
+                child: _softBlob(
+                  width: 210,
+                  height: 210,
+                  colors: [
+                    kHomeAccentSoft.withOpacity(0.10),
+                    Colors.white.withOpacity(0.05),
+                  ],
                 ),
               ),
             ),
-            ...List.generate(16, (i) {
-              final angle = (i / 16) * math.pi * 2 + t * math.pi * 0.28;
-              final distance = 145 + 110 * ((i % 5) / 5) + 20 * math.sin(t * math.pi * 2 + i);
-              final sizeDot = 3.0 + (i % 4) * 1.4;
-              final opacity = (0.13 + 0.22 * math.sin(t * math.pi * 2 + i * 0.45).abs()).clamp(0.08, 0.36);
-              final dotColor = [Colors.white, kHomeAccentSoft, const Color(0xFFC9FFF0)][i % 3];
-
-              return Positioned(
-                left: (size.width / 2 + math.cos(angle) * distance - sizeDot / 2).clamp(0, size.width),
-                top: (size.height / 2 + math.sin(angle) * distance - sizeDot / 2).clamp(0, size.height),
-                child: Opacity(
-                  opacity: opacity,
-                  child: Container(
-                    width: sizeDot,
-                    height: sizeDot,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: dotColor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: dotColor.withOpacity(0.48),
-                          blurRadius: 10,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }),
           ],
         );
       },
@@ -721,7 +667,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
   }) {
     return IgnorePointer(
       child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
+        imageFilter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
           width: width,
           height: height,
@@ -740,34 +686,26 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
 
   Widget _buildTopBar() {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const SizedBox(
-          width: 76,
-          height: 76,
+          width: 72,
+          height: 72,
           child: Center(
-            child: StaffLogoBadge(size: 68),
+            child: StaffLogoBadge(size: 54),
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 14),
         const Expanded(
           child: Text(
             'Flowru',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 42,
+              fontSize: 29,
               fontWeight: FontWeight.w900,
-              letterSpacing: -1.8,
+              letterSpacing: -0.9,
               color: Colors.white,
               height: 1.0,
-              shadows: [
-                Shadow(
-                  color: Color(0x66042D3C),
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-              ],
             ),
           ),
         ),
@@ -775,12 +713,12 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
           icon: CupertinoIcons.building_2_fill,
           onTap: _openEstablishmentPicker,
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         _TopIconButton(
           icon: CupertinoIcons.refresh,
           onTap: _loadDashboard,
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         _TopIconButton(
           icon: Icons.logout_rounded,
           onTap: () async {
@@ -796,119 +734,83 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
   Widget _buildPromoBanner() {
     return Container(
       key: const ValueKey('hero_promo_banner'),
-      width: double.infinity,
       height: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(36),
-        gradient: LinearGradient(
+        borderRadius: BorderRadius.circular(30),
+        gradient: const LinearGradient(
           colors: [
-            Colors.white.withOpacity(0.18),
-            Colors.white.withOpacity(0.08),
+            Color(0x1FFFFFFF),
+            Color(0x14FFFFFF),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.64),
-          width: 1.7,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.white.withOpacity(0.25),
-            blurRadius: 22,
-            offset: const Offset(0, 0),
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
-          ),
-        ],
+        border: Border.all(color: Colors.white.withOpacity(0.20)),
       ),
-      child: Stack(
-        clipBehavior: Clip.none,
+      child: Row(
         children: [
-          Positioned(
-            right: -34,
-            top: 12,
-            child: _OrbitRings(size: 210),
-          ),
-          Positioned(
-            right: 4,
-            top: 62,
-            child: const _DecorPercent(),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 236,
-                height: 40,
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(999),
-                  gradient: const LinearGradient(
-                    colors: [kHomeAccent, kHomeAccentSoft],
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
                   ),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.55),
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: kHomeAccent.withOpacity(0.36),
-                      blurRadius: 18,
-                      offset: const Offset(0, 9),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    gradient: const LinearGradient(
+                      colors: [kHomeAccent, kHomeAccentSoft],
                     ),
-                  ],
+                    boxShadow: [
+                      BoxShadow(
+                        color: kHomeAccent.withOpacity(0.30),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    _isOwner ? 'РЕЖИМ ВЛАДЕЛЬЦА' : 'ГЛАВНЫЙ ЭКРАН',
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
-                child: Text(
-                  _isOwner ? 'РЕЖИМ ВЛАДЕЛЬЦА' : 'ГЛАВНЫЙ ЭКРАН',
-                  style: const TextStyle(
-                    fontSize: 13,
+                const SizedBox(height: 14),
+                const Text(
+                  'Быстрая работа\nс клиентами',
+                  style: TextStyle(
+                    fontSize: 29,
+                    height: 1.02,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: 2.0,
+                    letterSpacing: -1.0,
                     color: Colors.white,
                   ),
                 ),
-              ),
-              const Spacer(),
-              const Text(
-                'Быстрая работа\nс клиентами',
-                style: TextStyle(
-                  fontSize: 42,
-                  height: 1.04,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1.2,
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(
-                      color: Color(0x66042D3C),
-                      blurRadius: 14,
-                      offset: Offset(0, 5),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: 320,
-                child: Text(
+                const SizedBox(height: 8),
+                Text(
                   _isOwner
                       ? 'Поиск, начисления, списания, награды и ключевые действия по заведению.'
-                      : 'Поиск, чат, объявления и история\n— всё под рукой.',
+                      : 'Поиск, чат, объявления и история — всё под рукой.',
                   style: TextStyle(
-                    fontSize: 19,
-                    height: 1.25,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white.withOpacity(0.90),
+                    fontSize: 14,
+                    height: 1.4,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white.withOpacity(0.84),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+          const SizedBox(width: 14),
+          const _DecorPercent(),
         ],
       ),
     );
@@ -917,108 +819,83 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
   Widget _buildPinnedAnnouncementBanner(_PinnedAnnouncement item, int index) {
     return Container(
       key: ValueKey('hero_pinned_${item.announcementId}_$index'),
-      width: double.infinity,
       height: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(36),
-        gradient: LinearGradient(
+        borderRadius: BorderRadius.circular(30),
+        gradient: const LinearGradient(
           colors: [
-            Colors.white.withOpacity(0.18),
-            Colors.white.withOpacity(0.08),
+            Color(0x1FFFFFFF),
+            Color(0x14FFFFFF),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.64),
-          width: 1.7,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.white.withOpacity(0.25),
-            blurRadius: 22,
-            offset: const Offset(0, 0),
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
-          ),
-        ],
+        border: Border.all(color: Colors.white.withOpacity(0.20)),
       ),
       child: Row(
         children: [
           Expanded(
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 236,
-                  height: 40,
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(999),
                     gradient: const LinearGradient(
                       colors: [kHomeAccent, kHomeAccentSoft],
                     ),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.55),
-                      width: 1,
-                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: kHomeAccent.withOpacity(0.36),
-                        blurRadius: 18,
-                        offset: const Offset(0, 9),
+                        color: kHomeAccent.withOpacity(0.30),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
                       ),
                     ],
                   ),
                   child: Text(
                     _isOwner ? 'ОБЪЯВЛЕНИЕ' : 'ВАЖНОЕ ОБЪЯВЛЕНИЕ',
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 10.5,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: 1.6,
+                      letterSpacing: 0.8,
                       color: Colors.white,
                     ),
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
                 Text(
                   item.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 38,
-                    height: 1.04,
+                    fontSize: 29,
+                    height: 1.02,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: -1.2,
+                    letterSpacing: -1.0,
                     color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        color: Color(0x66042D3C),
-                        blurRadius: 14,
-                        offset: Offset(0, 5),
-                      ),
-                    ],
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Expanded(
                   child: Text(
                     item.body,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 17,
-                      height: 1.32,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white.withOpacity(0.90),
+                      fontSize: 14,
+                      height: 1.4,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white.withOpacity(0.84),
                     ),
                   ),
                 ),
+                const SizedBox(height: 12),
                 if (_isOwner)
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -1028,9 +905,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(18),
                       color: Colors.white.withOpacity(0.16),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.18),
-                      ),
+                      border: Border.all(color: Colors.white.withOpacity(0.18)),
                     ),
                     child: Text(
                       'Ознакомлены: ${item.acknowledgedCount}/${item.totalStaffCount}',
@@ -1071,8 +946,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
     }
 
     return SizedBox(
-      width: double.infinity,
-      height: 340,
+      height: 242,
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 760),
         switchInCurve: Curves.easeOutCubic,
@@ -1110,53 +984,52 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
   Widget _buildSearchHeroCard() {
     return _Pressable(
       onTap: _openClientSearch,
-      borderRadius: 38,
+      borderRadius: 34,
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(38),
+          borderRadius: BorderRadius.circular(34),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.10),
-              blurRadius: 30,
+              color: Colors.black.withOpacity(0.11),
+              blurRadius: 26,
               offset: const Offset(0, 18),
             ),
             BoxShadow(
-              color: Colors.white.withOpacity(0.26),
-              blurRadius: 20,
-              spreadRadius: 1,
-              offset: const Offset(0, 0),
+              color: kHomeAccent.withOpacity(0.22),
+              blurRadius: 30,
+              spreadRadius: -4,
+              offset: const Offset(0, 14),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(38),
+          borderRadius: BorderRadius.circular(34),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
             child: Container(
-              padding: const EdgeInsets.fromLTRB(26, 28, 26, 26),
+              padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(38),
+                borderRadius: BorderRadius.circular(34),
                 gradient: LinearGradient(
                   colors: [
                     Colors.white.withOpacity(0.96),
-                    const Color(0xFFEFFFFF).withOpacity(0.86),
-                    Colors.white.withOpacity(0.74),
+                    Colors.white.withOpacity(0.82),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                border: Border.all(color: Colors.white.withOpacity(0.92), width: 1.5),
+                border: Border.all(color: Colors.white.withOpacity(0.94)),
               ),
               child: Stack(
                 children: [
                   Positioned(
-                    top: -20,
+                    top: -18,
                     right: -4,
                     child: ImageFiltered(
                       imageFilter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
                       child: Container(
-                        width: 136,
-                        height: 136,
+                        width: 126,
+                        height: 126,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: RadialGradient(
@@ -1169,100 +1042,119 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
                       ),
                     ),
                   ),
+                  Positioned(
+                    left: -12,
+                    right: -12,
+                    bottom: 46,
+                    child: IgnorePointer(
+                      child: ImageFiltered(
+                        imageFilter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+                        child: Container(
+                          height: 110,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                kHomeMintTop.withOpacity(0.05),
+                                Colors.white.withOpacity(0.10),
+                                Colors.white.withOpacity(0.0),
+                              ],
+                              stops: const [0.0, 0.45, 0.78, 1.0],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 11,
+                              vertical: 7,
+                            ),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(999),
-                              gradient: const LinearGradient(colors: [kHomeAccent, kHomeAccentSoft]),
-                              border: Border.all(color: Colors.white.withOpacity(0.55), width: 1),
+                              gradient: const LinearGradient(
+                                colors: [kHomeAccent, kHomeAccentSoft],
+                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: kHomeAccent.withOpacity(0.34),
-                                  blurRadius: 18,
-                                  offset: const Offset(0, 9),
+                                  color: kHomeAccent.withOpacity(0.28),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 8),
                                 ),
                               ],
                             ),
                             child: Text(
                               _roleLabel.toUpperCase(),
                               style: const TextStyle(
-                                fontSize: 13,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w900,
-                                letterSpacing: 2.0,
+                                letterSpacing: 0.8,
                                 color: Colors.white,
                               ),
                             ),
                           ),
                           const Spacer(),
                           Container(
-                            width: 66,
-                            height: 66,
+                            width: 54,
+                            height: 54,
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(22),
-                              color: Colors.white.withOpacity(0.54),
-                              border: Border.all(color: Colors.white.withOpacity(0.76), width: 1.2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.08),
-                                  blurRadius: 14,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
+                              borderRadius: BorderRadius.circular(18),
+                              color: kHomeInk.withOpacity(0.06),
                             ),
                             child: const Icon(
                               CupertinoIcons.search,
-                              size: 34,
+                              size: 26,
                               color: kHomeInk,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 34),
+                      const SizedBox(height: 20),
                       const Text(
                         'Найти клиента',
                         style: TextStyle(
-                          fontSize: 42,
+                          fontSize: 31,
                           height: 1.02,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: -1.4,
+                          letterSpacing: -1.0,
                           color: kHomeInk,
                         ),
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 10),
                       Text(
                         _isOwner
-                            ? 'Главное действие владельца на экране.\nБыстрый вход в работу с клиентом.'
-                            : 'Главное действие на экране.\nБыстрый поиск по телефону, имени\nили номеру клиента.',
+                            ? 'Главное действие владельца на экране. Быстрый вход в работу с клиентом.'
+                            : 'Главное действие на экране.\nБыстрый поиск по телефону, имени или номеру клиента.',
                         style: const TextStyle(
-                          fontSize: 20,
-                          height: 1.34,
+                          fontSize: 14.5,
+                          height: 1.42,
                           fontWeight: FontWeight.w700,
                           color: kHomeInkSoft,
                         ),
                       ),
-                      const SizedBox(height: 26),
+                      const SizedBox(height: 18),
                       Container(
-                        height: 76,
-                        padding: const EdgeInsets.fromLTRB(20, 0, 10, 0),
+                        height: 60,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(28),
-                          color: Colors.white.withOpacity(0.72),
-                          border: Border.all(color: Colors.white.withOpacity(0.92), width: 1.4),
+                          borderRadius: BorderRadius.circular(22),
+                          color: Colors.white.withOpacity(0.94),
+                          border: Border.all(
+                            color: const Color(0xFFE7EEF0),
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 16,
-                              offset: const Offset(0, 8),
-                            ),
-                            BoxShadow(
-                              color: Colors.white.withOpacity(0.44),
-                              blurRadius: 10,
-                              offset: const Offset(0, -2),
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
                             ),
                           ],
                         ),
@@ -1271,20 +1163,20 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
                             Icon(
                               CupertinoIcons.search,
                               color: kHomeInkSoft,
-                              size: 31,
+                              size: 20,
                             ),
-                            SizedBox(width: 16),
+                            SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 'Телефон, имя, номер клиента',
                                 style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
                                   color: kHomeInkSoft,
                                 ),
                               ),
                             ),
-                            SizedBox(width: 10),
+                            SizedBox(width: 8),
                             _MiniActionPill(),
                           ],
                         ),
@@ -1313,13 +1205,13 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
             showPulse: _chatCount > 0,
           ),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 12),
         Expanded(
           child: _ModuleCard(
             title: 'Объявления',
             subtitle: '',
             icon: CupertinoIcons.bell,
-            glowColor: kHomeViolet,
+            glowColor: kHomePink,
             onTap: _openAnnouncements,
             showPulse: _announcementsHasNew,
           ),
@@ -1331,20 +1223,20 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
   Widget _buildHistoryCard() {
     return _Pressable(
       onTap: _openHistory,
-      borderRadius: 32,
+      borderRadius: 30,
       child: _GlassCard(
-        padding: const EdgeInsets.all(20),
-        radius: 32,
+        padding: const EdgeInsets.all(18),
+        radius: 30,
         child: Row(
           children: [
             const _FloatingGlyph(
               icon: CupertinoIcons.time,
               mainColor: kHomeMintTop,
               secondaryColor: kHomeBlue,
-              size: 74,
-              iconSize: 32,
+              size: 68,
+              iconSize: 30,
             ),
-            const SizedBox(width: 17),
+            const SizedBox(width: 15),
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1352,16 +1244,16 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
                   Text(
                     'История',
                     style: TextStyle(
-                      fontSize: 21,
+                      fontSize: 18.5,
                       fontWeight: FontWeight.w900,
                       color: kHomeInk,
                     ),
                   ),
-                  SizedBox(height: 5),
+                  SizedBox(height: 4),
                   Text(
                     'События и действия по заведению',
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 13.5,
                       height: 1.35,
                       fontWeight: FontWeight.w700,
                       color: kHomeInkSoft,
@@ -1371,7 +1263,20 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
               ),
             ),
             const SizedBox(width: 10),
-            _ChevronGlassButton(),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: Colors.white.withOpacity(0.72),
+                border: Border.all(color: Colors.white.withOpacity(0.72)),
+              ),
+              child: const Icon(
+                CupertinoIcons.chevron_right,
+                size: 18,
+                color: kHomeInk,
+              ),
+            ),
           ],
         ),
       ),
@@ -1381,20 +1286,20 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
   Widget _buildWorkScheduleCard() {
     return _Pressable(
       onTap: _openWorkSchedule,
-      borderRadius: 32,
+      borderRadius: 30,
       child: _GlassCard(
-        padding: const EdgeInsets.all(20),
-        radius: 32,
+        padding: const EdgeInsets.all(18),
+        radius: 30,
         child: Row(
           children: [
             const _FloatingGlyph(
               icon: CupertinoIcons.calendar,
               mainColor: kHomeViolet,
               secondaryColor: kHomeBlue,
-              size: 74,
-              iconSize: 32,
+              size: 68,
+              iconSize: 30,
             ),
-            const SizedBox(width: 17),
+            const SizedBox(width: 15),
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1402,16 +1307,16 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
                   Text(
                     'График работы',
                     style: TextStyle(
-                      fontSize: 21,
+                      fontSize: 18.5,
                       fontWeight: FontWeight.w900,
                       color: kHomeInk,
                     ),
                   ),
-                  SizedBox(height: 5),
+                  SizedBox(height: 4),
                   Text(
                     'Месяц, смены и рабочие дни',
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 13.5,
                       height: 1.35,
                       fontWeight: FontWeight.w700,
                       color: kHomeInkSoft,
@@ -1421,7 +1326,20 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
               ),
             ),
             const SizedBox(width: 10),
-            _ChevronGlassButton(),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: Colors.white.withOpacity(0.72),
+                border: Border.all(color: Colors.white.withOpacity(0.72)),
+              ),
+              child: const Icon(
+                CupertinoIcons.chevron_right,
+                size: 18,
+                color: kHomeInk,
+              ),
+            ),
           ],
         ),
       ),
@@ -1431,20 +1349,20 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
   Widget _buildOwnerRequestsCard() {
     return _Pressable(
       onTap: _openOwnerRequests,
-      borderRadius: 32,
+      borderRadius: 30,
       child: _GlassCard(
-        padding: const EdgeInsets.all(20),
-        radius: 32,
+        padding: const EdgeInsets.all(18),
+        radius: 30,
         child: Row(
           children: [
             const _FloatingGlyph(
               icon: CupertinoIcons.check_mark_circled,
               mainColor: kHomeAccent,
               secondaryColor: kHomePink,
-              size: 74,
-              iconSize: 32,
+              size: 68,
+              iconSize: 30,
             ),
-            const SizedBox(width: 17),
+            const SizedBox(width: 15),
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1452,16 +1370,16 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
                   Text(
                     'График и согласования',
                     style: TextStyle(
-                      fontSize: 21,
+                      fontSize: 18.5,
                       fontWeight: FontWeight.w900,
                       color: kHomeInk,
                     ),
                   ),
-                  SizedBox(height: 5),
+                  SizedBox(height: 4),
                   Text(
                     'Запросы сотрудников, замены и публикация графика',
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 13.5,
                       height: 1.35,
                       fontWeight: FontWeight.w700,
                       color: kHomeInkSoft,
@@ -1471,7 +1389,20 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
               ),
             ),
             const SizedBox(width: 10),
-            _ChevronGlassButton(),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: Colors.white.withOpacity(0.72),
+                border: Border.all(color: Colors.white.withOpacity(0.72)),
+              ),
+              child: const Icon(
+                CupertinoIcons.chevron_right,
+                size: 18,
+                color: kHomeInk,
+              ),
+            ),
           ],
         ),
       ),
@@ -1558,19 +1489,19 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
                         physics: const BouncingScrollPhysics(
                           parent: AlwaysScrollableScrollPhysics(),
                         ),
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 30),
                         children: [
                           staggered(_buildTopBar()),
-                          const SizedBox(height: 22),
+                          const SizedBox(height: 18),
                           staggered(_buildHeroCarousel()),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 14),
                           staggered(_buildSearchHeroCard()),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 14),
                           staggered(_buildTopModulesRow()),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 16),
                           if (_error != null) ...[
                             staggered(_buildError()),
-                            const SizedBox(height: 18),
+                            const SizedBox(height: 16),
                           ],
                           staggered(
                             const Padding(
@@ -1578,17 +1509,10 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
                               child: Text(
                                 'Дополнительно',
                                 style: TextStyle(
-                                  fontSize: 24,
+                                  fontSize: 22,
                                   fontWeight: FontWeight.w900,
                                   letterSpacing: -0.5,
                                   color: Colors.white,
-                                  shadows: [
-                                    Shadow(
-                                      color: Color(0x66042D3C),
-                                      blurRadius: 10,
-                                      offset: Offset(0, 3),
-                                    ),
-                                  ],
                                 ),
                               ),
                             ),
@@ -1682,16 +1606,17 @@ class _PinnedAccentPillButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
         child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
-            gradient: const LinearGradient(colors: [kHomeAccent, kHomeAccentSoft]),
-            border: Border.all(color: Colors.white.withOpacity(0.44), width: 1),
+            gradient: const LinearGradient(
+              colors: [kHomeAccent, kHomeAccentSoft],
+            ),
             boxShadow: [
               BoxShadow(
                 color: kHomeAccent.withOpacity(0.28),
-                blurRadius: 14,
-                offset: const Offset(0, 7),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
@@ -1718,9 +1643,9 @@ class _PinnedAccentPillButton extends StatelessWidget {
                     Text(
                       text,
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w900,
-                        letterSpacing: 0.7,
+                        letterSpacing: 0.4,
                         color: Colors.white,
                       ),
                     ),
@@ -1745,42 +1670,30 @@ class _TopIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Pressable(
       onTap: onTap,
-      borderRadius: 24,
+      borderRadius: 18,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(18),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
           child: Container(
-            width: 64,
-            height: 64,
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.20),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withOpacity(0.52), width: 1.2),
+              color: Colors.white.withOpacity(0.16),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withOpacity(0.24)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 14,
-                  offset: const Offset(0, 7),
-                ),
-                BoxShadow(
-                  color: Colors.white.withOpacity(0.28),
-                  blurRadius: 8,
-                  offset: const Offset(0, -2),
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),
             child: Icon(
               icon,
               color: Colors.white,
-              size: 30,
-              shadows: const [
-                Shadow(
-                  color: Color(0x55042D3C),
-                  blurRadius: 8,
-                  offset: Offset(0, 3),
-                ),
-              ],
+              size: 21,
             ),
           ),
         ),
@@ -1805,65 +1718,30 @@ class _GlassCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(radius),
             gradient: LinearGradient(
               colors: [
-                Colors.white.withOpacity(0.94),
-                const Color(0xFFEFFFFF).withOpacity(0.80),
-                Colors.white.withOpacity(0.70),
+                kHomeCardStrong,
+                kHomeCard,
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            border: Border.all(color: Colors.white.withOpacity(0.88), width: 1.4),
+            border: Border.all(color: kHomeStroke),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 22,
+                color: kHomeShadow.withOpacity(0.10),
+                blurRadius: 24,
                 offset: const Offset(0, 14),
-              ),
-              BoxShadow(
-                color: Colors.white.withOpacity(0.32),
-                blurRadius: 12,
-                offset: const Offset(0, -2),
               ),
             ],
           ),
           child: child,
         ),
-      ),
-    );
-  }
-}
-
-class _ChevronGlassButton extends StatelessWidget {
-  const _ChevronGlassButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 50,
-      height: 50,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: Colors.white.withOpacity(0.70),
-        border: Border.all(color: Colors.white.withOpacity(0.82)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: const Icon(
-        CupertinoIcons.chevron_right,
-        size: 20,
-        color: kHomeInk,
       ),
     );
   }
@@ -1875,89 +1753,25 @@ class _MiniActionPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 58,
-      height: 58,
+      width: 34,
+      height: 34,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: const LinearGradient(colors: [kHomeAccent, kHomeAccentSoft]),
-        border: Border.all(color: Colors.white.withOpacity(0.58), width: 1.1),
+        borderRadius: BorderRadius.circular(12),
+        gradient: const LinearGradient(
+          colors: [kHomeAccent, kHomeAccentSoft],
+        ),
         boxShadow: [
           BoxShadow(
-            color: kHomeAccent.withOpacity(0.34),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            color: kHomeAccent.withOpacity(0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: const Icon(
         CupertinoIcons.arrow_right,
         color: Colors.white,
-        size: 30,
-      ),
-    );
-  }
-}
-
-class _OrbitRings extends StatelessWidget {
-  final double size;
-
-  const _OrbitRings({required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          for (int i = 0; i < 4; i++)
-            Container(
-              width: size - (i * 26),
-              height: size - (i * 26),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withOpacity(0.16 - i * 0.025), width: 1),
-              ),
-            ),
-          Positioned(
-            right: 20,
-            top: 54,
-            child: _SmallGlowDot(color: Colors.white, size: 8),
-          ),
-          Positioned(
-            left: 28,
-            bottom: 62,
-            child: _SmallGlowDot(color: kHomeAccentSoft, size: 5),
-          ),
-          Positioned(
-            right: 72,
-            bottom: 22,
-            child: _SmallGlowDot(color: kHomeAccentSoft, size: 6),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SmallGlowDot extends StatelessWidget {
-  final Color color;
-  final double size;
-
-  const _SmallGlowDot({required this.color, required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withOpacity(0.90),
-        boxShadow: [
-          BoxShadow(color: color.withOpacity(0.58), blurRadius: 12, spreadRadius: 1),
-        ],
+        size: 17,
       ),
     );
   }
@@ -1969,30 +1783,24 @@ class _DecorPercent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 124,
-      height: 134,
+      width: 88,
+      height: 108,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(36),
+        borderRadius: BorderRadius.circular(26),
         color: Colors.white.withOpacity(0.14),
-        border: Border.all(color: Colors.white.withOpacity(0.62), width: 1.5),
-        boxShadow: [
-          BoxShadow(color: Colors.white.withOpacity(0.24), blurRadius: 14, offset: const Offset(0, 0)),
-        ],
+        border: Border.all(color: Colors.white.withOpacity(0.22)),
       ),
       child: Stack(
         children: [
           Positioned(
-            top: 18,
-            right: 16,
+            top: 12,
+            right: 10,
             child: Container(
-              width: 24,
-              height: 24,
+              width: 16,
+              height: 16,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.82),
+                color: Colors.white.withOpacity(0.85),
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(color: Colors.white.withOpacity(0.40), blurRadius: 14),
-                ],
               ),
             ),
           ),
@@ -2001,17 +1809,10 @@ class _DecorPercent extends StatelessWidget {
               child: Text(
                 '%',
                 style: TextStyle(
-                  fontSize: 74,
+                  fontSize: 56,
                   fontWeight: FontWeight.w900,
-                  color: kHomeAccentSoft.withOpacity(0.96),
-                  letterSpacing: -3,
-                  shadows: [
-                    Shadow(
-                      color: kHomeAccent.withOpacity(0.35),
-                      blurRadius: 16,
-                      offset: const Offset(0, 7),
-                    ),
-                  ],
+                  color: kHomeAccent.withOpacity(0.97),
+                  letterSpacing: -2,
                 ),
               ),
             ),
@@ -2028,12 +1829,12 @@ class _DecorAnnouncement extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 112,
-      height: 128,
+      width: 88,
+      height: 108,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(34),
+        borderRadius: BorderRadius.circular(26),
         color: Colors.white.withOpacity(0.14),
-        border: Border.all(color: Colors.white.withOpacity(0.50), width: 1.4),
+        border: Border.all(color: Colors.white.withOpacity(0.22)),
       ),
       child: Stack(
         children: [
@@ -2041,8 +1842,8 @@ class _DecorAnnouncement extends StatelessWidget {
             top: 14,
             right: 12,
             child: Container(
-              width: 18,
-              height: 18,
+              width: 14,
+              height: 14,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.82),
                 shape: BoxShape.circle,
@@ -2053,19 +1854,19 @@ class _DecorAnnouncement extends StatelessWidget {
             child: Center(
               child: Icon(
                 CupertinoIcons.bell_fill,
-                size: 50,
+                size: 42,
                 color: Colors.white,
               ),
             ),
           ),
           Positioned(
-            bottom: 18,
+            bottom: 16,
             left: 0,
             right: 0,
             child: Center(
               child: Container(
-                width: 40,
-                height: 5,
+                width: 34,
+                height: 4,
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.75),
                   borderRadius: BorderRadius.circular(999),
@@ -2109,8 +1910,8 @@ class _FloatingGlyph extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: LinearGradient(
                 colors: [
-                  mainColor.withOpacity(0.20),
-                  secondaryColor.withOpacity(0.12),
+                  mainColor.withOpacity(0.22),
+                  secondaryColor.withOpacity(0.16),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -2118,24 +1919,23 @@ class _FloatingGlyph extends StatelessWidget {
             ),
           ),
           Container(
-            width: size * 0.78,
-            height: size * 0.78,
+            width: size * 0.74,
+            height: size * 0.74,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.72),
-              border: Border.all(color: Colors.white.withOpacity(0.82), width: 1.2),
+              color: Colors.white.withOpacity(0.86),
               boxShadow: [
                 BoxShadow(
                   color: mainColor.withOpacity(0.20),
-                  blurRadius: 18,
+                  blurRadius: 16,
                   offset: const Offset(0, 8),
                 ),
               ],
             ),
           ),
           Container(
-            width: size * 0.60,
-            height: size * 0.60,
+            width: size * 0.54,
+            height: size * 0.54,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
@@ -2143,13 +1943,6 @@ class _FloatingGlyph extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: mainColor.withOpacity(0.35),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
             ),
             child: Icon(
               icon,
@@ -2157,7 +1950,18 @@ class _FloatingGlyph extends StatelessWidget {
               size: iconSize,
             ),
           ),
-          
+          Positioned(
+            top: size * 0.11,
+            right: size * 0.14,
+            child: Container(
+              width: size * 0.14,
+              height: size * 0.14,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.90),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -2185,53 +1989,50 @@ class _ModuleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Pressable(
       onTap: onTap,
-      borderRadius: 34,
+      borderRadius: 30,
       child: _GlassCard(
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
-        radius: 34,
-        child: SizedBox(
-          height: 160,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Transform.translate(
-                offset: const Offset(0, -12),
-                child: _FloatingGlyph(
+        padding: const EdgeInsets.all(18),
+        radius: 30,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _FloatingGlyph(
                   icon: icon,
                   mainColor: glowColor,
-                  secondaryColor: glowColor == kHomeBlue ? kHomeMintTop : kHomePink,
-                  size: 96,
-                  iconSize: 42,
+                  secondaryColor:
+                      glowColor == kHomeBlue ? kHomeMintTop : kHomeViolet,
+                  size: 82,
+                  iconSize: 34,
                 ),
-              ),
-              const Spacer(),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  color: kHomeInk,
-                  letterSpacing: -0.7,
-                ),
-              ),
-              if (subtitle.isNotEmpty) ...[
-                const SizedBox(height: 5),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    height: 1.34,
-                    fontWeight: FontWeight.w700,
-                    color: kHomeInkSoft,
-                  ),
-                ),
+                const Spacer(),
+                if (showPulse) const _PulseDot(),
               ],
+            ),
+            const SizedBox(height: 18),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: kHomeInk,
+                letterSpacing: -0.4,
+              ),
+            ),
+            if (subtitle.isNotEmpty) ...[
+              const SizedBox(height: 5),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  height: 1.34,
+                  fontWeight: FontWeight.w700,
+                  color: kHomeInkSoft,
+                ),
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -2245,7 +2046,8 @@ class _PulseDot extends StatefulWidget {
   State<_PulseDot> createState() => _PulseDotState();
 }
 
-class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixin {
+class _PulseDotState extends State<_PulseDot>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
   @override
@@ -2290,12 +2092,11 @@ class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixi
                 ),
               ),
               Container(
-                width: 13,
-                height: 13,
+                width: 12,
+                height: 12,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: kHomePulseGreen,
-                  border: Border.all(color: Colors.white.withOpacity(0.74), width: 1),
                   boxShadow: [
                     BoxShadow(
                       color: kHomePulseGreen.withOpacity(0.55),
@@ -2328,7 +2129,8 @@ class _Pressable extends StatefulWidget {
   State<_Pressable> createState() => _PressableState();
 }
 
-class _PressableState extends State<_Pressable> with SingleTickerProviderStateMixin {
+class _PressableState extends State<_Pressable>
+    with SingleTickerProviderStateMixin {
   bool _pressed = false;
   late final AnimationController _glowController;
 

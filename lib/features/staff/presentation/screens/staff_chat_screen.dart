@@ -1716,111 +1716,98 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     final progress = totalSeconds > 0 ? playedSeconds / totalSeconds : 0.0;
     final speed = _voicePlaybackRates[message.id] ?? 1.0;
 
-    final gradientColors = mine
-        ? const [Color(0xFF2F86FF), Color(0xFF6857FF), Color(0xFF9B4DFF)]
-        : const [Color(0xFFFFFFFF), Color(0xFFF4F8FB)];
-
-    final mainTextColor = mine ? Colors.white : kChatInk;
-    final mutedTextColor = mine ? Colors.white.withOpacity(0.82) : kChatInkSoft;
-    final activeWaveColor = mine ? Colors.white : kChatBlue;
-    final inactiveWaveColor = mine
-        ? Colors.white.withOpacity(0.38)
-        : kChatBlue.withOpacity(0.25);
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(34),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          padding: const EdgeInsets.fromLTRB(14, 13, 16, 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(34),
-            gradient: LinearGradient(
-              colors: gradientColors,
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
-            border: Border.all(
-              color: mine
-                  ? Colors.white.withOpacity(0.45)
-                  : Colors.white.withOpacity(0.96),
-              width: mine ? 1.35 : 1.0,
-            ),
-            boxShadow: [
-              if (mine)
-                BoxShadow(
-                  color: const Color(0xFF6857FF).withOpacity(0.34),
-                  blurRadius: 26,
-                  spreadRadius: 1,
-                  offset: const Offset(0, 12),
-                )
-              else
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.07),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              if (mine)
-                BoxShadow(
-                  color: Colors.white.withOpacity(0.22),
-                  blurRadius: 18,
-                  spreadRadius: -7,
-                  offset: const Offset(0, -4),
-                ),
-            ],
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        gradient: mine
+            ? LinearGradient(
+                colors: [
+                  const Color(0xFF6366F1).withOpacity(0.95),
+                  const Color(0xFF8B5CF6).withOpacity(0.95),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : LinearGradient(
+                colors: [
+                  Colors.white.withOpacity(0.98),
+                  const Color(0xFFF0F4F8),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        border: Border.all(
+          color: mine
+              ? Colors.white.withOpacity(0.3)
+              : const Color(0xFFE7EEF0),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (mine ? const Color(0xFF6366F1) : Colors.black)
+                .withOpacity(mine ? 0.25 : 0.08),
+            blurRadius: mine ? 20 : 12,
+            offset: Offset(0, mine ? 8 : 4),
           ),
-          child: Row(
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
+              // ----- КНОПКА PLAY / PAUSE с жёлтым индикатором загрузки -----
               GestureDetector(
                 onTap: isLoading ? null : () => _toggleInlineVoicePlayback(message),
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: 58,
-                  height: 58,
+                  duration: const Duration(milliseconds: 200),
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: mine ? Colors.white : kChatBlue,
+                    gradient: mine
+                        ? const LinearGradient(
+                            colors: [Colors.white, Color(0xFFF8F9FF)],
+                          )
+                        : const LinearGradient(
+                            colors: [kChatBlue, Color(0xFF6366F1)],
+                          ),
                     boxShadow: [
                       BoxShadow(
-                        color: (mine ? Colors.white : kChatBlue).withOpacity(0.34),
-                        blurRadius: 18,
+                        color: (mine ? Colors.white : kChatBlue).withOpacity(0.4),
+                        blurRadius: 12,
                         spreadRadius: 2,
-                        offset: const Offset(0, 6),
                       ),
                     ],
                   ),
-                  child: Center(
-                    child: isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.6,
-                              valueColor: AlwaysStoppedAnimation<Color>(kChatAccent),
-                            ),
-                          )
-                        : AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 160),
-                            child: Icon(
-                              isPlaying
-                                  ? CupertinoIcons.pause_fill
-                                  : CupertinoIcons.play_fill,
-                              key: ValueKey(isPlaying ? 'pause' : 'play'),
-                              color: mine ? kChatBlue : Colors.white,
-                              size: 24,
-                            ),
+                  child: isLoading
+                      ? SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(kChatAccent), // ЖЁЛТЫЙ
                           ),
-                  ),
+                        )
+                      : AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(
+                            isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                            key: ValueKey(isPlaying ? 'pause' : 'play'),
+                            color: mine ? kChatBlue : Colors.white,
+                            size: 22,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(width: 14),
+
+              // ----- ВОЛНА + ПЕРЕМОТКА (тап и перетаскивание) -----
               Expanded(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
                     GestureDetector(
-                      behavior: HitTestBehavior.opaque,
                       onTapDown: (details) => _seekVoiceMessageFromTap(message, details),
                       onHorizontalDragUpdate: (details) {
                         final box = context.findRenderObject();
@@ -1830,49 +1817,37 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                           _seekVoiceMessageFromTap(message, dragDetails);
                         }
                       },
-                      child: SizedBox(
-                        height: 36,
+                      child: Container(
+                        height: 44,
                         child: LayoutBuilder(
                           builder: (context, constraints) {
-                            const barCount = 34;
-                            final rawBarWidth = constraints.maxWidth / barCount;
-                            final barWidth = math.max(2.4, rawBarWidth - 3.2);
-                            final waveHeights = _voiceWaveHeights(
-                              message,
-                              count: barCount,
-                            );
-
+                            final barCount = 40;
+                            final barWidth = (constraints.maxWidth / barCount) - 1.5;
+                            final waveHeights = _voiceWaveHeights(message, count: barCount);
                             return Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: List.generate(barCount, (i) {
                                 final t = i / (barCount - 1);
                                 final isActive = t <= progress;
-                                double baseHeight = 8 + waveHeights[i] * 1.36;
-
+                                double baseHeight = waveHeights[i];
                                 if (isPlaying) {
-                                  final pulse = 0.82 +
-                                      0.34 *
-                                          math.sin(
-                                            DateTime.now().millisecondsSinceEpoch / 135 +
-                                                i * 0.58,
-                                          );
+                                  final pulse = 0.8 + 0.4 * math.sin(
+                                    DateTime.now().millisecondsSinceEpoch / 150 + i * 0.5,
+                                  );
                                   baseHeight = baseHeight * pulse;
                                 }
-
-                                final height = baseHeight.clamp(7.0, 34.0);
-
-                                return Expanded(
-                                  child: Align(
-                                    alignment: Alignment.center,
-                                    child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 110),
-                                      width: barWidth,
-                                      height: height,
-                                      decoration: BoxDecoration(
-                                        color: isActive ? activeWaveColor : inactiveWaveColor,
-                                        borderRadius: BorderRadius.circular(99),
-                                      ),
-                                    ),
+                                final height = baseHeight.clamp(6.0, 32.0);
+                                return AnimatedContainer(
+                                  duration: const Duration(milliseconds: 100),
+                                  width: barWidth,
+                                  height: height,
+                                  margin: const EdgeInsets.only(right: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: isActive
+                                        ? (mine ? Colors.white : kChatBlue)
+                                        : (mine
+                                            ? Colors.white.withOpacity(0.45)
+                                            : kChatBlue.withOpacity(0.35)),
+                                    borderRadius: BorderRadius.circular(barWidth / 2),
                                   ),
                                 );
                               }),
@@ -1882,69 +1857,75 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                       ),
                     ),
                     const SizedBox(height: 8),
+
+                    // ----- НИЖНЯЯ ПАНЕЛЬ: время, скорость, статус прочитано -----
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          isPlaying
-                              ? _formatSeconds(playedSeconds)
-                              : _formatSeconds(totalSeconds),
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            color: mainTextColor,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () {
-                            double newSpeed;
-                            if (speed == 1.0) {
-                              newSpeed = 1.5;
-                            } else if (speed == 1.5) {
-                              newSpeed = 2.0;
-                            } else {
-                              newSpeed = 1.0;
-                            }
-                            _setVoiceSpeed(message, newSpeed);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 11,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(999),
-                              color: mine
-                                  ? Colors.white.withOpacity(0.18)
-                                  : kChatBlue.withOpacity(0.10),
-                              border: Border.all(
-                                color: mine
-                                    ? Colors.white.withOpacity(0.14)
-                                    : kChatBlue.withOpacity(0.12),
-                              ),
-                            ),
-                            child: Text(
-                              '${speed.toStringAsFixed(1)}x',
+                        Row(
+                          children: [
+                            AnimatedDefaultTextStyle(
+                              duration: const Duration(milliseconds: 150),
                               style: TextStyle(
                                 fontSize: 12.5,
-                                fontWeight: FontWeight.w900,
-                                color: mine ? Colors.white : kChatBlue,
+                                fontWeight: FontWeight.w700,
+                                color: mine
+                                    ? Colors.white.withOpacity(0.9)
+                                    : kChatInkSoft,
+                                fontFeatures: const [FontFeature.tabularFigures()],
+                              ),
+                              child: Text(
+                                isPlaying
+                                    ? _formatSeconds(playedSeconds)
+                                    : _formatSeconds(totalSeconds),
                               ),
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            // Кнопка ускорения (1x / 1.5x / 2x)
+                            GestureDetector(
+                              onTap: () {
+                                double newSpeed;
+                                if (speed == 1.0) newSpeed = 1.5;
+                                else if (speed == 1.5) newSpeed = 2.0;
+                                else newSpeed = 1.0;
+                                _setVoiceSpeed(message, newSpeed);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: mine
+                                      ? Colors.white.withOpacity(0.2)
+                                      : kChatBlue.withOpacity(0.1),
+                                ),
+                                child: Text(
+                                  '${speed.toStringAsFixed(1)}x',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: mine ? Colors.white : kChatBlue,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const Spacer(),
-                        Text(
-                          _formatMessageTime(message.createdAt),
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w800,
-                            color: mutedTextColor,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              _formatMessageTime(message.createdAt),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: mine
+                                    ? Colors.white.withOpacity(0.7)
+                                    : kChatInkSoft,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            _statusIcon(message, mine),   // ← галочки "прочитано"
+                          ],
                         ),
-                        _statusIcon(message, mine),
                       ],
                     ),
                   ],
@@ -1952,7 +1933,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -2727,28 +2708,22 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(999),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.92),
-              border: Border.all(color: Colors.white.withOpacity(0.98), width: 1.1),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.09),
-                  blurRadius: 14,
-                  offset: const Offset(0, 7),
-                ),
-              ],
+      child: Container(
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: Colors.white.withOpacity(0.90),
+          border: Border.all(color: const Color(0xFFE7EEF0)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
             ),
-            child: Icon(icon, size: 20, color: kChatInk),
-          ),
+          ],
         ),
+        child: Icon(icon, size: 15.5, color: kChatInk),
       ),
     );
   }
@@ -3866,182 +3841,140 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(34),
+            borderRadius: BorderRadius.circular(28),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
               child: Container(
-                padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                padding: const EdgeInsets.fromLTRB(9, 9, 9, 9),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(34),
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.white.withOpacity(0.96),
-                      Colors.white.withOpacity(0.86),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  border: Border.all(color: Colors.white.withOpacity(0.98), width: 1.2),
+                  borderRadius: BorderRadius.circular(28),
+                  color: Colors.white.withOpacity(0.90),
+                  border: Border.all(color: Colors.white.withOpacity(0.94)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.white.withOpacity(0.34),
-                      blurRadius: 26,
-                      spreadRadius: -6,
-                      offset: const Offset(0, -8),
-                    ),
-                    BoxShadow(
-                      color: const Color(0xFF024C56).withOpacity(0.20),
-                      blurRadius: 28,
-                      offset: const Offset(0, 14),
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    GestureDetector(
+                    InkWell(
+                      borderRadius: BorderRadius.circular(18),
                       onTap: _openAttachmentSheet,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 160),
-                        width: 52,
-                        height: 52,
+                      child: Container(
+                        width: 42,
+                        height: 42,
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xFFF7FAFB),
-                          border: Border.all(color: Colors.white, width: 1.2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
+                          borderRadius: BorderRadius.circular(18),
+                          color: kChatPink.withOpacity(0.10),
                         ),
                         child: const Icon(
                           CupertinoIcons.add,
                           color: kChatInk,
-                          size: 30,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 2),
-                        child: TextField(
-                          controller: _messageController,
-                          focusNode: _messageFocusNode,
-                          minLines: 1,
-                          maxLines: 7,
-                          textCapitalization: TextCapitalization.sentences,
-                          style: const TextStyle(
-                            color: kChatInk,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 17,
-                            height: 1.25,
-                          ),
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            hintText: _editingMessageId != null
-                                ? 'Изменить сообщение'
-                                : _replyingToMessageId != null
-                                    ? 'Напиши ответ...'
-                                    : 'Написать сообщение',
-                            hintStyle: TextStyle(
-                              color: kChatInkSoft.withOpacity(0.84),
-                              fontWeight: FontWeight.w800,
-                              fontSize: 17,
-                              letterSpacing: -0.2,
-                            ),
+                      child: TextField(
+                        controller: _messageController,
+                        focusNode: _messageFocusNode,
+                        minLines: 1,
+                        maxLines: 7,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          hintText: _editingMessageId != null
+                              ? 'Изменить сообщение'
+                              : _replyingToMessageId != null
+                                  ? 'Напиши ответ...'
+                                  : 'Написать сообщение',
+                          hintStyle: const TextStyle(
+                            color: kChatInkSoft,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     if (!showSendButton)
                       GestureDetector(
                         onTap: () {
                           HapticFeedback.lightImpact();
                           _startVoiceRecording();
                         },
-                        child: Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [
-                                kChatRed.withOpacity(0.10),
-                                kChatRed.withOpacity(0.18),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+                        child: Animate(
+                          effects: [
+                            ScaleEffect(
+                              duration: 150.ms,
+                              begin: Offset(1, 1),
+                              end: Offset(1.1, 1.1),
+                              curve: Curves.easeInOut,
                             ),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.86),
-                              width: 1.2,
+                          ],
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(18),
+                              color: kChatRed.withOpacity(0.15),
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: kChatRed.withOpacity(0.10),
-                                blurRadius: 16,
-                                offset: const Offset(0, 7),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            CupertinoIcons.mic_fill,
-                            color: kChatRed,
-                            size: 29,
+                            child: const Icon(CupertinoIcons.mic_fill, color: kChatRed),
                           ),
                         ),
                       )
                     else
-                      GestureDetector(
-                        onTap: _sending
-                            ? null
-                            : () async {
-                                HapticFeedback.lightImpact();
-                                await _sendMessage();
-                              },
-                        child: Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: _editingMessageId != null
-                                  ? const [kChatAmber, kChatAccentSoft]
-                                  : const [kChatBlue, kChatViolet],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: (_editingMessageId != null ? kChatAmber : kChatBlue)
-                                    .withOpacity(0.32),
-                                blurRadius: 18,
-                                offset: const Offset(0, 9),
-                              ),
-                            ],
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          gradient: LinearGradient(
+                            colors: _editingMessageId != null
+                                ? const [kChatAmber, kChatAccentSoft]
+                                : const [kChatBlue, kChatViolet],
                           ),
-                          child: Center(
-                            child: _sending
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.4,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : Icon(
-                                    _editingMessageId != null
-                                        ? CupertinoIcons.check_mark
-                                        : CupertinoIcons.arrow_up,
-                                    color: Colors.white,
-                                    size: 25,
-                                  ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (_editingMessageId != null
+                                      ? kChatAmber
+                                      : kChatBlue)
+                                  .withOpacity(0.22),
+                              blurRadius: 14,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: GestureDetector(
+                          onTap: _sending ? null : () async {
+                            HapticFeedback.lightImpact();
+                            await _sendMessage();
+                          },
+                          child: AnimatedScale(
+                            scale: 0.95,
+                            duration: const Duration(milliseconds: 100),
+                            child: SizedBox(
+                              width: 44,
+                              height: 44,
+                              child: Center(
+                                child: _sending
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : Icon(
+                                        _editingMessageId != null
+                                            ? CupertinoIcons.check_mark
+                                            : CupertinoIcons.arrow_up,
+                                        color: Colors.white,
+                                      ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -4156,22 +4089,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(999),
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.white.withOpacity(0.24),
-                                Colors.white.withOpacity(0.12),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            border: Border.all(color: Colors.white.withOpacity(0.42)),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.white.withOpacity(0.12),
-                                blurRadius: 14,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+                            color: Colors.white.withOpacity(0.20),
+                            border: Border.all(color: Colors.white.withOpacity(0.24)),
                           ),
                           child: Text(
                             _formatDayLabel(message.createdAt),
@@ -4989,35 +4908,30 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }) {
     return _Pressable(
       onTap: onTap,
-      borderRadius: 22,
+      borderRadius: 18,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
           child: Container(
-            width: 52,
-            height: 52,
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.16),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: Colors.white.withOpacity(0.28), width: 1.1),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withOpacity(0.24)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 14,
-                  offset: const Offset(0, 7),
-                ),
-                BoxShadow(
-                  color: Colors.white.withOpacity(0.12),
+                  color: Colors.black.withOpacity(0.05),
                   blurRadius: 12,
-                  offset: const Offset(0, -3),
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),
             child: Icon(
               icon,
               color: Colors.white,
-              size: 22,
+              size: 21,
             ),
           ),
         ),
@@ -5054,114 +4968,87 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       animation: _bgController,
       builder: (context, child) {
         final t = _bgController.value;
-        final shiftA = math.sin(t * math.pi * 2) * 24;
-        final shiftB = math.cos(t * math.pi * 2) * 18;
-        final shiftC = math.sin(t * math.pi * 2 + 1.2) * 16;
-        final rotate = math.sin(t * math.pi * 2) * 0.035;
+        final shiftA = math.sin(t * math.pi * 2) * 18;
+        final shiftB = math.cos(t * math.pi * 2) * 12;
+        final rotate = math.sin(t * math.pi * 2) * 0.03;
 
         return Stack(
           children: [
             Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Color.lerp(
-                      const Color(0xFF1AD6C4),
-                      const Color(0xFF08A9AB),
-                      (math.sin(t * math.pi) * 0.5 + 0.5).clamp(0.0, 1.0),
-                    )!,
-                    const Color(0xFF09AEB4),
-                    const Color(0xFF087F90),
-                    const Color(0xFF044B5C),
+                    kChatMintTop,
+                    kChatMintMid,
+                    kChatMintBottom,
+                    kChatMintDeep,
                   ],
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  stops: const [0.0, 0.36, 0.72, 1.0],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  stops: [0.0, 0.40, 0.78, 1.0],
                 ),
               ),
             ),
             Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(0.62, -0.92),
-                    radius: 1.10,
-                    colors: [
-                      const Color(0xFFE7FFD7).withOpacity(0.42),
-                      const Color(0xFF72EFE0).withOpacity(0.18),
-                      Colors.transparent,
-                    ],
-                    stops: const [0.0, 0.33, 1.0],
-                  ),
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(-1.0, 1.02),
-                    radius: 1.0,
-                    colors: [
-                      const Color(0xFF032F3B).withOpacity(0.35),
-                      Colors.transparent,
-                    ],
-                    stops: const [0.0, 1.0],
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.07),
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.10),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                   ),
                 ),
               ),
             ),
             Positioned(
-              top: -100 + shiftA,
-              right: -70,
+              top: -84 + shiftA,
+              right: -36,
               child: Transform.rotate(
                 angle: rotate,
-                child: _softBlob(
-                  width: 330,
-                  height: 330,
-                  colors: [
-                    Colors.white.withOpacity(0.20),
-                    kChatAccentSoft.withOpacity(0.12),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              left: -95,
-              top: 175 + shiftB,
-              child: Transform.rotate(
-                angle: -rotate,
                 child: _softBlob(
                   width: 280,
                   height: 280,
                   colors: [
-                    Colors.white.withOpacity(0.13),
-                    kChatViolet.withOpacity(0.10),
-                    Colors.transparent,
+                    Colors.white.withOpacity(0.16),
+                    kChatAccent.withOpacity(0.12),
                   ],
                 ),
               ),
             ),
             Positioned(
-              bottom: 45 - shiftC,
-              right: -70,
+              left: -64,
+              top: 210 + shiftB,
               child: Transform.rotate(
-                angle: rotate * 0.8,
+                angle: -rotate,
                 child: _softBlob(
-                  width: 300,
-                  height: 300,
+                  width: 220,
+                  height: 220,
                   colors: [
-                    kChatAccentSoft.withOpacity(0.12),
-                    Colors.white.withOpacity(0.07),
-                    Colors.transparent,
+                    Colors.white.withOpacity(0.10),
+                    kChatBlue.withOpacity(0.07),
                   ],
                 ),
               ),
             ),
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _ChatAmbientPainter(progress: t),
+            Positioned(
+              bottom: 48 - shiftA,
+              right: -18,
+              child: Transform.rotate(
+                angle: rotate,
+                child: _softBlob(
+                  width: 210,
+                  height: 210,
+                  colors: [
+                    kChatAccentSoft.withOpacity(0.10),
+                    Colors.white.withOpacity(0.05),
+                  ],
+                ),
               ),
             ),
           ],
@@ -5243,84 +5130,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       } catch (_) {}
     }
   }  
-}
-
-
-class _ChatAmbientPainter extends CustomPainter {
-  final double progress;
-
-  const _ChatAmbientPainter({required this.progress});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final ringPaint = Paint()
-      ..color = Colors.white.withOpacity(0.055)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..strokeCap = StrokeCap.round;
-
-    final smallGlow = Paint()
-      ..color = Colors.white.withOpacity(0.16)
-      ..style = PaintingStyle.fill;
-
-    final goldGlow = Paint()
-      ..color = kChatAccentSoft.withOpacity(0.32)
-      ..style = PaintingStyle.fill;
-
-    final centerA = Offset(size.width * 0.86, size.height * 0.26);
-    final centerB = Offset(size.width * 0.22, size.height * 0.72);
-
-    canvas.drawArc(
-      Rect.fromCircle(center: centerA, radius: 118),
-      progress * math.pi * 2,
-      math.pi * 0.72,
-      false,
-      ringPaint,
-    );
-    canvas.drawArc(
-      Rect.fromCircle(center: centerA, radius: 152),
-      progress * math.pi * 2 + 1.1,
-      math.pi * 0.52,
-      false,
-      ringPaint,
-    );
-    canvas.drawArc(
-      Rect.fromCircle(center: centerB, radius: 128),
-      -progress * math.pi * 2 + 0.8,
-      math.pi * 0.60,
-      false,
-      ringPaint,
-    );
-
-    final points = <Offset>[
-      Offset(size.width * 0.08, size.height * 0.10),
-      Offset(size.width * 0.19, size.height * 0.07),
-      Offset(size.width * 0.76, size.height * 0.09),
-      Offset(size.width * 0.91, size.height * 0.18),
-      Offset(size.width * 0.66, size.height * 0.38),
-      Offset(size.width * 0.18, size.height * 0.58),
-      Offset(size.width * 0.72, size.height * 0.78),
-      Offset(size.width * 0.12, size.height * 0.88),
-    ];
-
-    for (int i = 0; i < points.length; i++) {
-      final p = points[i];
-      final wave = 0.5 + 0.5 * math.sin(progress * math.pi * 2 + i * 0.9);
-      canvas.drawCircle(
-        p.translate(
-          math.sin(progress * math.pi * 2 + i) * 5,
-          math.cos(progress * math.pi * 2 + i) * 4,
-        ),
-        1.6 + wave * 2.2,
-        i.isEven ? goldGlow : smallGlow,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _ChatAmbientPainter oldDelegate) {
-    return oldDelegate.progress != progress;
-  }
 }
 
 class _GlassCard extends StatelessWidget {
