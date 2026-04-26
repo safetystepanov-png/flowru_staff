@@ -239,11 +239,8 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
     try {
       final authenticated = await _localAuth.authenticate(
         localizedReason: 'Войдите в Flowru Staff',
-        options: const AuthenticationOptions(
-          biometricOnly: true,
-          stickyAuth: true,
-          useErrorDialogs: true,
-        ),
+        biometricOnly: true,
+        persistAcrossBackgrounding: true,
       );
       
       print('🔐 Authentication result: $authenticated');
