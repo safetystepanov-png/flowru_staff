@@ -792,13 +792,21 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           ),
           child: Row(
             children: [
+              const SizedBox(
+                width: 52,
+                height: 52,
+                child: Center(
+                  child: StaffLogoBadge(size: 46),
+                ),
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 9,
+                      horizontal: 16,
+                      vertical: 8,
                     ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(999),
@@ -818,9 +826,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.w900,
-                        letterSpacing: 1.15,
+                        letterSpacing: 1.0,
                         color: Colors.white,
                         height: 1.0,
                       ),
