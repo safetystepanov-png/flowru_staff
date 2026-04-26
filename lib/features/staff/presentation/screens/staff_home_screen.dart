@@ -572,8 +572,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       builder: (context, child) {
         final t = _ambientController.value;
         final shiftA = math.sin(t * math.pi * 2) * 18;
-        final shiftB = math.cos(t * math.pi * 2) * 12;
-        final rotate = math.sin(t * math.pi * 2) * 0.03;
+        final shiftB = math.cos(t * math.pi * 2) * 14;
+        final shiftC = math.sin((t + 0.28) * math.pi * 2) * 10;
+        final rotate = math.sin(t * math.pi * 2) * 0.025;
 
         return Stack(
           children: [
@@ -581,14 +582,31 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    kHomeMintTop,
-                    kHomeMintMid,
-                    kHomeMintBottom,
-                    kHomeMintDeep,
+                    Color(0xFF006B91),
+                    Color(0xFF08B8BE),
+                    Color(0xFF6FE7BE),
+                    Color(0xFFEAF9C7),
                   ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  stops: [0.0, 0.40, 0.78, 1.0],
+                  begin: Alignment.bottomLeft,
+                  end: Alignment.topRight,
+                  stops: [0.0, 0.42, 0.76, 1.0],
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(0.55, -0.72),
+                      radius: 0.86,
+                      colors: [
+                        Colors.white.withOpacity(0.30),
+                        Colors.white.withOpacity(0.06),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -600,7 +618,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                       colors: [
                         Colors.white.withOpacity(0.07),
                         Colors.transparent,
-                        Colors.black.withOpacity(0.10),
+                        Colors.black.withOpacity(0.16),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -610,50 +628,112 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
               ),
             ),
             Positioned(
-              top: -90 + shiftA,
-              right: -40,
+              top: -78 + shiftA,
+              right: -46,
               child: Transform.rotate(
                 angle: rotate,
                 child: _softBlob(
-                  width: 280,
-                  height: 280,
+                  width: 300,
+                  height: 300,
                   colors: [
-                    Colors.white.withOpacity(0.16),
-                    kHomeAccent.withOpacity(0.12),
+                    Colors.white.withOpacity(0.24),
+                    const Color(0xFFE8FFD7).withOpacity(0.22),
                   ],
                 ),
               ),
             ),
             Positioned(
-              top: 210 + shiftB,
-              left: -70,
+              top: 196 + shiftB,
+              left: -78,
               child: Transform.rotate(
-                angle: -rotate * 0.9,
+                angle: -rotate,
                 child: _softBlob(
-                  width: 220,
-                  height: 220,
+                  width: 230,
+                  height: 230,
                   colors: [
-                    Colors.white.withOpacity(0.10),
-                    kHomeBlue.withOpacity(0.06),
+                    Colors.white.withOpacity(0.13),
+                    kHomeBlue.withOpacity(0.10),
                   ],
                 ),
               ),
             ),
             Positioned(
-              bottom: 60 - shiftA,
-              right: -20,
-              child: Transform.rotate(
-                angle: rotate,
-                child: _softBlob(
-                  width: 210,
-                  height: 210,
-                  colors: [
-                    kHomeAccentSoft.withOpacity(0.10),
-                    Colors.white.withOpacity(0.05),
-                  ],
+              bottom: 52 - shiftA,
+              right: -34,
+              child: _softBlob(
+                width: 240,
+                height: 240,
+                colors: [
+                  kHomeAccentSoft.withOpacity(0.16),
+                  Colors.white.withOpacity(0.08),
+                ],
+              ),
+            ),
+            Positioned(
+              bottom: 190 + shiftC,
+              left: -120,
+              child: IgnorePointer(
+                child: Container(
+                  width: 260,
+                  height: 260,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.15),
+                      width: 2,
+                    ),
+                  ),
                 ),
               ),
             ),
+            Positioned(
+              top: 142 - shiftC,
+              right: -122,
+              child: IgnorePointer(
+                child: Container(
+                  width: 270,
+                  height: 270,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.12),
+                      width: 2,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            for (final item in const [
+              _HomeParticle(34, 86, 4.5),
+              _HomeParticle(82, 232, 2.6),
+              _HomeParticle(310, 102, 3.2),
+              _HomeParticle(356, 306, 2.4),
+              _HomeParticle(24, 494, 3.0),
+              _HomeParticle(334, 586, 4.0),
+              _HomeParticle(68, 704, 2.8),
+              _HomeParticle(360, 778, 2.6),
+            ])
+              Positioned(
+                left: item.left + math.sin((t + item.size) * math.pi * 2) * 2,
+                top: item.top + math.cos((t + item.left / 100) * math.pi * 2) * 3,
+                child: IgnorePointer(
+                  child: Container(
+                    width: item.size,
+                    height: item.size,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(0.55),
+                      boxShadow: [
+                        BoxShadow(
+                          color: kHomeAccentSoft.withOpacity(0.45),
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
           ],
         );
       },
@@ -685,49 +765,92 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   }
 
   Widget _buildTopBar() {
-    return Row(
-      children: [
-        const SizedBox(
-          width: 72,
-          height: 72,
-          child: Center(
-            child: StaffLogoBadge(size: 54),
-          ),
-        ),
-        const SizedBox(width: 14),
-        const Expanded(
-          child: Text(
-            'Flowru',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 29,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.9,
-              color: Colors.white,
-              height: 1.0,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(30),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(30),
+            gradient: LinearGradient(
+              colors: [
+                Colors.white.withOpacity(0.30),
+                Colors.white.withOpacity(0.16),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
+            border: Border.all(color: Colors.white.withOpacity(0.34)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 24,
+                offset: const Offset(0, 14),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 9,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      gradient: const LinearGradient(
+                        colors: [kHomeAccent, kHomeAccentSoft],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: kHomeAccent.withOpacity(0.30),
+                          blurRadius: 14,
+                          offset: const Offset(0, 7),
+                        ),
+                      ],
+                    ),
+                    child: const Text(
+                      'FLOWRU STAFF',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.15,
+                        color: Colors.white,
+                        height: 1.0,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _TopIconButton(
+                icon: CupertinoIcons.building_2_fill,
+                onTap: _openEstablishmentPicker,
+              ),
+              const SizedBox(width: 7),
+              _TopIconButton(
+                icon: CupertinoIcons.refresh,
+                onTap: _loadDashboard,
+              ),
+              const SizedBox(width: 7),
+              _TopIconButton(
+                icon: Icons.logout_rounded,
+                onTap: () async {
+                  await auth_storage.AuthStorage.clearAll();
+                  if (!context.mounted) return;
+                  Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+                },
+              ),
+            ],
           ),
         ),
-        _TopIconButton(
-          icon: CupertinoIcons.building_2_fill,
-          onTap: _openEstablishmentPicker,
-        ),
-        const SizedBox(width: 8),
-        _TopIconButton(
-          icon: CupertinoIcons.refresh,
-          onTap: _loadDashboard,
-        ),
-        const SizedBox(width: 8),
-        _TopIconButton(
-          icon: Icons.logout_rounded,
-          onTap: () async {
-            await auth_storage.AuthStorage.clearAll();
-            if (!context.mounted) return;
-            Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-          },
-        ),
-      ],
+      ),
     );
   }
 
@@ -795,22 +918,26 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  _isOwner
-                      ? 'Поиск, начисления, списания, награды и ключевые действия по заведению.'
-                      : 'Поиск, чат, объявления и история — всё под рукой.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.4,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white.withOpacity(0.84),
+                Expanded(
+                  child: Text(
+                    _isOwner
+                        ? 'Поиск, начисления, списания, награды и ключевые действия по заведению.'
+                        : 'Поиск, чат, объявления и история — всё под рукой.',
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.4,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white.withOpacity(0.84),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 14),
-          const _DecorPercent(),
+          const _DecorMainScreen(),
         ],
       ),
     );
@@ -1538,6 +1665,15 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   }
 }
 
+
+class _HomeParticle {
+  final double left;
+  final double top;
+  final double size;
+
+  const _HomeParticle(this.left, this.top, this.size);
+}
+
 class _PinnedAnnouncement {
   final String announcementId;
   final String title;
@@ -1718,25 +1854,30 @@ class _GlassCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(radius),
             gradient: LinearGradient(
               colors: [
-                kHomeCardStrong,
-                kHomeCard,
+                Colors.white.withOpacity(0.92),
+                Colors.white.withOpacity(0.72),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            border: Border.all(color: kHomeStroke),
+            border: Border.all(color: Colors.white.withOpacity(0.86)),
             boxShadow: [
               BoxShadow(
-                color: kHomeShadow.withOpacity(0.10),
+                color: Colors.black.withOpacity(0.07),
                 blurRadius: 24,
                 offset: const Offset(0, 14),
+              ),
+              BoxShadow(
+                color: Colors.white.withOpacity(0.35),
+                blurRadius: 14,
+                offset: const Offset(-4, -4),
               ),
             ],
           ),
@@ -1777,48 +1918,16 @@ class _MiniActionPill extends StatelessWidget {
   }
 }
 
-class _DecorPercent extends StatelessWidget {
-  const _DecorPercent();
+class _DecorMainScreen extends StatelessWidget {
+  const _DecorMainScreen();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 88,
-      height: 108,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(26),
-        color: Colors.white.withOpacity(0.14),
-        border: Border.all(color: Colors.white.withOpacity(0.22)),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: 12,
-            right: 10,
-            child: Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.85),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Center(
-              child: Text(
-                '%',
-                style: TextStyle(
-                  fontSize: 56,
-                  fontWeight: FontWeight.w900,
-                  color: kHomeAccent.withOpacity(0.97),
-                  letterSpacing: -2,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return const _HeroDecorIcon(
+      icon: CupertinoIcons.person_crop_circle_badge_checkmark,
+      accentIcon: CupertinoIcons.bolt_fill,
+      primaryColor: kHomeBlue,
+      secondaryColor: kHomeViolet,
     );
   }
 }
@@ -1828,49 +1937,139 @@ class _DecorAnnouncement extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 88,
-      height: 108,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(26),
-        color: Colors.white.withOpacity(0.14),
-        border: Border.all(color: Colors.white.withOpacity(0.22)),
-      ),
+    return const _HeroDecorIcon(
+      icon: CupertinoIcons.bell_fill,
+      accentIcon: CupertinoIcons.exclamationmark,
+      primaryColor: kHomeAccent,
+      secondaryColor: kHomePink,
+    );
+  }
+}
+
+class _HeroDecorIcon extends StatelessWidget {
+  final IconData icon;
+  final IconData accentIcon;
+  final Color primaryColor;
+  final Color secondaryColor;
+
+  const _HeroDecorIcon({
+    required this.icon,
+    required this.accentIcon,
+    required this.primaryColor,
+    required this.secondaryColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 90,
+      height: 112,
       child: Stack(
+        alignment: Alignment.center,
         children: [
-          Positioned(
-            top: 14,
-            right: 12,
+          Positioned.fill(
             child: Container(
-              width: 14,
-              height: 14,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.82),
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(28),
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.white.withOpacity(0.20),
+                    Colors.white.withOpacity(0.09),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(color: Colors.white.withOpacity(0.24)),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryColor.withOpacity(0.18),
+                    blurRadius: 22,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
               ),
             ),
           ),
-          const Positioned.fill(
-            child: Center(
+          Positioned(
+            top: 12,
+            right: 10,
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [primaryColor, secondaryColor],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(color: Colors.white.withOpacity(0.55)),
+                boxShadow: [
+                  BoxShadow(
+                    color: secondaryColor.withOpacity(0.30),
+                    blurRadius: 12,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
               child: Icon(
-                CupertinoIcons.bell_fill,
-                size: 42,
+                accentIcon,
+                size: 13,
                 color: Colors.white,
               ),
             ),
           ),
-          Positioned(
-            bottom: 16,
-            left: 0,
-            right: 0,
+          Positioned.fill(
             child: Center(
               child: Container(
-                width: 34,
-                height: 4,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.75),
-                  borderRadius: BorderRadius.circular(999),
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.white.withOpacity(0.96),
+                      Colors.white.withOpacity(0.34),
+                    ],
+                  ),
+                  border: Border.all(color: Colors.white.withOpacity(0.52)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.26),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
                 ),
+                child: Icon(
+                  icon,
+                  size: 32,
+                  color: kHomeInk,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 11,
+            bottom: 14,
+            child: Container(
+              width: 26,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.70),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 13,
+            bottom: 14,
+            child: Container(
+              width: 12,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.42),
+                borderRadius: BorderRadius.circular(999),
               ),
             ),
           ),

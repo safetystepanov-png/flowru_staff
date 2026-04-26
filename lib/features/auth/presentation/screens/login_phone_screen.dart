@@ -16,20 +16,20 @@ import '../../data/user_api.dart';
 import 'register_screen.dart';
 
 // === ЦВЕТОВАЯ ПАЛИТРА ===
-const Color kLoginMintTop = Color(0xFF0CB7B3);
-const Color kLoginMintMid = Color(0xFF08A9AB);
-const Color kLoginMintBottom = Color(0xFF067D87);
-const Color kLoginMintDeep = Color(0xFF055E66);
-const Color kLoginAccent = Color(0xFFFFA11D);
-const Color kLoginAccentSoft = Color(0xFFFFC45E);
-const Color kLoginCard = Color(0xCCFFFFFF);
-const Color kLoginCardStrong = Color(0xE8FFFFFF);
-const Color kLoginStroke = Color(0xA6FFFFFF);
-const Color kLoginInk = Color(0xFF103238);
-const Color kLoginInkSoft = Color(0xFF58767D);
-const Color kLoginBlue = Color(0xFF4E7CFF);
-const Color kLoginPink = Color(0xFFFF5F8F);
-const Color kLoginViolet = Color(0xFF7A63FF);
+const Color kLoginMintTop = Color(0xFF0FCAC5);
+const Color kLoginMintMid = Color(0xFF0BAEBB);
+const Color kLoginMintBottom = Color(0xFF087D94);
+const Color kLoginMintDeep = Color(0xFF064B64);
+const Color kLoginAccent = Color(0xFFFFA51E);
+const Color kLoginAccentSoft = Color(0xFFFFD966);
+const Color kLoginCard = Color(0xD8FFFFFF);
+const Color kLoginCardStrong = Color(0xF2FFFFFF);
+const Color kLoginStroke = Color(0xD9FFFFFF);
+const Color kLoginInk = Color(0xFF0A2B47);
+const Color kLoginInkSoft = Color(0xFF557186);
+const Color kLoginBlue = Color(0xFF246BFF);
+const Color kLoginPink = Color(0xFFFF4F91);
+const Color kLoginViolet = Color(0xFF7A4CFF);
 
 class LoginPhoneScreen extends StatefulWidget {
   const LoginPhoneScreen({super.key});
@@ -346,65 +346,226 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
     return AnimatedBuilder(
       animation: Listenable.merge([_ambientController, _pulseController]),
       builder: (context, child) {
+        final size = MediaQuery.of(context).size;
         final t = _ambientController.value;
         final p = _pulseController.value;
-        final shiftA = math.sin(t * math.pi * 2) * 24;
+        final shiftA = math.sin(t * math.pi * 2) * 22;
         final shiftB = math.cos(t * math.pi * 2) * 18;
-        final rotate = math.sin(t * math.pi * 2) * 0.025;
-        return Stack(children: [
-          Container(decoration: const BoxDecoration(gradient: LinearGradient(colors: [kLoginMintTop, kLoginMintMid, kLoginMintBottom, kLoginMintDeep], begin: Alignment.topLeft, end: Alignment.bottomRight, stops: [0.0, 0.30, 0.70, 1.0]))),
-          Positioned.fill(child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.white.withOpacity(0.05), Colors.transparent], begin: Alignment.topLeft, end: Alignment.bottomRight)))),
-          Positioned(top: -90 + shiftA, right: -40 + shiftB, child: Transform.rotate(angle: rotate, child: _softBlob(width: 300, height: 300, colors: [Colors.white.withOpacity(0.22), kLoginAccent.withOpacity(0.14)]))),
-          Positioned(left: -70, bottom: 70 - shiftB, child: Transform.rotate(angle: -rotate, child: _softBlob(width: 260, height: 260, colors: [kLoginBlue.withOpacity(0.18), Colors.white.withOpacity(0.1)]))),
-          Positioned(top: 320 + shiftA, left: 90 + shiftB, child: Transform.rotate(angle: rotate * 0.8, child: _softBlob(width: 220, height: 220, colors: [kLoginPink.withOpacity(0.14), Colors.transparent]))),
-          ...List.generate(6, (i) {
-            final angle = (i / 6) * math.pi * 2 + t * math.pi * 0.3;
-            final distance = 180 + 30 * math.sin(t * math.pi * 2 + i);
-            final size = 4 + 2 * math.sin(p * math.pi * 2 + i);
-            final opacity = (0.15 + 0.1 * math.sin(p * math.pi * 2 + i * 0.5)).clamp(0.0, 1.0);
-            return Positioned(
-              left: (MediaQuery.of(context).size.width / 2 + math.cos(angle) * distance - size / 2).clamp(0, MediaQuery.of(context).size.width),
-              top: (MediaQuery.of(context).size.height / 2 + math.sin(angle) * distance - size / 2).clamp(0, MediaQuery.of(context).size.height),
-              child: Opacity(opacity: opacity, child: Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, color: [kLoginBlue, kLoginPink, kLoginViolet, kLoginAccent][i % 4]))),
-            );
-          }),
-        ]);
+
+        return Stack(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xFF087AA2),
+                    Color(0xFF0CBBC5),
+                    Color(0xFF66E2C4),
+                    Color(0xFF073E63),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  stops: [0.0, 0.36, 0.66, 1.0],
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(0.82, -0.88),
+                    radius: 0.92,
+                    colors: [
+                      Colors.white.withOpacity(0.42),
+                      Colors.white.withOpacity(0.08),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.36, 1.0],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: -120 + shiftA,
+              right: -80 + shiftB,
+              child: _softBlob(
+                width: 360,
+                height: 360,
+                colors: [Colors.white.withOpacity(0.30), kLoginAccentSoft.withOpacity(0.16)],
+              ),
+            ),
+            Positioned(
+              left: -130 - shiftB,
+              bottom: -40 + shiftA,
+              child: _softBlob(
+                width: 310,
+                height: 310,
+                colors: [kLoginBlue.withOpacity(0.24), Colors.white.withOpacity(0.10)],
+              ),
+            ),
+            Positioned(
+              top: size.height * 0.36 + shiftB,
+              right: -120,
+              child: Container(
+                width: 230,
+                height: 230,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withOpacity(0.13), width: 2),
+                ),
+              ),
+            ),
+            Positioned(
+              left: -58,
+              bottom: size.height * 0.13,
+              child: Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withOpacity(0.18), width: 2),
+                ),
+              ),
+            ),
+            ...List.generate(18, (i) {
+              final angle = (i * 1.73) + t * math.pi * 0.32;
+              final x = (math.sin(i * 19.7) * 0.5 + 0.5) * size.width;
+              final y = (math.cos(i * 13.1) * 0.5 + 0.5) * size.height;
+              final driftX = math.cos(angle) * (8 + i % 5);
+              final driftY = math.sin(angle) * (8 + i % 6);
+              final dotSize = 2.0 + (i % 4) * 1.15;
+              final opacity = (0.22 + 0.18 * math.sin(p * math.pi * 2 + i)).clamp(0.08, 0.42);
+
+              return Positioned(
+                left: x + driftX,
+                top: y + driftY,
+                child: IgnorePointer(
+                  child: Container(
+                    width: dotSize,
+                    height: dotSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: (i % 3 == 0 ? kLoginAccentSoft : Colors.white).withOpacity(opacity),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (i % 3 == 0 ? kLoginAccentSoft : Colors.white).withOpacity(opacity),
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        );
       },
     );
   }
 
+
   Widget _topBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        gradient: const LinearGradient(colors: [kLoginAccent, kLoginAccentSoft]),
-        boxShadow: [BoxShadow(color: kLoginAccent.withOpacity(0.32), blurRadius: 16, offset: const Offset(0, 7))],
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFF9C14), Color(0xFFFFC83F)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        border: Border.all(color: Colors.white.withOpacity(0.52), width: 1),
+        boxShadow: [
+          BoxShadow(color: kLoginAccent.withOpacity(0.36), blurRadius: 18, offset: const Offset(0, 8)),
+          BoxShadow(color: Colors.white.withOpacity(0.42), blurRadius: 4, offset: const Offset(0, -1)),
+        ],
       ),
-      child: const Text('FLOWRU STAFF', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1, color: Colors.white)),
+      child: const Text(
+        'FLOWRU STAFF',
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.8, color: Colors.white),
+      ),
     );
   }
 
-  Widget _logoOrb() {
+
+  Widget _orbitalLogo(double logoSize, {required bool isVerySmall, required bool isSmallScreen}) {
     return AnimatedBuilder(
-      animation: _pulseController,
+      animation: Listenable.merge([_ambientController, _pulseController]),
       builder: (context, child) {
-        final pulse = _pulseAnimation.value;
-        return Transform.scale(
-          scale: pulse,
-          child: SizedBox(
-            width: 100, height: 100,
-            child: Stack(alignment: Alignment.center, children: [
-              Transform.scale(scale: pulse * 1.15, child: Container(decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: kLoginAccent.withOpacity(0.35), blurRadius: 50, spreadRadius: 12), BoxShadow(color: kLoginBlue.withOpacity(0.2), blurRadius: 35, spreadRadius: 6)]))),
-              Container(width: 100, height: 100, decoration: BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [Colors.white.withOpacity(0.28), Colors.white.withOpacity(0.12)]))),
-              Container(width: 80, height: 80, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.96), boxShadow: [BoxShadow(color: kLoginBlue.withOpacity(0.14), blurRadius: 20, offset: const Offset(0, 12))])),
-              Container(width: 60, height: 60, decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [kLoginAccent, kLoginAccentSoft]), boxShadow: [BoxShadow(color: kLoginAccent.withOpacity(0.4), blurRadius: 26, offset: const Offset(0, 10))]), child: Center(child: Image.asset('assets/images/flowru_logo.png', width: 40, height: 40, fit: BoxFit.contain))),
-            ]),
+        final orbitSize = logoSize * 1.48;
+        final centerSize = logoSize * 0.82;
+        final badgeSize = logoSize * 0.58;
+
+        return SizedBox(
+          width: orbitSize,
+          height: orbitSize,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Transform.scale(
+                scale: _pulseAnimation.value,
+                child: Container(
+                  width: centerSize,
+                  height: centerSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: kLoginAccent.withOpacity(0.40),
+                        blurRadius: isVerySmall ? 26 : isSmallScreen ? 34 : 46,
+                        spreadRadius: isVerySmall ? 4 : isSmallScreen ? 7 : 10,
+                      ),
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.35),
+                        blurRadius: 22,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              CustomPaint(
+                size: Size.square(orbitSize),
+                painter: _LoginOrbitPainter(progress: _ambientController.value),
+              ),
+              Container(
+                width: centerSize,
+                height: centerSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const RadialGradient(
+                    colors: [Color(0xFFFFEE7B), Color(0xFFFFBD2E), Color(0xFFFFA51E)],
+                    stops: [0.0, 0.68, 1.0],
+                  ),
+                  border: Border.all(color: Colors.white.withOpacity(0.62), width: 1.2),
+                  boxShadow: [
+                    BoxShadow(color: kLoginAccent.withOpacity(0.42), blurRadius: 24, offset: const Offset(0, 10)),
+                  ],
+                ),
+              ),
+              Container(
+                width: badgeSize,
+                height: badgeSize,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.04)),
+                child: Center(
+                  child: Image.asset(
+                    'assets/images/flowru_logo.png',
+                    width: badgeSize * 0.86,
+                    height: badgeSize * 0.86,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },
     );
   }
+
+  Widget _logoOrb() => _orbitalLogo(88, isVerySmall: false, isSmallScreen: false);
+
 
   Widget _buildGlassInput({
     required TextEditingController controller,
@@ -425,53 +586,66 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
 
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 22),
-        color: Colors.white.withOpacity(0.94),
-        border: Border.all(color: const Color(0xFFE7EEF0), width: 1.2),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 18 : 24),
+        color: Colors.white.withOpacity(0.72),
+        border: Border.all(color: Colors.white.withOpacity(0.92), width: 1.35),
+        boxShadow: [
+          BoxShadow(color: const Color(0xFF0A5270).withOpacity(0.10), blurRadius: 18, offset: const Offset(0, 8)),
+          BoxShadow(color: Colors.white.withOpacity(0.75), blurRadius: 3, offset: const Offset(0, -1)),
+        ],
       ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        autofillHints: autofillHints,
-        textInputAction: textInputAction,
-        enableSuggestions: enableSuggestions,
-        autocorrect: autocorrect,
-        onSubmitted: onSubmitted,
-        style: TextStyle(
-          color: kLoginInk,
-          fontSize: isSmallScreen ? 14 : 16,
-        ),
-        decoration: InputDecoration(
-          prefixIcon: icon != null
-              ? Icon(
-                  icon,
-                  color: kLoginInkSoft,
-                  size: isSmallScreen ? 18 : 20,
-                )
-              : null,
-          suffixIcon: suffixIcon,
-          labelText: label,
-          hintText: hintText,
-          labelStyle: TextStyle(
-            color: kLoginInkSoft,
-            fontWeight: FontWeight.w600,
-            fontSize: isSmallScreen ? 13 : 15,
-          ),
-          hintStyle: const TextStyle(
-            color: Color(0xFF9AA5B1),
-            fontWeight: FontWeight.w400,
-          ),
-          floatingLabelStyle: const TextStyle(color: kLoginViolet),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: isSmallScreen ? 16 : 22,
-            vertical: isSmallScreen ? 12 : 19,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(isSmallScreen ? 18 : 24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: TextField(
+            controller: controller,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            autofillHints: autofillHints,
+            textInputAction: textInputAction,
+            enableSuggestions: enableSuggestions,
+            autocorrect: autocorrect,
+            onSubmitted: onSubmitted,
+            style: TextStyle(
+              color: kLoginInk,
+              fontSize: isSmallScreen ? 14 : 16,
+              fontWeight: FontWeight.w700,
+            ),
+            decoration: InputDecoration(
+              prefixIcon: icon != null
+                  ? Icon(
+                      icon,
+                      color: kLoginInkSoft,
+                      size: isSmallScreen ? 19 : 22,
+                    )
+                  : null,
+              suffixIcon: suffixIcon,
+              labelText: label,
+              hintText: hintText,
+              labelStyle: TextStyle(
+                color: kLoginInkSoft.withOpacity(0.88),
+                fontWeight: FontWeight.w700,
+                fontSize: isSmallScreen ? 13 : 15,
+              ),
+              hintStyle: TextStyle(
+                color: const Color(0xFF9AA5B1).withOpacity(0.65),
+                fontWeight: FontWeight.w500,
+                fontSize: isSmallScreen ? 12 : 14,
+              ),
+              floatingLabelStyle: const TextStyle(color: kLoginViolet, fontWeight: FontWeight.w800),
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: isSmallScreen ? 16 : 22,
+                vertical: isSmallScreen ? 13 : 19,
+              ),
+            ),
           ),
         ),
       ),
     );
   }
+
 
   Widget _glassButton({
     required VoidCallback? onPressed,
@@ -483,21 +657,23 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(isSmallScreen ? 24 : 30),
-        gradient: const LinearGradient(colors: [kLoginBlue, kLoginViolet, kLoginPink]),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 25 : 31),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1E70FF), Color(0xFF7A4CFF), Color(0xFFFF4F91)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        border: Border.all(color: Colors.white.withOpacity(0.70), width: 1.1),
         boxShadow: [
-          BoxShadow(
-            color: kLoginBlue.withOpacity(0.28),
-            blurRadius: isSmallScreen ? 14 : 22,
-            offset: Offset(0, isSmallScreen ? 6 : 12),
-          ),
+          BoxShadow(color: kLoginBlue.withOpacity(0.30), blurRadius: isSmallScreen ? 16 : 24, offset: Offset(0, isSmallScreen ? 7 : 12)),
+          BoxShadow(color: kLoginPink.withOpacity(0.20), blurRadius: isSmallScreen ? 18 : 26, offset: Offset(0, isSmallScreen ? 8 : 14)),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(isSmallScreen ? 24 : 30),
+          borderRadius: BorderRadius.circular(isSmallScreen ? 25 : 31),
           child: Container(
             height: isSmallScreen ? 48.0 : 60.0,
             alignment: Alignment.center,
@@ -505,10 +681,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                 ? SizedBox(
                     width: isSmallScreen ? 18 : 24,
                     height: isSmallScreen ? 18 : 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.4,
-                      color: Colors.white,
-                    ),
+                    child: const CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
                   )
                 : Text(
                     text,
@@ -516,6 +689,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                       color: Colors.white,
                       fontSize: isSmallScreen ? 14 : 16,
                       fontWeight: FontWeight.w900,
+                      letterSpacing: 0.2,
                     ),
                   ),
           ),
@@ -524,26 +698,30 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
     );
   }
 
+
   Widget _outlineGlassButton({required String text, required VoidCallback onTap}) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 400;
-    
+
     return Container(
       padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
       child: OutlinedButton(
-        onPressed: onTap, 
+        onPressed: onTap,
         style: OutlinedButton.styleFrom(
+          backgroundColor: Colors.white.withOpacity(0.34),
           side: const BorderSide(color: kLoginViolet, width: 1.5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 26 : 30)), 
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 26 : 30)),
           padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 15 : 17, horizontal: isSmallScreen ? 16 : 24),
-        ), 
+          shadowColor: kLoginViolet.withOpacity(0.18),
+        ),
         child: Text(
-          text, 
-          style: TextStyle(color: kLoginViolet, fontSize: isSmallScreen ? 14 : 15, fontWeight: FontWeight.w800),
+          text,
+          style: TextStyle(color: kLoginViolet, fontSize: isSmallScreen ? 14 : 15, fontWeight: FontWeight.w900),
         ),
       ),
     );
   }
+
 
   Widget _biometricButton() {
     if (!_shouldShowBiometricButton) return const SizedBox.shrink();
@@ -589,16 +767,17 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
         : isSmallScreen
             ? screenWidth * 0.92
             : isMediumScreen
-                ? screenWidth * 0.85
+                ? screenWidth * 0.86
                 : 500.0;
 
     final horizontalPadding = isVerySmall ? 12.0 : isSmallScreen ? 14.0 : 24.0;
-    final cardPadding = isVerySmall ? 12.0 : isSmallScreen ? 16.0 : 24.0;
-    final innerPadding = isVerySmall ? 10.0 : isSmallScreen ? 14.0 : 24.0;
+    final cardPadding = isVerySmall ? 10.0 : isSmallScreen ? 14.0 : 22.0;
+    final innerPadding = isVerySmall ? 10.0 : isSmallScreen ? 14.0 : 22.0;
 
+    // Шрифты оставлены в прежнем диапазоне: визуал меняем, масштаб не раздуваем.
     final titleSize = isVerySmall ? 20.0 : isSmallScreen ? 22.0 : 30.0;
     final subtitleSize = isVerySmall ? 10.5 : isSmallScreen ? 11.5 : 14.0;
-    final logoSize = isVerySmall ? 56.0 : isSmallScreen ? 64.0 : 88.0;
+    final logoSize = isVerySmall ? 58.0 : isSmallScreen ? 66.0 : 88.0;
 
     final gapSmall = isVerySmall ? 3.0 : isSmallScreen ? 4.0 : 8.0;
     final gapMedium = isVerySmall ? 6.0 : isSmallScreen ? 8.0 : 14.0;
@@ -630,9 +809,15 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                         borderRadius: BorderRadius.circular(isVerySmall ? 26 : isSmallScreen ? 32 : 44),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.12),
-                            blurRadius: isVerySmall ? 16 : isSmallScreen ? 20 : 32,
-                            offset: Offset(0, isVerySmall ? 6 : isSmallScreen ? 10 : 16),
+                            color: Colors.black.withOpacity(0.13),
+                            blurRadius: isVerySmall ? 18 : isSmallScreen ? 24 : 38,
+                            offset: Offset(0, isVerySmall ? 7 : isSmallScreen ? 12 : 18),
+                          ),
+                          BoxShadow(
+                            color: Colors.white.withOpacity(0.26),
+                            blurRadius: 18,
+                            spreadRadius: 1,
+                            offset: const Offset(0, -2),
                           ),
                         ],
                       ),
@@ -645,98 +830,21 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(isVerySmall ? 26 : isSmallScreen ? 32 : 44),
                               gradient: LinearGradient(
-                                colors: [kLoginCardStrong, kLoginCard],
+                                colors: [kLoginCardStrong, kLoginCard, Colors.white.withOpacity(0.78)],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
-                              border: Border.all(color: kLoginStroke),
+                              border: Border.all(color: kLoginStroke, width: 1.2),
                             ),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 _topBadge(),
                                 SizedBox(height: isVerySmall ? 6 : gapMedium),
-                                SizedBox(
-                                  width: logoSize,
-                                  height: logoSize,
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      Transform.scale(
-                                        scale: _pulseAnimation.value * 1.15,
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: kLoginAccent.withOpacity(0.35),
-                                                blurRadius: isVerySmall ? 20 : isSmallScreen ? 30 : 45,
-                                                spreadRadius: isVerySmall ? 2 : isSmallScreen ? 6 : 10,
-                                              ),
-                                              BoxShadow(
-                                                color: kLoginBlue.withOpacity(0.2),
-                                                blurRadius: isVerySmall ? 16 : isSmallScreen ? 22 : 32,
-                                                spreadRadius: isVerySmall ? 1 : isSmallScreen ? 3 : 5,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      Container(
-                                        width: logoSize,
-                                        height: logoSize,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          gradient: LinearGradient(
-                                            colors: [
-                                              Colors.white.withOpacity(0.28),
-                                              Colors.white.withOpacity(0.12),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      Container(
-                                        width: logoSize * 0.8,
-                                        height: logoSize * 0.8,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Colors.white.withOpacity(0.96),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: kLoginBlue.withOpacity(0.14),
-                                              blurRadius: isVerySmall ? 8 : isSmallScreen ? 12 : 18,
-                                              offset: const Offset(0, 4),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Container(
-                                        width: logoSize * 0.6,
-                                        height: logoSize * 0.6,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          gradient: const LinearGradient(
-                                            colors: [kLoginAccent, kLoginAccentSoft],
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: kLoginAccent.withOpacity(0.4),
-                                              blurRadius: isVerySmall ? 10 : isSmallScreen ? 16 : 24,
-                                              offset: Offset(0, isVerySmall ? 3 : isSmallScreen ? 5 : 8),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Center(
-                                          child: Image.asset(
-                                            'assets/images/flowru_logo.png',
-                                            width: logoSize * 0.4,
-                                            height: logoSize * 0.4,
-                                            fit: BoxFit.contain,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                _orbitalLogo(
+                                  logoSize,
+                                  isVerySmall: isVerySmall,
+                                  isSmallScreen: isSmallScreen,
                                 ),
                                 SizedBox(height: isVerySmall ? 4 : gapMedium),
                                 Text(
@@ -752,7 +860,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                 ),
                                 SizedBox(height: isVerySmall ? 2 : gapSmall),
                                 Text(
-                                  'Введите номер телефона и пароль,\nчтобы открыть рабочее пространство.',
+                                  'Введите номер телефона и пароль,\nчтобы открыть рабочее\nпространство.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: subtitleSize,
@@ -770,7 +878,6 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                         label: 'Телефон',
                                         icon: Icons.phone_android_outlined,
                                         keyboardType: TextInputType.phone,
-                                        hintText: '+7 999 555 30 55',
                                         autofillHints: const [AutofillHints.username],
                                         textInputAction: TextInputAction.next,
                                         enableSuggestions: false,
@@ -848,6 +955,68 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
       ),
     );
   }
+}
+
+class _LoginOrbitPainter extends CustomPainter {
+  _LoginOrbitPainter({required this.progress});
+
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final baseRadius = size.width * 0.39;
+
+    final ringPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.15
+      ..color = Colors.white.withOpacity(0.58);
+
+    final accentPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.3
+      ..strokeCap = StrokeCap.round
+      ..color = kLoginAccentSoft.withOpacity(0.74);
+
+    canvas.drawCircle(center, baseRadius, ringPaint);
+    canvas.drawCircle(
+      center,
+      baseRadius * 1.16,
+      ringPaint..color = Colors.white.withOpacity(0.32),
+    );
+
+    final rectA = Rect.fromCircle(center: center, radius: baseRadius * 1.16);
+    final rectB = Rect.fromCircle(center: center, radius: baseRadius * 0.98);
+    canvas.drawArc(rectA, -math.pi * 0.82 + progress * math.pi * 2, math.pi * 0.38, false, accentPaint);
+    canvas.drawArc(
+      rectB,
+      math.pi * 0.18 + progress * math.pi * 2,
+      math.pi * 0.24,
+      false,
+      accentPaint..color = Colors.white.withOpacity(0.66),
+    );
+
+    for (int i = 0; i < 4; i++) {
+      final radius = i.isEven ? baseRadius * 1.16 : baseRadius;
+      final angle = progress * math.pi * 2 + i * math.pi * 0.72;
+      final dot = Offset(center.dx + math.cos(angle) * radius, center.dy + math.sin(angle) * radius);
+      final dotPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = i.isEven ? kLoginAccentSoft.withOpacity(0.92) : Colors.white.withOpacity(0.85);
+      canvas.drawCircle(dot, i.isEven ? 2.6 : 3.2, dotPaint);
+      canvas.drawCircle(
+        dot,
+        i.isEven ? 4.7 : 5.2,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.8
+          ..color = Colors.white.withOpacity(0.50),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _LoginOrbitPainter oldDelegate) => oldDelegate.progress != progress;
 }
 
 // ========== ВОССТАНОВЛЕНИЕ ПАРОЛЯ ==========
