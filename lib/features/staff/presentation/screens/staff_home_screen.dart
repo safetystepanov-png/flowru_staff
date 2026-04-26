@@ -796,6 +796,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
   Widget _buildPromoBanner() {
     return Container(
       key: const ValueKey('hero_promo_banner'),
+      width: double.infinity,
       height: double.infinity,
       padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
       decoration: BoxDecoration(
@@ -808,90 +809,107 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        border: Border.all(color: Colors.white.withOpacity(0.64), width: 1.7),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.64),
+          width: 1.7,
+        ),
         boxShadow: [
-          BoxShadow(color: Colors.white.withOpacity(0.25), blurRadius: 22, offset: const Offset(0, 0)),
-          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 28, offset: const Offset(0, 16)),
+          BoxShadow(
+            color: Colors.white.withOpacity(0.25),
+            blurRadius: 22,
+            offset: const Offset(0, 0),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
+          ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
-        child: Stack(
-          children: [
-            Positioned(
-              right: -34,
-              top: 12,
-              child: _OrbitRings(size: 210),
-            ),
-            Positioned(
-              right: 4,
-              top: 62,
-              child: const _DecorPercent(),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    gradient: const LinearGradient(colors: [kHomeAccent, kHomeAccentSoft]),
-                    border: Border.all(color: Colors.white.withOpacity(0.55), width: 1),
-                    boxShadow: [
-                      BoxShadow(
-                        color: kHomeAccent.withOpacity(0.36),
-                        blurRadius: 18,
-                        offset: const Offset(0, 9),
-                      ),
-                    ],
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            right: -34,
+            top: 12,
+            child: _OrbitRings(size: 210),
+          ),
+          Positioned(
+            right: 4,
+            top: 62,
+            child: const _DecorPercent(),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 236,
+                height: 40,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  gradient: const LinearGradient(
+                    colors: [kHomeAccent, kHomeAccentSoft],
                   ),
-                  child: Text(
-                    _isOwner ? 'РЕЖИМ ВЛАДЕЛЬЦА' : 'ГЛАВНЫЙ ЭКРАН',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 2.0,
-                      color: Colors.white,
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.55),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: kHomeAccent.withOpacity(0.36),
+                      blurRadius: 18,
+                      offset: const Offset(0, 9),
                     ),
-                  ),
+                  ],
                 ),
-                const Spacer(),
-                const Text(
-                  'Быстрая работа\nс клиентами',
-                  style: TextStyle(
-                    fontSize: 42,
-                    height: 1.04,
+                child: Text(
+                  _isOwner ? 'РЕЖИМ ВЛАДЕЛЬЦА' : 'ГЛАВНЫЙ ЭКРАН',
+                  style: const TextStyle(
+                    fontSize: 13,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: -1.2,
+                    letterSpacing: 2.0,
                     color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        color: Color(0x66042D3C),
-                        blurRadius: 14,
-                        offset: Offset(0, 5),
-                      ),
-                    ],
                   ),
                 ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: 260,
-                  child: Text(
-                    _isOwner
-                        ? 'Поиск, начисления, списания, награды и ключевые действия по заведению.'
-                        : 'Поиск, чат, объявления и история\n— всё под рукой.',
-                    style: TextStyle(
-                      fontSize: 19,
-                      height: 1.25,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white.withOpacity(0.90),
+              ),
+              const Spacer(),
+              const Text(
+                'Быстрая работа\nс клиентами',
+                style: TextStyle(
+                  fontSize: 42,
+                  height: 1.04,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1.2,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(
+                      color: Color(0x66042D3C),
+                      blurRadius: 14,
+                      offset: Offset(0, 5),
                     ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: 320,
+                child: Text(
+                  _isOwner
+                      ? 'Поиск, начисления, списания, награды и ключевые действия по заведению.'
+                      : 'Поиск, чат, объявления и история\n— всё под рукой.',
+                  style: TextStyle(
+                    fontSize: 19,
+                    height: 1.25,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white.withOpacity(0.90),
                   ),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -899,6 +917,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
   Widget _buildPinnedAnnouncementBanner(_PinnedAnnouncement item, int index) {
     return Container(
       key: ValueKey('hero_pinned_${item.announcementId}_$index'),
+      width: double.infinity,
       height: double.infinity,
       padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
       decoration: BoxDecoration(
@@ -911,25 +930,43 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        border: Border.all(color: Colors.white.withOpacity(0.64), width: 1.7),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.64),
+          width: 1.7,
+        ),
         boxShadow: [
-          BoxShadow(color: Colors.white.withOpacity(0.25), blurRadius: 22, offset: const Offset(0, 0)),
-          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 28, offset: const Offset(0, 16)),
+          BoxShadow(
+            color: Colors.white.withOpacity(0.25),
+            blurRadius: 22,
+            offset: const Offset(0, 0),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
+          ),
         ],
       ),
       child: Row(
         children: [
           Expanded(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  width: 236,
+                  height: 40,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(999),
-                    gradient: const LinearGradient(colors: [kHomeAccent, kHomeAccentSoft]),
-                    border: Border.all(color: Colors.white.withOpacity(0.55), width: 1),
+                    gradient: const LinearGradient(
+                      colors: [kHomeAccent, kHomeAccentSoft],
+                    ),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.55),
+                      width: 1,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: kHomeAccent.withOpacity(0.36),
@@ -984,11 +1021,16 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
                 ),
                 if (_isOwner)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(18),
                       color: Colors.white.withOpacity(0.16),
-                      border: Border.all(color: Colors.white.withOpacity(0.18)),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.18),
+                      ),
                     ),
                     child: Text(
                       'Ознакомлены: ${item.acknowledgedCount}/${item.totalStaffCount}',
@@ -1004,7 +1046,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
                     text: 'Ознакомлен',
                     isLoading: _pinActionLoading,
                     isDone: item.isAcknowledged,
-                    onTap: item.isAcknowledged ? null : () => _acknowledgePinned(item),
+                    onTap: item.isAcknowledged
+                        ? null
+                        : () => _acknowledgePinned(item),
                   ),
               ],
             ),
@@ -1027,7 +1071,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> with TickerProviderSt
     }
 
     return SizedBox(
-      height: 300,
+      width: double.infinity,
+      height: 340,
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 760),
         switchInCurve: Curves.easeOutCubic,
