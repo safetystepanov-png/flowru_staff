@@ -20,26 +20,26 @@ import 'staff_establishment_history_screen.dart';
 import 'staff_establishments_screen.dart';
 import 'staff_work_schedule_screen.dart';
 
-const Color kHomeMintTop = Color(0xFF0CB7B3);
-const Color kHomeMintMid = Color(0xFF08A9AB);
-const Color kHomeMintBottom = Color(0xFF067D87);
-const Color kHomeMintDeep = Color(0xFF055E66);
+const Color kHomeMintTop = Color(0xFF0FCAC5);
+const Color kHomeMintMid = Color(0xFF0BAEBB);
+const Color kHomeMintBottom = Color(0xFF087D94);
+const Color kHomeMintDeep = Color(0xFF064B64);
 
-const Color kHomeAccent = Color(0xFFFFA11D);
-const Color kHomeAccentSoft = Color(0xFFFFC45E);
+const Color kHomeAccent = Color(0xFFFFA51E);
+const Color kHomeAccentSoft = Color(0xFFFFD966);
 const Color kHomeAccentRed = Color(0xFFFF6A5E);
 
 const Color kHomeCard = Color(0xCCFFFFFF);
 const Color kHomeCardStrong = Color(0xE8FFFFFF);
 const Color kHomeStroke = Color(0xA6FFFFFF);
 
-const Color kHomeInk = Color(0xFF103238);
-const Color kHomeInkSoft = Color(0xFF58767D);
+const Color kHomeInk = Color(0xFF0A2B47);
+const Color kHomeInkSoft = Color(0xFF557186);
 const Color kHomeShadow = Color(0x22062E36);
 
-const Color kHomeBlue = Color(0xFF4E7CFF);
-const Color kHomePink = Color(0xFFFF5F8F);
-const Color kHomeViolet = Color(0xFF7A63FF);
+const Color kHomeBlue = Color(0xFF246BFF);
+const Color kHomePink = Color(0xFFFF4F91);
+const Color kHomeViolet = Color(0xFF7A4CFF);
 const Color kHomePulseGreen = Color(0xFF22C55E);
 
 class StaffHomeScreen extends StatefulWidget {
@@ -582,14 +582,14 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Color(0xFF006B91),
-                    Color(0xFF08B8BE),
-                    Color(0xFF6FE7BE),
-                    Color(0xFFEAF9C7),
+                    kHomeMintDeep,
+                    kHomeMintBottom,
+                    kHomeMintMid,
+                    kHomeMintTop,
                   ],
                   begin: Alignment.bottomLeft,
                   end: Alignment.topRight,
-                  stops: [0.0, 0.42, 0.76, 1.0],
+                  stops: [0.0, 0.38, 0.72, 1.0],
                 ),
               ),
             ),
@@ -601,8 +601,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                       center: const Alignment(0.55, -0.72),
                       radius: 0.86,
                       colors: [
-                        Colors.white.withOpacity(0.30),
-                        Colors.white.withOpacity(0.06),
+                        Colors.white.withOpacity(0.18),
+                        Colors.white.withOpacity(0.04),
                         Colors.transparent,
                       ],
                     ),
@@ -616,9 +616,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Colors.white.withOpacity(0.07),
+                        Colors.white.withOpacity(0.04),
                         Colors.transparent,
-                        Colors.black.withOpacity(0.16),
+                        Colors.black.withOpacity(0.18),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -636,8 +636,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   width: 300,
                   height: 300,
                   colors: [
-                    Colors.white.withOpacity(0.24),
-                    const Color(0xFFE8FFD7).withOpacity(0.22),
+                    Colors.white.withOpacity(0.16),
+                    kHomeAccentSoft.withOpacity(0.10),
                   ],
                 ),
               ),
@@ -651,8 +651,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   width: 230,
                   height: 230,
                   colors: [
-                    Colors.white.withOpacity(0.13),
-                    kHomeBlue.withOpacity(0.10),
+                    Colors.white.withOpacity(0.09),
+                    kHomeBlue.withOpacity(0.08),
                   ],
                 ),
               ),
@@ -664,8 +664,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 width: 240,
                 height: 240,
                 colors: [
-                  kHomeAccentSoft.withOpacity(0.16),
-                  Colors.white.withOpacity(0.08),
+                  kHomeAccentSoft.withOpacity(0.11),
+                  Colors.white.withOpacity(0.05),
                 ],
               ),
             ),
@@ -722,10 +722,10 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                     height: item.size,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.55),
+                      color: Colors.white.withOpacity(0.40),
                       boxShadow: [
                         BoxShadow(
-                          color: kHomeAccentSoft.withOpacity(0.45),
+                          color: kHomeAccentSoft.withOpacity(0.25),
                           blurRadius: 10,
                           spreadRadius: 1,
                         ),
@@ -775,13 +775,13 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
             borderRadius: BorderRadius.circular(30),
             gradient: LinearGradient(
               colors: [
-                Colors.white.withOpacity(0.30),
-                Colors.white.withOpacity(0.16),
+                Colors.white.withOpacity(0.24),
+                Colors.white.withOpacity(0.12),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            border: Border.all(color: Colors.white.withOpacity(0.34)),
+            border: Border.all(color: Colors.white.withOpacity(0.26)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.08),
@@ -821,11 +821,11 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                         ),
                       ],
                     ),
-                    child: const Text(
-                      'FLOWRU STAFF',
+                    child: Text(
+                      _roleLabel,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.0,
@@ -1147,13 +1147,13 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 borderRadius: BorderRadius.circular(34),
                 gradient: LinearGradient(
                   colors: [
-                    Colors.white.withOpacity(0.96),
-                    Colors.white.withOpacity(0.82),
+                    Colors.white.withOpacity(0.90),
+                    Colors.white.withOpacity(0.74),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                border: Border.all(color: Colors.white.withOpacity(0.94)),
+                border: Border.all(color: Colors.white.withOpacity(0.78)),
               ),
               child: Stack(
                 children: [
@@ -1208,34 +1208,6 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                     children: [
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 11,
-                              vertical: 7,
-                            ),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(999),
-                              gradient: const LinearGradient(
-                                colors: [kHomeAccent, kHomeAccentSoft],
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: kHomeAccent.withOpacity(0.28),
-                                  blurRadius: 14,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: Text(
-                              _roleLabel.toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.8,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
                           const Spacer(),
                           Container(
                             width: 54,
@@ -1245,7 +1217,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                               color: kHomeInk.withOpacity(0.06),
                             ),
                             child: const Icon(
-                              CupertinoIcons.search,
+                              Icons.manage_search_rounded,
                               size: 26,
                               color: kHomeInk,
                             ),
@@ -1296,7 +1268,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                         child: const Row(
                           children: [
                             Icon(
-                              CupertinoIcons.search,
+                              Icons.manage_search_rounded,
                               color: kHomeInkSoft,
                               size: 20,
                             ),
@@ -1334,7 +1306,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           child: _ModuleCard(
             title: 'Чат',
             subtitle: '',
-            icon: CupertinoIcons.chat_bubble_2_fill,
+            icon: Icons.forum_rounded,
             glowColor: kHomeBlue,
             onTap: _openMessenger,
             showPulse: _chatCount > 0,
@@ -1345,7 +1317,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           child: _ModuleCard(
             title: 'Объявления',
             subtitle: '',
-            icon: CupertinoIcons.bell,
+            icon: Icons.campaign_rounded,
             glowColor: kHomePink,
             onTap: _openAnnouncements,
             showPulse: _announcementsHasNew,
@@ -1365,7 +1337,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         child: Row(
           children: [
             const _FloatingGlyph(
-              icon: CupertinoIcons.time,
+              icon: Icons.history_rounded,
               mainColor: kHomeMintTop,
               secondaryColor: kHomeBlue,
               size: 68,
@@ -1428,7 +1400,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         child: Row(
           children: [
             const _FloatingGlyph(
-              icon: CupertinoIcons.calendar,
+              icon: Icons.calendar_month_rounded,
               mainColor: kHomeViolet,
               secondaryColor: kHomeBlue,
               size: 68,
@@ -1491,7 +1463,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         child: Row(
           children: [
             const _FloatingGlyph(
-              icon: CupertinoIcons.check_mark_circled,
+              icon: Icons.fact_check_rounded,
               mainColor: kHomeAccent,
               secondaryColor: kHomePink,
               size: 68,
@@ -1869,13 +1841,13 @@ class _GlassCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(radius),
             gradient: LinearGradient(
               colors: [
-                Colors.white.withOpacity(0.92),
-                Colors.white.withOpacity(0.72),
+                Colors.white.withOpacity(0.86),
+                Colors.white.withOpacity(0.66),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            border: Border.all(color: Colors.white.withOpacity(0.86)),
+            border: Border.all(color: Colors.white.withOpacity(0.68)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.07),
@@ -1932,8 +1904,8 @@ class _DecorMainScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const _HeroDecorIcon(
-      icon: CupertinoIcons.person_crop_circle_badge_checkmark,
-      accentIcon: CupertinoIcons.bolt_fill,
+      icon: Icons.verified_user_rounded,
+      accentIcon: Icons.flash_on_rounded,
       primaryColor: kHomeBlue,
       secondaryColor: kHomeViolet,
     );
@@ -1946,8 +1918,8 @@ class _DecorAnnouncement extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const _HeroDecorIcon(
-      icon: CupertinoIcons.bell_fill,
-      accentIcon: CupertinoIcons.exclamationmark,
+      icon: Icons.notifications_active_rounded,
+      accentIcon: Icons.priority_high_rounded,
       primaryColor: kHomeAccent,
       secondaryColor: kHomePink,
     );
