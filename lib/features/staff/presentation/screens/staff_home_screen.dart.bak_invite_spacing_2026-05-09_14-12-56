@@ -1714,7 +1714,6 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                           staggered(_buildHeroCarousel()),
                           const SizedBox(height: 14),
                           staggered(_buildSearchHeroCard()),
-                          const SizedBox(height: 18),
                           staggered(_buildInviteClientCard()),
                           const SizedBox(height: 14),
                           staggered(_buildTopModulesRow()),

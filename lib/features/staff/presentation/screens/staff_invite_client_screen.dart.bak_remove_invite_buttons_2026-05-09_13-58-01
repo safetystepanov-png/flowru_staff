@@ -1,6 +1,9 @@
 ﻿import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/staff_invite_api.dart';
 
@@ -84,6 +87,38 @@ class _StaffInviteClientScreenState extends State<StaffInviteClientScreen>
     }
   }
 
+  Future<void> _copyLink() async {
+    final invite = _invite;
+    if (invite == null) return;
+
+    await Clipboard.setData(ClipboardData(text: invite.joinUrl));
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Ссылка скопирована'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _shareLink() async {
+    final invite = _invite;
+    if (invite == null) return;
+
+    final text = 'Добавьте ${invite.establishmentName} в Flowru:\n${invite.joinUrl}';
+    await Share.share(text);
+  }
+
+  Future<void> _openLink() async {
+    final invite = _invite;
+    if (invite == null) return;
+
+    final uri = Uri.parse(invite.joinUrl);
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
   @override
   Widget build(BuildContext context) {
     final invite = _invite;
@@ -132,6 +167,20 @@ class _StaffInviteClientScreenState extends State<StaffInviteClientScreen>
 
                           _InviteStepsCard(
                             establishmentName: invite.establishmentName,
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          _InviteActionsCard(
+                            onCopy: _copyLink,
+                            onShare: _shareLink,
+                            onOpen: _openLink,
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          _InviteLinkCard(
+                            link: invite.joinUrl,
                           ),
                         ],
                       ],
@@ -414,6 +463,103 @@ class _InviteStepsCard extends StatelessWidget {
             title: 'Заведение появляется у клиента',
             text: '$establishmentName будет доступно в его приложении.',
             isLast: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InviteActionsCard extends StatelessWidget {
+  final VoidCallback onCopy;
+  final VoidCallback onShare;
+  final VoidCallback onOpen;
+
+  const _InviteActionsCard({
+    required this.onCopy,
+    required this.onShare,
+    required this.onOpen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _WhiteCard(
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _InviteActionButton(
+                  icon: CupertinoIcons.doc_on_doc_fill,
+                  title: 'Скопировать',
+                  onTap: onCopy,
+                  colors: const [kInviteBlue, kInviteViolet],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _InviteActionButton(
+                  icon: CupertinoIcons.share_solid,
+                  title: 'Поделиться',
+                  onTap: onShare,
+                  colors: const [kInviteAccent, kInviteAccentSoft],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _InviteActionButton(
+            icon: CupertinoIcons.link,
+            title: 'Открыть страницу приглашения',
+            onTap: onOpen,
+            colors: const [kInviteMintBottom, kInviteMintTop],
+            fullWidth: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InviteLinkCard extends StatelessWidget {
+  final String link;
+
+  const _InviteLinkCard({
+    required this.link,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _WhiteCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Ссылка приглашения',
+            style: TextStyle(
+              color: kInviteInk,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              color: const Color(0xFFF3F8FA),
+              border: Border.all(color: const Color(0xFFE0EDF2)),
+            ),
+            child: Text(
+              link,
+              style: const TextStyle(
+                color: kInviteInkSoft,
+                fontSize: 13,
+                height: 1.35,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
         ],
       ),
@@ -788,4 +934,3 @@ class _Blob extends StatelessWidget {
     );
   }
 }
-
