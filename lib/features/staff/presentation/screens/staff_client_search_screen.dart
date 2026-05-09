@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import '../../../auth/data/auth_storage.dart';
 import '../../../../core/config/app_config.dart';
 import 'staff_client_detail_screen.dart';
+import '../../data/staff_client_qr_api.dart';
 import 'staff_qr_scanner_screen.dart';
 
 const Color kSearchMintTop = Color(0xFF0CB7B3);
@@ -181,24 +182,64 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
   }
 
   Future<void> _openQrSearch() async {
-    final result = await Navigator.of(context).push<String>(
+    final qrToken = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         builder: (_) => const StaffQrScannerScreen(),
       ),
     );
 
-    if (result == null || result.trim().isEmpty) return;
-    if (!mounted) return;
+    if (!mounted || qrToken == null || qrToken.trim().isEmpty) return;
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => StaffClientDetailScreen(
-          establishmentId: widget.establishmentId,
-          establishmentName: widget.establishmentName,
-          clientId: result.trim(),
-        ),
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CupertinoActivityIndicator(radius: 18),
       ),
     );
+
+    try {
+      final resolved = await StaffClientQrApi().resolveClientQr(
+        establishmentId: widget.establishmentId,
+        qrToken: qrToken.trim(),
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => StaffClientDetailScreen(
+            establishmentId: widget.establishmentId,
+            establishmentName: resolved.establishmentName,
+            clientId: resolved.clientId,
+          ),
+        ),
+      );
+
+      if (mounted) {
+        _resetSearch();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+
+      await showCupertinoDialog<void>(
+        context: context,
+        builder: (_) => CupertinoAlertDialog(
+          title: const Text('QR не распознан'),
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Понятно'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   void _openClient(_ClientSearchItem item) {

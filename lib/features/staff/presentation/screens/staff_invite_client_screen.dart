@@ -1,0 +1,936 @@
+﻿import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../data/staff_invite_api.dart';
+
+const Color kInviteMintTop = Color(0xFF0FCAC5);
+const Color kInviteMintMid = Color(0xFF0BAEBB);
+const Color kInviteMintBottom = Color(0xFF087D94);
+const Color kInviteDeep = Color(0xFF063247);
+const Color kInviteInk = Color(0xFF0A2B47);
+const Color kInviteInkSoft = Color(0xFF5D7488);
+const Color kInviteAccent = Color(0xFFFFA51E);
+const Color kInviteAccentSoft = Color(0xFFFFD166);
+const Color kInviteBlue = Color(0xFF246BFF);
+const Color kInviteViolet = Color(0xFF7A4CFF);
+
+class StaffInviteClientScreen extends StatefulWidget {
+  final int establishmentId;
+  final String establishmentName;
+
+  const StaffInviteClientScreen({
+    super.key,
+    required this.establishmentId,
+    required this.establishmentName,
+  });
+
+  @override
+  State<StaffInviteClientScreen> createState() => _StaffInviteClientScreenState();
+}
+
+class _StaffInviteClientScreenState extends State<StaffInviteClientScreen>
+    with SingleTickerProviderStateMixin {
+  final StaffInviteApi _api = StaffInviteApi();
+
+  late final AnimationController _pulseController;
+
+  StaffEstablishmentInvite? _invite;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final invite = await _api.getInvite(
+        establishmentId: widget.establishmentId,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _invite = invite;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _error = e.toString().replaceFirst('Exception: ', '');
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _copyLink() async {
+    final invite = _invite;
+    if (invite == null) return;
+
+    await Clipboard.setData(ClipboardData(text: invite.joinUrl));
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Ссылка скопирована'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _shareLink() async {
+    final invite = _invite;
+    if (invite == null) return;
+
+    final text = 'Добавьте ${invite.establishmentName} в Flowru:\n${invite.joinUrl}';
+    await Share.share(text);
+  }
+
+  Future<void> _openLink() async {
+    final invite = _invite;
+    if (invite == null) return;
+
+    final uri = Uri.parse(invite.joinUrl);
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final invite = _invite;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF2F6F8),
+      body: Stack(
+        children: [
+          const _InviteBackground(),
+
+          SafeArea(
+            child: Column(
+              children: [
+                _InviteTopBar(
+                  title: 'Пригласить клиента',
+                  subtitle: widget.establishmentName,
+                  onBack: () => Navigator.of(context).pop(),
+                  onReload: _load,
+                ),
+
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _load,
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
+                      children: [
+                        if (_loading)
+                          const _InviteStateCard(
+                            icon: CupertinoIcons.clock_fill,
+                            title: 'Готовим QR',
+                            text: 'Получаем ссылку приглашения заведения',
+                          )
+                        else if (_error != null)
+                          _InviteErrorCard(
+                            text: _error!,
+                            onRetry: _load,
+                          )
+                        else if (invite != null) ...[
+                          _InviteHeroCard(
+                            invite: invite,
+                            pulseController: _pulseController,
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          _InviteStepsCard(
+                            establishmentName: invite.establishmentName,
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          _InviteActionsCard(
+                            onCopy: _copyLink,
+                            onShare: _shareLink,
+                            onOpen: _openLink,
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          _InviteLinkCard(
+                            link: invite.joinUrl,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InviteTopBar extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final VoidCallback onBack;
+  final VoidCallback onReload;
+
+  const _InviteTopBar({
+    required this.title,
+    required this.subtitle,
+    required this.onBack,
+    required this.onReload,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Row(
+        children: [
+          _CircleButton(
+            icon: CupertinoIcons.chevron_left,
+            onTap: onBack,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: kInviteInk,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: kInviteInkSoft,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          _CircleButton(
+            icon: CupertinoIcons.refresh,
+            onTap: onReload,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InviteHeroCard extends StatelessWidget {
+  final StaffEstablishmentInvite invite;
+  final AnimationController pulseController;
+
+  const _InviteHeroCard({
+    required this.invite,
+    required this.pulseController,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(34),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            kInviteDeep,
+            kInviteMintBottom,
+            kInviteMintTop,
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: kInviteMintBottom.withOpacity(0.32),
+            blurRadius: 34,
+            offset: const Offset(0, 18),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: const LinearGradient(
+                    colors: [kInviteAccent, kInviteAccentSoft],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: kInviteAccent.withOpacity(0.36),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  CupertinoIcons.person_crop_circle_badge_plus,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      invite.establishmentName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'QR для добавления заведения',
+                      style: TextStyle(
+                        color: Color(0xDFFFFFFF),
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 22),
+
+          AnimatedBuilder(
+            animation: pulseController,
+            builder: (_, child) {
+              final scale = 1.0 + pulseController.value * 0.025;
+
+              return Transform.scale(
+                scale: scale,
+                child: child,
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.35),
+                    blurRadius: 34,
+                    spreadRadius: 2,
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.16),
+                    blurRadius: 24,
+                    offset: const Offset(0, 14),
+                  ),
+                ],
+              ),
+              child: QrImageView(
+                data: invite.qrPayload,
+                version: QrVersions.auto,
+                size: 230,
+                backgroundColor: Colors.white,
+                foregroundColor: kInviteInk,
+                eyeStyle: const QrEyeStyle(
+                  eyeShape: QrEyeShape.square,
+                  color: kInviteInk,
+                ),
+                dataModuleStyle: const QrDataModuleStyle(
+                  dataModuleShape: QrDataModuleShape.square,
+                  color: kInviteInk,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          const Text(
+            'Покажите QR клиенту',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 19,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.2,
+            ),
+          ),
+          const SizedBox(height: 7),
+          const Text(
+            'Клиент откроет ссылку, войдёт в Flowru и добавит заведение в свой список.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xE8FFFFFF),
+              fontSize: 13.5,
+              height: 1.35,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InviteStepsCard extends StatelessWidget {
+  final String establishmentName;
+
+  const _InviteStepsCard({
+    required this.establishmentName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _WhiteCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Как это работает',
+            style: TextStyle(
+              color: kInviteInk,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _StepLine(
+            number: '1',
+            title: 'Клиент сканирует QR',
+            text: 'Открывается страница подключения заведения.',
+          ),
+          _StepLine(
+            number: '2',
+            title: 'Клиент входит в Flowru',
+            text: 'Если приложения нет — увидит страницу-переходник.',
+          ),
+          _StepLine(
+            number: '3',
+            title: 'Заведение появляется у клиента',
+            text: '$establishmentName будет доступно в его приложении.',
+            isLast: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InviteActionsCard extends StatelessWidget {
+  final VoidCallback onCopy;
+  final VoidCallback onShare;
+  final VoidCallback onOpen;
+
+  const _InviteActionsCard({
+    required this.onCopy,
+    required this.onShare,
+    required this.onOpen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _WhiteCard(
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _InviteActionButton(
+                  icon: CupertinoIcons.doc_on_doc_fill,
+                  title: 'Скопировать',
+                  onTap: onCopy,
+                  colors: const [kInviteBlue, kInviteViolet],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _InviteActionButton(
+                  icon: CupertinoIcons.share_solid,
+                  title: 'Поделиться',
+                  onTap: onShare,
+                  colors: const [kInviteAccent, kInviteAccentSoft],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _InviteActionButton(
+            icon: CupertinoIcons.link,
+            title: 'Открыть страницу приглашения',
+            onTap: onOpen,
+            colors: const [kInviteMintBottom, kInviteMintTop],
+            fullWidth: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InviteLinkCard extends StatelessWidget {
+  final String link;
+
+  const _InviteLinkCard({
+    required this.link,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _WhiteCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Ссылка приглашения',
+            style: TextStyle(
+              color: kInviteInk,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              color: const Color(0xFFF3F8FA),
+              border: Border.all(color: const Color(0xFFE0EDF2)),
+            ),
+            child: Text(
+              link,
+              style: const TextStyle(
+                color: kInviteInkSoft,
+                fontSize: 13,
+                height: 1.35,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InviteActionButton extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+  final List<Color> colors;
+  final bool fullWidth;
+
+  const _InviteActionButton({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    required this.colors,
+    this.fullWidth = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: onTap,
+      child: Container(
+        width: fullWidth ? double.infinity : null,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(colors: colors),
+          boxShadow: [
+            BoxShadow(
+              color: colors.first.withOpacity(0.24),
+              blurRadius: 18,
+              offset: const Offset(0, 9),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StepLine extends StatelessWidget {
+  final String number;
+  final String title;
+  final String text;
+  final bool isLast;
+
+  const _StepLine({
+    required this.number,
+    required this.title,
+    required this.text,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [kInviteBlue, kInviteViolet],
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  number,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+            if (!isLast)
+              Container(
+                width: 2,
+                height: 34,
+                color: const Color(0xFFE5EEF2),
+              ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: isLast ? 0 : 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: kInviteInk,
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  text,
+                  style: const TextStyle(
+                    color: kInviteInkSoft,
+                    fontSize: 13.2,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InviteStateCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String text;
+
+  const _InviteStateCard({
+    required this.icon,
+    required this.title,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _WhiteCard(
+      child: Column(
+        children: [
+          const CupertinoActivityIndicator(radius: 18),
+          const SizedBox(height: 18),
+          Text(
+            title,
+            style: const TextStyle(
+              color: kInviteInk,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: kInviteInkSoft,
+              fontSize: 14,
+              height: 1.35,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InviteErrorCard extends StatelessWidget {
+  final String text;
+  final VoidCallback onRetry;
+
+  const _InviteErrorCard({
+    required this.text,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _WhiteCard(
+      child: Column(
+        children: [
+          const Icon(
+            CupertinoIcons.exclamationmark_circle_fill,
+            color: Color(0xFFFF6A5E),
+            size: 42,
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Не удалось загрузить приглашение',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: kInviteInk,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: kInviteInkSoft,
+              fontSize: 14,
+              height: 1.35,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _InviteActionButton(
+            icon: CupertinoIcons.refresh,
+            title: 'Повторить',
+            onTap: onRetry,
+            colors: const [kInviteBlue, kInviteViolet],
+            fullWidth: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WhiteCard extends StatelessWidget {
+  final Widget child;
+
+  const _WhiteCard({
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        color: Colors.white.withOpacity(0.92),
+        border: Border.all(color: Colors.white),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF062E36).withOpacity(0.10),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _CircleButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _CircleButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: onTap,
+      child: Container(
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white.withOpacity(0.92),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF062E36).withOpacity(0.10),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Icon(icon, color: kInviteInk, size: 22),
+      ),
+    );
+  }
+}
+
+class _InviteBackground extends StatelessWidget {
+  const _InviteBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFEFF9FA),
+              Color(0xFFF7F8FC),
+              Color(0xFFEAF1F7),
+            ],
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -90,
+              right: -90,
+              child: _Blob(
+                size: 230,
+                color: kInviteMintTop,
+                opacity: 0.14,
+              ),
+            ),
+            Positioned(
+              bottom: 60,
+              left: -120,
+              child: _Blob(
+                size: 260,
+                color: kInviteViolet,
+                opacity: 0.10,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Blob extends StatelessWidget {
+  final double size;
+  final Color color;
+  final double opacity;
+
+  const _Blob({
+    required this.size,
+    required this.color,
+    required this.opacity,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color.withOpacity(opacity),
+      ),
+    );
+  }
+}

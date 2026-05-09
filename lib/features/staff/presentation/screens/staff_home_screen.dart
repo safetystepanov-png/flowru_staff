@@ -16,6 +16,7 @@ import 'owner_requests_screen.dart';
 import 'staff_announcements_screen.dart';
 import 'staff_chat_screen.dart';
 import 'staff_client_search_screen.dart';
+import 'staff_invite_client_screen.dart';
 import 'staff_establishment_history_screen.dart';
 import 'staff_establishments_screen.dart';
 import 'staff_work_schedule_screen.dart';
@@ -1116,6 +1117,116 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     );
   }
 
+
+  void _openInviteClient() {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => StaffInviteClientScreen(
+              establishmentId: widget.establishmentId,
+              establishmentName: widget.establishmentName,
+            ),
+          ),
+        )
+        .then((_) => _loadDashboard());
+  }
+
+  Widget _buildInviteClientCard() {
+    return GestureDetector(
+      onTap: _openInviteClient,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              kHomeCardStrong,
+              kHomeCard,
+            ],
+          ),
+          border: Border.all(color: kHomeStroke),
+          boxShadow: [
+            BoxShadow(
+              color: kHomeAccent.withOpacity(0.18),
+              blurRadius: 26,
+              offset: const Offset(0, 14),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 62,
+              height: 62,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: const LinearGradient(
+                  colors: [kHomeAccent, kHomeAccentSoft],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: kHomeAccent.withOpacity(0.28),
+                    blurRadius: 22,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                CupertinoIcons.person_crop_circle_badge_plus,
+                color: Colors.white,
+                size: 31,
+              ),
+            ),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Пригласить клиента',
+                    style: TextStyle(
+                      color: kHomeInk,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.25,
+                    ),
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    'Покажите QR заведения. Клиент добавит его в Flowru.',
+                    style: TextStyle(
+                      color: kHomeInkSoft,
+                      fontSize: 13.5,
+                      height: 1.35,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: kHomeInk.withOpacity(0.06),
+              ),
+              child: const Icon(
+                CupertinoIcons.chevron_right,
+                color: kHomeInk,
+                size: 19,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSearchHeroCard() {
     return _Pressable(
       onTap: _openClientSearch,
@@ -1603,6 +1714,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                           staggered(_buildHeroCarousel()),
                           const SizedBox(height: 14),
                           staggered(_buildSearchHeroCard()),
+                          staggered(_buildInviteClientCard()),
                           const SizedBox(height: 14),
                           staggered(_buildTopModulesRow()),
                           const SizedBox(height: 16),
