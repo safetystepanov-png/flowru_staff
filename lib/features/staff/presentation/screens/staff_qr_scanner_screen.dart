@@ -1,5 +1,6 @@
-﻿import 'package:flutter/cupertino.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 class StaffQrScannerScreen extends StatefulWidget {
@@ -9,206 +10,460 @@ class StaffQrScannerScreen extends StatefulWidget {
   State<StaffQrScannerScreen> createState() => _StaffQrScannerScreenState();
 }
 
-class _StaffQrScannerScreenState extends State<StaffQrScannerScreen> {
+class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
+    with SingleTickerProviderStateMixin {
   final MobileScannerController _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
-    facing: CameraFacing.back,
+    formats: const [BarcodeFormat.qrCode],
     torchEnabled: false,
   );
+
+  late final AnimationController _lineController;
 
   bool _handled = false;
   bool _torchOn = false;
 
+  static const Color _mintTop = Color(0xFF0CB7B3);
+  static const Color _mintMid = Color(0xFF08A9AB);
+  static const Color _mintDeep = Color(0xFF055E66);
+  static const Color _accent = Color(0xFFFFA11D);
+  static const Color _ink = Color(0xFF103238);
+
+  @override
+  void initState() {
+    super.initState();
+    _lineController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1650),
+    )..repeat(reverse: true);
+  }
+
   @override
   void dispose() {
+    _lineController.dispose();
     _controller.dispose();
     super.dispose();
   }
 
-  void _onDetect(BarcodeCapture capture) {
+  void _onDetect(BarcodeCapture capture) async {
     if (_handled) return;
 
-    final barcodes = capture.barcodes;
-    if (barcodes.isEmpty) return;
+    String raw = '';
 
-    final raw = barcodes.first.rawValue;
-    if (raw == null || raw.trim().isEmpty) return;
+    for (final barcode in capture.barcodes) {
+      final value = barcode.rawValue?.trim();
+      if (value != null && value.isNotEmpty) {
+        raw = value;
+        break;
+      }
+    }
 
-    _handled = true;
-    Navigator.of(context).pop(raw.trim());
+    if (raw.isEmpty) return;
+
+    setState(() => _handled = true);
+
+    try {
+      HapticFeedback.mediumImpact();
+    } catch (_) {}
+
+    try {
+      await _controller.stop();
+    } catch (_) {}
+
+    if (!mounted) return;
+    Navigator.of(context).pop(raw);
   }
 
   Future<void> _toggleTorch() async {
-    await _controller.toggleTorch();
-    if (!mounted) return;
-    setState(() => _torchOn = !_torchOn);
+    try {
+      await _controller.toggleTorch();
+      if (!mounted) return;
+      setState(() => _torchOn = !_torchOn);
+    } catch (_) {
+      if (!mounted) return;
+      _showSmallMessage('Фонарик недоступен на этом устройстве');
+    }
+  }
+
+  void _showSmallMessage(String text) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: _ink,
+      ),
+    );
+  }
+
+  void _closeScanner() {
+    Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    const scanSize = 268.0;
+    final scanSize = MediaQuery.of(context).size.width * 0.72;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF061D26),
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
           Positioned.fill(
-            child: MobileScanner(
-              controller: _controller,
-              onDetect: _onDetect,
+            child: MobileScanner(controller: _controller, onDetect: _onDetect),
+          ),
+
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _ScannerOverlayPainter(
+                scanSize: scanSize,
+                accentColor: _accent,
+              ),
             ),
           ),
 
           Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    const Color(0xFF03131A).withOpacity(0.78),
-                    const Color(0xFF062632).withOpacity(0.40),
-                    const Color(0xFF03131A).withOpacity(0.86),
-                  ],
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black.withOpacity(0.38),
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.72),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
                 ),
               ),
             ),
           ),
 
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _ScannerFramePainter(scanSize: scanSize),
-            ),
-          ),
-
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
               child: Column(
                 children: [
-                  Row(
-                    children: [
-                      _RoundIconButton(
-                        icon: CupertinoIcons.chevron_left,
-                        onTap: () => Navigator.of(context).pop(),
-                      ),
-                      const Spacer(),
-                      _RoundIconButton(
-                        icon: _torchOn
-                            ? CupertinoIcons.bolt_fill
-                            : CupertinoIcons.bolt,
-                        onTap: _toggleTorch,
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 34),
-
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      color: Colors.white.withOpacity(0.14),
-                      border: Border.all(color: Colors.white.withOpacity(0.18)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF00D6C9).withOpacity(0.16),
-                          blurRadius: 28,
-                          offset: const Offset(0, 14),
-                        ),
-                      ],
-                    ),
-                    child: const Column(
-                      children: [
-                        Text(
-                          'Сканируйте Flowru QR',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.4,
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Клиент показывает общий QR на главном экране приложения. Система сама найдёт клиента в этом заведении.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Color(0xDDEAFBFF),
-                            fontSize: 13.5,
-                            height: 1.35,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
+                  _topBar(),
                   const Spacer(),
-
                   SizedBox(
                     width: scanSize,
                     height: scanSize,
                     child: Stack(
-                      alignment: Alignment.center,
                       children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(38),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.22),
-                              width: 1.2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF00D6C9).withOpacity(0.22),
-                                blurRadius: 36,
-                                spreadRadius: 2,
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(34),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.24),
+                                width: 1.2,
                               ),
-                            ],
-                          ),
-                        ),
-                        const _ScannerCorners(),
-                        const _ScannerLine(),
-                      ],
-                    ),
-                  ),
-
-                  const Spacer(),
-
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      color: Colors.white.withOpacity(0.12),
-                      border: Border.all(color: Colors.white.withOpacity(0.16)),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(
-                          CupertinoIcons.info_circle_fill,
-                          color: Color(0xFFFFD166),
-                          size: 22,
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'После сканирования откроется карточка клиента: начисление, списание, история и награды.',
-                            style: TextStyle(
-                              color: Color(0xEFFFFFFF),
-                              fontSize: 13,
-                              height: 1.35,
-                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
+                        AnimatedBuilder(
+                          animation: _lineController,
+                          builder: (context, _) {
+                            final top =
+                                18 + (_lineController.value * (scanSize - 38));
+
+                            return Positioned(
+                              left: 18,
+                              right: 18,
+                              top: top,
+                              child: Container(
+                                height: 3,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(999),
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Colors.transparent,
+                                      _accent,
+                                      Colors.transparent,
+                                    ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _accent.withOpacity(0.55),
+                                      blurRadius: 16,
+                                      spreadRadius: 1,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
+                  const Spacer(),
+                  _bottomCard(),
                 ],
               ),
+            ),
+          ),
+
+          if (_handled)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.34),
+                child: const Center(child: _ProcessingCard()),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _topBar() {
+    return Row(
+      children: [
+        _CircleButton(icon: CupertinoIcons.xmark, onTap: _closeScanner),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.13),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: Colors.white.withOpacity(0.16)),
+            ),
+            child: const Text(
+              'Сканирование клиента',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.2,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        _CircleButton(
+          icon: _torchOn
+              ? CupertinoIcons.bolt_fill
+              : CupertinoIcons.bolt_slash_fill,
+          active: _torchOn,
+          onTap: _toggleTorch,
+        ),
+      ],
+    );
+  }
+
+  Widget _bottomCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(32),
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withOpacity(0.96),
+            Colors.white.withOpacity(0.88),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: Colors.white.withOpacity(0.75)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.24),
+            blurRadius: 34,
+            offset: const Offset(0, 18),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(19),
+                  gradient: const LinearGradient(
+                    colors: [_mintTop, _mintMid, _mintDeep],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _mintMid.withOpacity(0.28),
+                      blurRadius: 18,
+                      offset: const Offset(0, 9),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  CupertinoIcons.qrcode_viewfinder,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 13),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Наведите камеру на QR',
+                      style: TextStyle(
+                        color: _ink,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.35,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Поддерживаются QR из приложения, Telegram/MAX-карты, код клиента и телефон.',
+                      style: TextStyle(
+                        color: Color(0xFF58767D),
+                        fontSize: 13.5,
+                        height: 1.24,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: _closeScanner,
+                    icon: const Icon(CupertinoIcons.keyboard),
+                    label: const Text('Ввести вручную'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _ink,
+                      side: BorderSide(color: _ink.withOpacity(0.14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: _toggleTorch,
+                    icon: Icon(
+                      _torchOn
+                          ? CupertinoIcons.bolt_fill
+                          : CupertinoIcons.bolt_slash_fill,
+                    ),
+                    label: Text(_torchOn ? 'Выключить' : 'Фонарик'),
+                    style: ElevatedButton.styleFrom(
+                      elevation: 0,
+                      backgroundColor: _accent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CircleButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool active;
+
+  const _CircleButton({
+    required this.icon,
+    required this.onTap,
+    this.active = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Ink(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: active
+                ? const Color(0xFFFFA11D).withOpacity(0.95)
+                : Colors.white.withOpacity(0.14),
+            border: Border.all(color: Colors.white.withOpacity(0.18)),
+          ),
+          child: Icon(icon, color: Colors.white, size: 22),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProcessingCard extends StatelessWidget {
+  const _ProcessingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 230,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.22),
+            blurRadius: 30,
+            offset: const Offset(0, 15),
+          ),
+        ],
+      ),
+      child: const Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 34,
+            height: 34,
+            child: CircularProgressIndicator(strokeWidth: 3),
+          ),
+          SizedBox(height: 14),
+          Text(
+            'QR считан',
+            style: TextStyle(
+              color: Color(0xFF103238),
+              fontWeight: FontWeight.w900,
+              fontSize: 18,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'Открываю карточку клиента…',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF58767D),
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -217,172 +472,26 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen> {
   }
 }
 
-class _RoundIconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _RoundIconButton({
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return CupertinoButton(
-      padding: EdgeInsets.zero,
-      onPressed: onTap,
-      child: Container(
-        width: 46,
-        height: 46,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withOpacity(0.14),
-          border: Border.all(color: Colors.white.withOpacity(0.18)),
-        ),
-        child: Icon(icon, color: Colors.white, size: 22),
-      ),
-    );
-  }
-}
-
-class _ScannerCorners extends StatelessWidget {
-  const _ScannerCorners();
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _ScannerCornersPainter(),
-      child: const SizedBox.expand(),
-    );
-  }
-}
-
-class _ScannerLine extends StatefulWidget {
-  const _ScannerLine();
-
-  @override
-  State<_ScannerLine> createState() => _ScannerLineState();
-}
-
-class _ScannerLineState extends State<_ScannerLine>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1700),
-    )..repeat(reverse: true);
-
-    _animation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOutCubic,
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (_, __) {
-        final top = 34 + (200 * _animation.value);
-
-        return Positioned(
-          top: top,
-          left: 28,
-          right: 28,
-          child: Container(
-            height: 3,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(99),
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0x0000D6C9),
-                  Color(0xFF00D6C9),
-                  Color(0xFFFFD166),
-                  Color(0x0000D6C9),
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF00D6C9).withOpacity(0.55),
-                  blurRadius: 16,
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ScannerCornersPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFF00D6C9)
-      ..strokeWidth = 5
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    const radius = 34.0;
-    const len = 48.0;
-
-    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(radius));
-
-    canvas.drawRRect(
-      rrect,
-      Paint()
-        ..color = Colors.white.withOpacity(0.05)
-        ..style = PaintingStyle.fill,
-    );
-
-    canvas.drawLine(const Offset(24, 0), const Offset(24 + len, 0), paint);
-    canvas.drawLine(const Offset(0, 24), const Offset(0, 24 + len), paint);
-
-    canvas.drawLine(Offset(size.width - 24, 0), Offset(size.width - 24 - len, 0), paint);
-    canvas.drawLine(Offset(size.width, 24), Offset(size.width, 24 + len), paint);
-
-    canvas.drawLine(Offset(24, size.height), Offset(24 + len, size.height), paint);
-    canvas.drawLine(Offset(0, size.height - 24), Offset(0, size.height - 24 - len), paint);
-
-    canvas.drawLine(Offset(size.width - 24, size.height), Offset(size.width - 24 - len, size.height), paint);
-    canvas.drawLine(Offset(size.width, size.height - 24), Offset(size.width, size.height - 24 - len), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _ScannerFramePainter extends CustomPainter {
+class _ScannerOverlayPainter extends CustomPainter {
   final double scanSize;
+  final Color accentColor;
 
-  const _ScannerFramePainter({required this.scanSize});
+  const _ScannerOverlayPainter({
+    required this.scanSize,
+    required this.accentColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final overlay = Path()..addRect(Offset.zero & size);
 
     final left = (size.width - scanSize) / 2;
-    final top = (size.height - scanSize) / 2 + 16;
+    final top = (size.height - scanSize) / 2;
 
+    final cutoutRect = Rect.fromLTWH(left, top, scanSize, scanSize);
     final cutout = Path()
       ..addRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(left, top, scanSize, scanSize),
-          const Radius.circular(38),
-        ),
+        RRect.fromRectAndRadius(cutoutRect, const Radius.circular(36)),
       );
 
     final path = Path.combine(PathOperation.difference, overlay, cutout);
@@ -390,13 +499,73 @@ class _ScannerFramePainter extends CustomPainter {
     canvas.drawPath(
       path,
       Paint()
-        ..color = Colors.black.withOpacity(0.16)
+        ..color = Colors.black.withOpacity(0.50)
         ..style = PaintingStyle.fill,
+    );
+
+    final cornerPaint = Paint()
+      ..color = accentColor
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    const corner = 42.0;
+    final r = RRect.fromRectAndRadius(cutoutRect, const Radius.circular(36));
+
+    final rect = r.outerRect;
+
+    // top left
+    canvas.drawLine(
+      rect.topLeft + const Offset(22, 0),
+      rect.topLeft + const Offset(corner, 0),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      rect.topLeft + const Offset(0, 22),
+      rect.topLeft + const Offset(0, corner),
+      cornerPaint,
+    );
+
+    // top right
+    canvas.drawLine(
+      rect.topRight + const Offset(-22, 0),
+      rect.topRight + const Offset(-corner, 0),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      rect.topRight + const Offset(0, 22),
+      rect.topRight + const Offset(0, corner),
+      cornerPaint,
+    );
+
+    // bottom left
+    canvas.drawLine(
+      rect.bottomLeft + const Offset(22, 0),
+      rect.bottomLeft + const Offset(corner, 0),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      rect.bottomLeft + const Offset(0, -22),
+      rect.bottomLeft + const Offset(0, -corner),
+      cornerPaint,
+    );
+
+    // bottom right
+    canvas.drawLine(
+      rect.bottomRight + const Offset(-22, 0),
+      rect.bottomRight + const Offset(-corner, 0),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      rect.bottomRight + const Offset(0, -22),
+      rect.bottomRight + const Offset(0, -corner),
+      cornerPaint,
     );
   }
 
   @override
-  bool shouldRepaint(covariant _ScannerFramePainter oldDelegate) {
-    return oldDelegate.scanSize != scanSize;
+  bool shouldRepaint(covariant _ScannerOverlayPainter oldDelegate) {
+    return oldDelegate.scanSize != scanSize ||
+        oldDelegate.accentColor != accentColor;
   }
 }
