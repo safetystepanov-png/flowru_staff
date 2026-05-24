@@ -36,55 +36,6 @@ const Color kAnnSuccessSoft = Color(0xFF4ADE80);
 const Color kAnnWarn = Color(0xFFF97316);
 const Color kAnnWarnSoft = Color(0xFFFB923C);
 
-
-String flowruCleanText(String value) {
-  var s = value;
-
-  final replacements = <String, String>{
-    'РђРєС‚РёРІРЅРѕ': 'Активно',
-    'РђРєС‚РёРІРЅР°': 'Активна',
-    'Р—Р°РєСЂРµРїР»РµРЅРѕ': 'Закреплено',
-    'РћР·РЅР°РєРѕРјР»РµРЅ': 'Ознакомлен',
-    'РџСЂРѕС‡РёС‚Р°РЅРѕ': 'Прочитано',
-    'РќРµ РѕР·РЅР°РєРѕРјР»РµРЅ': 'Не ознакомлен',
-    'Р“СЂР°С„РёРє': 'График',
-    'РСЃС‚РѕСЂРёСЏ': 'История',
-    'РћР±СЉСЏРІР»РµРЅРёРµ': 'Объявление',
-    'РћР±СЉСЏРІР»РµРЅРёСЏ': 'Объявления',
-    'Р’Р°Р¶РЅРѕ': 'Важно',
-    'РќРѕРІРѕРµ': 'Новое',
-    'СЃРѕР·РґР°РЅРѕ': 'создано',
-    'СЂР°Р±РѕС‚С‹': 'работы',
-    'СЃРѕС‚СЂСѓРґРЅРёРє': 'сотрудник',
-    'вЂў': '•',
-    'вЂ“': '–',
-    'вЂ”': '—',
-  };
-
-  replacements.forEach((from, to) {
-    s = s.replaceAll(from, to);
-  });
-
-  final brokenMarkers = [
-    'Рђ', 'Рџ', 'Рќ', 'РЎ', 'Рћ', 'Р—', 'СЃ', 'С‚', 'СЂ', '╨', '╤', 'Ð', 'Ñ', 'вЂ'
-  ];
-
-  final stillBroken = brokenMarkers.any((m) => s.contains(m));
-  if (!stillBroken) return s;
-
-  // Для коротких жёлтых бейджей лучше не показывать мусор.
-  if (s.length <= 24) {
-    if (s.toLowerCase().contains('schedule') || s.contains('Граф')) return 'График';
-    if (s.toLowerCase().contains('announcement') || s.contains('Об')) return 'Объявление';
-    if (s.toLowerCase().contains('pinned')) return 'Закреплено';
-    if (s.toLowerCase().contains('ack')) return 'Ознакомлен';
-    return 'Статус';
-  }
-
-  return s;
-}
-
-
 class StaffAnnouncementsScreen extends StatefulWidget {
   final int establishmentId;
   final String establishmentName;
@@ -232,7 +183,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Не удалось загрузить объявления';
+        _error = 'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РѕР±СЉСЏРІР»РµРЅРёСЏ';
       });
       _introController.forward(from: 0);
     }
@@ -269,7 +220,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Новое объявление',
+                            'РќРѕРІРѕРµ РѕР±СЉСЏРІР»РµРЅРёРµ',
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w900,
@@ -279,7 +230,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                           ),
                           const SizedBox(height: 8),
                           const Text(
-                            'Создайте объявление для сотрудников заведения',
+                            'РЎРѕР·РґР°Р№ РѕР±СЉСЏРІР»РµРЅРёРµ РґР»СЏ СЃРѕС‚СЂСѓРґРЅРёРєРѕРІ Р·Р°РІРµРґРµРЅРёСЏ',
                             style: TextStyle(
                               fontSize: 14,
                               height: 1.4,
@@ -290,14 +241,14 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                           const SizedBox(height: 18),
                           TextField(
                             controller: titleController,
-                            decoration: _dialogInputDecoration('Заголовок'),
+                            decoration: _dialogInputDecoration('Р—Р°РіРѕР»РѕРІРѕРє'),
                           ),
                           const SizedBox(height: 12),
                           TextField(
                             controller: bodyController,
                             maxLines: 5,
                             decoration: _dialogInputDecoration(
-                              'Текст объявления',
+                              'РўРµРєСЃС‚ РѕР±СЉСЏРІР»РµРЅРёСЏ',
                               alignLabelWithHint: true,
                             ),
                           ),
@@ -319,7 +270,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                               },
                               activeColor: kAnnAccent,
                               title: const Text(
-                                'Закрепить',
+                                'Р—Р°РєСЂРµРїРёС‚СЊ',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w800,
                                   color: kAnnInk,
@@ -341,7 +292,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  'Срок действия',
+                                  'РЎСЂРѕРє РґРµР№СЃС‚РІРёСЏ',
                                   style: TextStyle(
                                     fontWeight: FontWeight.w900,
                                     color: kAnnInk,
@@ -354,7 +305,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                     Expanded(
                                       child: _ExpiryChoiceButton(
                                         selected: !expiresEnabled,
-                                        title: 'Бессрочно',
+                                        title: 'Р‘РµСЃСЃСЂРѕС‡РЅРѕ',
                                         icon: CupertinoIcons.repeat,
                                         onTap: () {
                                           setLocalState(() {
@@ -369,98 +320,31 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                       child: _ExpiryChoiceButton(
                                         selected: expiresEnabled,
                                         title: expiresAt == null
-                                            ? 'До даты'
-                                            : 'До ${expiresAt!.day.toString().padLeft(2, '0')}.${expiresAt!.month.toString().padLeft(2, '0')}.${expiresAt!.year}',
+                                            ? 'Р”Рѕ РґР°С‚С‹'
+                                            : 'Р”Рѕ ${expiresAt!.day.toString().padLeft(2, '0')}.${expiresAt!.month.toString().padLeft(2, '0')}.${expiresAt!.year}',
                                         icon: CupertinoIcons.calendar,
                                         onTap: () async {
                                           final now = DateTime.now();
-                                          DateTime selected = expiresAt ?? now.add(const Duration(days: 7));
-
-                                          await showCupertinoModalPopup<void>(
+                                          final picked = await showDatePicker(
                                             context: context,
-                                            builder: (pickerContext) {
-                                              return Container(
-                                                height: 330,
-                                                decoration: const BoxDecoration(
-                                                  color: Colors.white,
-                                                  borderRadius: BorderRadius.vertical(
-                                                    top: Radius.circular(26),
-                                                  ),
-                                                ),
-                                                child: SafeArea(
-                                                  top: false,
-                                                  child: Column(
-                                                    children: [
-                                                      Padding(
-                                                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-                                                        child: Row(
-                                                          children: [
-                                                            CupertinoButton(
-                                                              padding: EdgeInsets.zero,
-                                                              onPressed: () => Navigator.of(pickerContext).pop(),
-                                                              child: const Text(
-                                                                'Отмена',
-                                                                style: TextStyle(
-                                                                  color: kAnnInkSoft,
-                                                                  fontWeight: FontWeight.w800,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            const Spacer(),
-                                                            const Text(
-                                                              'Дата окончания',
-                                                              style: TextStyle(
-                                                                color: kAnnInk,
-                                                                fontSize: 16,
-                                                                fontWeight: FontWeight.w900,
-                                                              ),
-                                                            ),
-                                                            const Spacer(),
-                                                            CupertinoButton(
-                                                              padding: EdgeInsets.zero,
-                                                              onPressed: () {
-                                                                setLocalState(() {
-                                                                  expiresEnabled = true;
-                                                                  expiresAt = DateTime(
-                                                                    selected.year,
-                                                                    selected.month,
-                                                                    selected.day,
-                                                                    23,
-                                                                    59,
-                                                                    59,
-                                                                  );
-                                                                });
-                                                                Navigator.of(pickerContext).pop();
-                                                              },
-                                                              child: const Text(
-                                                                'Готово',
-                                                                style: TextStyle(
-                                                                  color: kAnnAccent,
-                                                                  fontWeight: FontWeight.w900,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                      const Divider(height: 1),
-                                                      Expanded(
-                                                        child: CupertinoDatePicker(
-                                                          mode: CupertinoDatePickerMode.date,
-                                                          initialDateTime: selected,
-                                                          minimumDate: DateTime(now.year, now.month, now.day),
-                                                          maximumDate: now.add(const Duration(days: 365 * 3)),
-                                                          onDateTimeChanged: (value) {
-                                                            selected = value;
-                                                          },
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              );
-                                            },
+                                            initialDate: expiresAt ?? now.add(const Duration(days: 7)),
+                                            firstDate: DateTime(now.year, now.month, now.day),
+                                            lastDate: now.add(const Duration(days: 365 * 3)),
                                           );
+
+                                          if (picked == null) return;
+
+                                          setLocalState(() {
+                                            expiresEnabled = true;
+                                            expiresAt = DateTime(
+                                              picked.year,
+                                              picked.month,
+                                              picked.day,
+                                              23,
+                                              59,
+                                              59,
+                                            );
+                                          });
                                         },
                                       ),
                                     ),
@@ -482,7 +366,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                     ),
                                   ),
                                   child: const Text(
-                                    'Отмена',
+                                    'РћС‚РјРµРЅР°',
                                     style: TextStyle(
                                       fontWeight: FontWeight.w800,
                                       color: kAnnInkSoft,
@@ -531,7 +415,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                       ),
                                     ),
                                     child: const Text(
-                                      'Создать',
+                                      'РЎРѕР·РґР°С‚СЊ',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w900,
@@ -630,7 +514,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = 'Не удалось создать объявление';
+        _error = 'РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ РѕР±СЉСЏРІР»РµРЅРёРµ';
       });
     } finally {
       if (mounted) {
@@ -713,7 +597,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Объявление СѓРґР°Р»РµРЅРѕ'),
+          content: Text('РћР±СЉСЏРІР»РµРЅРёРµ СѓРґР°Р»РµРЅРѕ'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -721,7 +605,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Не удалось удалить объявление'),
+          content: Text('РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ РѕР±СЉСЏРІР»РµРЅРёРµ'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -774,7 +658,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
       final mm = dt.month.toString().padLeft(2, '0');
       final hh = dt.hour.toString().padLeft(2, '0');
       final mi = dt.minute.toString().padLeft(2, '0');
-      return '$dd.$mm • $hh:$mi';
+      return '$dd.$mm вЂў $hh:$mi';
     } catch (_) {
       return value;
     }
@@ -798,7 +682,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Ознакомились: ${item.acknowledgedCount}/${item.totalStaffCount}',
+              'РћР·РЅР°РєРѕРјРёР»РёСЃСЊ: ${item.acknowledgedCount}/${item.totalStaffCount}',
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w900,
@@ -912,7 +796,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
               color: kAnnWarn.withOpacity(0.10),
             ),
             child: const Text(
-              'Не ознакомлен',
+              'РќРµ РѕР·РЅР°РєРѕРјР»РµРЅ',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w900,
@@ -945,7 +829,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
         ],
       ),
       child: const Text(
-        'Закреплено',
+        'Р—Р°РєСЂРµРїР»РµРЅРѕ',
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w900,
@@ -1087,7 +971,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                       SizedBox(width: 12),
                                       Expanded(
                                         child: Text(
-                                          'Загружаем список сотрудников...',
+                                          'Р—Р°РіСЂСѓР¶Р°РµРј СЃРїРёСЃРѕРє СЃРѕС‚СЂСѓРґРЅРёРєРѕРІ...',
                                           style: TextStyle(
                                             fontSize: 13.5,
                                             fontWeight: FontWeight.w700,
@@ -1100,7 +984,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                 )
                               else ...[
                                 const Text(
-                                  'Ознакомились',
+                                  'РћР·РЅР°РєРѕРјРёР»РёСЃСЊ',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w900,
@@ -1125,7 +1009,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                           Border.all(color: const Color(0xFFE7EEF0)),
                                     ),
                                     child: const Text(
-                                      'Пока никто не ознакомился.',
+                                      'РџРѕРєР° РЅРёРєС‚Рѕ РЅРµ РѕР·РЅР°РєРѕРјРёР»СЃСЏ.',
                                       style: TextStyle(
                                         fontSize: 13.5,
                                         height: 1.4,
@@ -1136,7 +1020,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                   ),
                                 const SizedBox(height: 14),
                                 const Text(
-                                  'Не ознакомились',
+                                  'РќРµ РѕР·РЅР°РєРѕРјРёР»РёСЃСЊ',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w900,
@@ -1158,7 +1042,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                           Border.all(color: const Color(0xFFE7EEF0)),
                                     ),
                                     child: const Text(
-                                      'Все сотрудники уже ознакомились.',
+                                      'Р’СЃРµ СЃРѕС‚СЂСѓРґРЅРёРєРё СѓР¶Рµ РѕР·РЅР°РєРѕРјРёР»РёСЃСЊ.',
                                       style: TextStyle(
                                         fontSize: 13.5,
                                         height: 1.4,
@@ -1189,7 +1073,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                         ),
                                       ),
                                       child: const Text(
-                                        'Обновить список',
+                                        'РћР±РЅРѕРІРёС‚СЊ СЃРїРёСЃРѕРє',
                                         style: TextStyle(
                                           fontWeight: FontWeight.w900,
                                           color: kAnnInk,
@@ -1235,7 +1119,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                                 ),
                                               )
                                             : const Text(
-                                                'Удалить',
+                                                'РЈРґР°Р»РёС‚СЊ',
                                                 style: TextStyle(
                                                   color: Colors.white,
                                                   fontWeight: FontWeight.w900,
@@ -1292,7 +1176,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                                 .showSnackBar(
                                               const SnackBar(
                                                 content:
-                                                    Text('Ознакомление отмечено'),
+                                                    Text('РћР·РЅР°РєРѕРјР»РµРЅРёРµ РѕС‚РјРµС‡РµРЅРѕ'),
                                                 behavior:
                                                     SnackBarBehavior.floating,
                                               ),
@@ -1303,7 +1187,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                                 .showSnackBar(
                                               const SnackBar(
                                                 content: Text(
-                                                  'Не удалось отметить ознакомление',
+                                                  'РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РјРµС‚РёС‚СЊ РѕР·РЅР°РєРѕРјР»РµРЅРёРµ',
                                                 ),
                                                 behavior:
                                                     SnackBarBehavior.floating,
@@ -1355,8 +1239,8 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                             Flexible(
                                               child: Text(
                                                 acknowledged
-                                                    ? 'Ознакомлен'
-                                                    : 'Отметить как ознакомлен',
+                                                    ? 'РћР·РЅР°РєРѕРјР»РµРЅ'
+                                                    : 'РћС‚РјРµС‚РёС‚СЊ РєР°Рє РѕР·РЅР°РєРѕРјР»РµРЅ',
                                                 textAlign: TextAlign.center,
                                                 style: const TextStyle(
                                                   color: Colors.white,
@@ -1561,7 +1445,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
               )
             : const Icon(CupertinoIcons.add),
         label: const Text(
-          'Создать',
+          'РЎРѕР·РґР°С‚СЊ',
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
@@ -1681,7 +1565,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                   )
                 else
                   Text(
-                    item.acknowledged ? 'Ознакомлен' : 'Не ознакомлен',
+                    item.acknowledged ? 'РћР·РЅР°РєРѕРјР»РµРЅ' : 'РќРµ РѕР·РЅР°РєРѕРјР»РµРЅ',
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w900,
@@ -1704,7 +1588,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          'Объявления',
+          'РћР±СЉСЏРІР»РµРЅРёСЏ',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w900,
@@ -1744,7 +1628,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                               index: 0,
                               child: _stateCard(
                                 icon: CupertinoIcons.exclamationmark_circle_fill,
-                                title: 'Ошибка',
+                                title: 'РћС€РёР±РєР°',
                                 subtitle: _error!,
                               ),
                             )
@@ -1753,10 +1637,10 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                               index: 0,
                               child: _stateCard(
                                 icon: CupertinoIcons.bell_fill,
-                                title: 'Объявлений пока нет',
+                                title: 'РћР±СЉСЏРІР»РµРЅРёР№ РїРѕРєР° РЅРµС‚',
                                 subtitle: widget.isOwner
-                                    ? 'Создай первое объявление для сотрудников'
-                                    : 'Когда владелец добавит объявление, оно появится здесь',
+                                    ? 'РЎРѕР·РґР°Р№ РїРµСЂРІРѕРµ РѕР±СЉСЏРІР»РµРЅРёРµ РґР»СЏ СЃРѕС‚СЂСѓРґРЅРёРєРѕРІ'
+                                    : 'РљРѕРіРґР° РІР»Р°РґРµР»РµС† РґРѕР±Р°РІРёС‚ РѕР±СЉСЏРІР»РµРЅРёРµ, РѕРЅРѕ РїРѕСЏРІРёС‚СЃСЏ Р·РґРµСЃСЊ',
                               ),
                             )
                           else
@@ -1949,7 +1833,7 @@ class _AnnouncementAckUser {
       name: json['name']?.toString() ??
           json['user_name']?.toString() ??
           json['full_name']?.toString() ??
-          'Сотрудник',
+          'РЎРѕС‚СЂСѓРґРЅРёРє',
       acknowledgedAt: json['acknowledged_at']?.toString() ?? '',
     );
   }
@@ -1961,7 +1845,7 @@ class _AnnouncementAckUser {
         .where((e) => e.isNotEmpty)
         .toList();
 
-    if (parts.isEmpty) return '—';
+    if (parts.isEmpty) return 'вЂ”';
     if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
@@ -1982,7 +1866,7 @@ class _AnnouncementPendingUser {
       name: json['name']?.toString() ??
           json['user_name']?.toString() ??
           json['full_name']?.toString() ??
-          'Сотрудник',
+          'РЎРѕС‚СЂСѓРґРЅРёРє',
     );
   }
 
@@ -1993,7 +1877,7 @@ class _AnnouncementPendingUser {
         .where((e) => e.isNotEmpty)
         .toList();
 
-    if (parts.isEmpty) return '—';
+    if (parts.isEmpty) return 'вЂ”';
     if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
@@ -2147,7 +2031,7 @@ class _AnnouncementItem {
 
     return _AnnouncementItem(
       id: json['announcement_id']?.toString() ?? json['id']?.toString() ?? '',
-      title: json['title']?.toString() ?? 'Объявление',
+      title: json['title']?.toString() ?? 'РћР±СЉСЏРІР»РµРЅРёРµ',
       body: json['body']?.toString() ?? '',
       isPinned: parseBool(json['is_pinned']),
       acknowledged: parseBool(
@@ -2196,6 +2080,3 @@ class _AnnouncementItem {
 }
 // STAFF_ANNOUNCEMENT_EXPIRES_UI_20260524
 
-
-
-// STAFF_ANNOUNCEMENT_CUPERTINO_DATE_PICKER_20260524

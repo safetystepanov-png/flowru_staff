@@ -36,55 +36,6 @@ const Color kAnnSuccessSoft = Color(0xFF4ADE80);
 const Color kAnnWarn = Color(0xFFF97316);
 const Color kAnnWarnSoft = Color(0xFFFB923C);
 
-
-String flowruCleanText(String value) {
-  var s = value;
-
-  final replacements = <String, String>{
-    'РђРєС‚РёРІРЅРѕ': 'Активно',
-    'РђРєС‚РёРІРЅР°': 'Активна',
-    'Р—Р°РєСЂРµРїР»РµРЅРѕ': 'Закреплено',
-    'РћР·РЅР°РєРѕРјР»РµРЅ': 'Ознакомлен',
-    'РџСЂРѕС‡РёС‚Р°РЅРѕ': 'Прочитано',
-    'РќРµ РѕР·РЅР°РєРѕРјР»РµРЅ': 'Не ознакомлен',
-    'Р“СЂР°С„РёРє': 'График',
-    'РСЃС‚РѕСЂРёСЏ': 'История',
-    'РћР±СЉСЏРІР»РµРЅРёРµ': 'Объявление',
-    'РћР±СЉСЏРІР»РµРЅРёСЏ': 'Объявления',
-    'Р’Р°Р¶РЅРѕ': 'Важно',
-    'РќРѕРІРѕРµ': 'Новое',
-    'СЃРѕР·РґР°РЅРѕ': 'создано',
-    'СЂР°Р±РѕС‚С‹': 'работы',
-    'СЃРѕС‚СЂСѓРґРЅРёРє': 'сотрудник',
-    'вЂў': '•',
-    'вЂ“': '–',
-    'вЂ”': '—',
-  };
-
-  replacements.forEach((from, to) {
-    s = s.replaceAll(from, to);
-  });
-
-  final brokenMarkers = [
-    'Рђ', 'Рџ', 'Рќ', 'РЎ', 'Рћ', 'Р—', 'СЃ', 'С‚', 'СЂ', '╨', '╤', 'Ð', 'Ñ', 'вЂ'
-  ];
-
-  final stillBroken = brokenMarkers.any((m) => s.contains(m));
-  if (!stillBroken) return s;
-
-  // Для коротких жёлтых бейджей лучше не показывать мусор.
-  if (s.length <= 24) {
-    if (s.toLowerCase().contains('schedule') || s.contains('Граф')) return 'График';
-    if (s.toLowerCase().contains('announcement') || s.contains('Об')) return 'Объявление';
-    if (s.toLowerCase().contains('pinned')) return 'Закреплено';
-    if (s.toLowerCase().contains('ack')) return 'Ознакомлен';
-    return 'Статус';
-  }
-
-  return s;
-}
-
-
 class StaffAnnouncementsScreen extends StatefulWidget {
   final int establishmentId;
   final String establishmentName;

@@ -85,9 +85,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
 
   String get _roleLabel {
     final role = widget.role.trim().toLowerCase();
-    if (role == 'owner') return 'Владелец';
-    if (role == 'admin') return 'Администратор';
-    return 'Сотрудник';
+    if (role == 'owner') return 'Р’Р»Р°РґРµР»РµС†';
+    if (role == 'admin') return 'РђРґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ';
+    return 'РЎРѕС‚СЂСѓРґРЅРёРє';
   }
 
   int get _heroSlidesCount => 1 + _pinnedAnnouncements.length;
@@ -364,7 +364,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Не удалось загрузить главную: $e';
+        _error = 'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РіР»Р°РІРЅСѓСЋ: $e';
       });
       _introController.forward(from: 0);
     }
@@ -416,7 +416,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Ознакомление отмечено'),
+          content: Text('РћР·РЅР°РєРѕРјР»РµРЅРёРµ РѕС‚РјРµС‡РµРЅРѕ'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -424,7 +424,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Не удалось отметить ознакомление: $e'),
+          content: Text('РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РјРµС‚РёС‚СЊ РѕР·РЅР°РєРѕРјР»РµРЅРёРµ: $e'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -906,7 +906,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                     ],
                   ),
                   child: Text(
-                    _isOwner ? 'ОБЪЯВЛЕНИЕ' : 'ВАЖНОЕ ОБЪЯВЛЕНИЕ',
+                    _isOwner ? 'Р Р•Р–РРњ Р’Р›РђР”Р•Р›Р¬Р¦Рђ' : 'Р“Р›РђР’РќР«Р™ Р­РљР РђРќ',
                     style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w900,
@@ -917,7 +917,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 ),
                 const SizedBox(height: 14),
                 const Text(
-                  'Быстрая работа\nс клиентами',
+                  'Р‘С‹СЃС‚СЂР°СЏ СЂР°Р±РѕС‚Р°\nСЃ РєР»РёРµРЅС‚Р°РјРё',
                   style: TextStyle(
                     fontSize: 29,
                     height: 1.02,
@@ -930,8 +930,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 Expanded(
                   child: Text(
                     _isOwner
-                        ? 'Поиск, начисления, списания, награды и ключевые действия по заведению.'
-                        : 'Поиск, чат, объявления и история — всё под рукой.',
+                        ? 'РџРѕРёСЃРє, РЅР°С‡РёСЃР»РµРЅРёСЏ, СЃРїРёСЃР°РЅРёСЏ, РЅР°РіСЂР°РґС‹ Рё РєР»СЋС‡РµРІС‹Рµ РґРµР№СЃС‚РІРёСЏ РїРѕ Р·Р°РІРµРґРµРЅРёСЋ.'
+                        : 'РџРѕРёСЃРє, С‡Р°С‚, РѕР±СЉСЏРІР»РµРЅРёСЏ Рё РёСЃС‚РѕСЂРёСЏ вЂ” РІСЃС‘ РїРѕРґ СЂСѓРєРѕР№.',
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -995,7 +995,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                     ],
                   ),
                   child: Text(
-                    _isOwner ? 'ОБЪЯВЛЕНИЕ' : 'ВАЖНОЕ ОБЪЯВЛЕНИЕ',
+                    _isOwner ? 'РћР‘РЄРЇР’Р›Р•РќРР•' : 'Р’РђР–РќРћР• РћР‘РЄРЇР’Р›Р•РќРР•',
                     style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w900,
@@ -1044,7 +1044,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                       border: Border.all(color: Colors.white.withOpacity(0.18)),
                     ),
                     child: Text(
-                      'Ознакомлены: ${item.acknowledgedCount}/${item.totalStaffCount}',
+                      'РћР·РЅР°РєРѕРјР»РµРЅС‹: ${item.acknowledgedCount}/${item.totalStaffCount}',
                       style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w900,
@@ -1054,7 +1054,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   )
                 else
                   _PinnedAccentPillButton(
-                    text: 'Ознакомлен',
+                    text: 'РћР·РЅР°РєРѕРјР»РµРЅ',
                     isLoading: _pinActionLoading,
                     isDone: item.isAcknowledged,
                     onTap: item.isAcknowledged
@@ -1186,7 +1186,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Пригласить',
+                    'РџСЂРёРіР»Р°СЃРёС‚СЊ РєР»РёРµРЅС‚Р°',
                     style: TextStyle(
                       color: kHomeInk,
                       fontSize: 19,
@@ -1196,7 +1196,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   ),
                   SizedBox(height: 6),
                   Text(
-                    'QR клиента и сотрудника для подключения к Flowru.',
+                    'РџРѕРєР°Р¶РёС‚Рµ QR Р·Р°РІРµРґРµРЅРёСЏ. РљР»РёРµРЅС‚ РґРѕР±Р°РІРёС‚ РµРіРѕ РІ Flowru.',
                     style: TextStyle(
                       color: kHomeInkSoft,
                       fontSize: 13.5,
@@ -1337,7 +1337,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                       ),
                       const SizedBox(height: 20),
                       const Text(
-                        'Найти клиента',
+                        'РќР°Р№С‚Рё РєР»РёРµРЅС‚Р°',
                         style: TextStyle(
                           fontSize: 31,
                           height: 1.02,
@@ -1349,8 +1349,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                       const SizedBox(height: 10),
                       Text(
                         _isOwner
-                            ? 'Главное действие владельца на экране. Быстрый вход в работу с клиентом.'
-                            : 'Главное действие на экране.\nБыстрый поиск по телефону, имени или номеру клиента.',
+                            ? 'Р“Р»Р°РІРЅРѕРµ РґРµР№СЃС‚РІРёРµ РІР»Р°РґРµР»СЊС†Р° РЅР° СЌРєСЂР°РЅРµ. Р‘С‹СЃС‚СЂС‹Р№ РІС…РѕРґ РІ СЂР°Р±РѕС‚Сѓ СЃ РєР»РёРµРЅС‚РѕРј.'
+                            : 'Р“Р»Р°РІРЅРѕРµ РґРµР№СЃС‚РІРёРµ РЅР° СЌРєСЂР°РЅРµ.\nР‘С‹СЃС‚СЂС‹Р№ РїРѕРёСЃРє РїРѕ С‚РµР»РµС„РѕРЅСѓ, РёРјРµРЅРё РёР»Рё РЅРѕРјРµСЂСѓ РєР»РёРµРЅС‚Р°.',
                         style: const TextStyle(
                           fontSize: 14.5,
                           height: 1.42,
@@ -1386,7 +1386,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                             SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                'Телефон, имя, номер клиента',
+                                'РўРµР»РµС„РѕРЅ, РёРјСЏ, РЅРѕРјРµСЂ РєР»РёРµРЅС‚Р°',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
@@ -1415,7 +1415,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       children: [
         Expanded(
           child: _ModuleCard(
-            title: 'Чат',
+            title: 'Р§Р°С‚',
             subtitle: '',
             icon: Icons.forum_rounded,
             glowColor: kHomeBlue,
@@ -1426,7 +1426,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         const SizedBox(width: 12),
         Expanded(
           child: _ModuleCard(
-            title: 'Объявления',
+            title: 'РћР±СЉСЏРІР»РµРЅРёСЏ',
             subtitle: '',
             icon: Icons.campaign_rounded,
             glowColor: kHomePink,
@@ -1460,7 +1460,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'История заведения',
+                    'РСЃС‚РѕСЂРёСЏ',
                     style: TextStyle(
                       fontSize: 18.5,
                       fontWeight: FontWeight.w900,
@@ -1469,7 +1469,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'События и действия по заведению',
+                    'РЎРѕР±С‹С‚РёСЏ Рё РґРµР№СЃС‚РІРёСЏ РїРѕ Р·Р°РІРµРґРµРЅРёСЋ',
                     style: TextStyle(
                       fontSize: 13.5,
                       height: 1.35,
@@ -1523,7 +1523,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'График работы',
+                    'Р“СЂР°С„РёРє СЂР°Р±РѕС‚С‹',
                     style: TextStyle(
                       fontSize: 18.5,
                       fontWeight: FontWeight.w900,
@@ -1532,7 +1532,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Месяц, смены и рабочие дни',
+                    'РњРµСЃСЏС†, СЃРјРµРЅС‹ Рё СЂР°Р±РѕС‡РёРµ РґРЅРё',
                     style: TextStyle(
                       fontSize: 13.5,
                       height: 1.35,
@@ -1586,7 +1586,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'График и согласования',
+                    'Р“СЂР°С„РёРє Рё СЃРѕРіР»Р°СЃРѕРІР°РЅРёСЏ',
                     style: TextStyle(
                       fontSize: 18.5,
                       fontWeight: FontWeight.w900,
@@ -1595,7 +1595,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Запросы сотрудников, замены и публикация графика',
+                    'Р—Р°РїСЂРѕСЃС‹ СЃРѕС‚СЂСѓРґРЅРёРєРѕРІ, Р·Р°РјРµРЅС‹ Рё РїСѓР±Р»РёРєР°С†РёСЏ РіСЂР°С„РёРєР°',
                     style: TextStyle(
                       fontSize: 13.5,
                       height: 1.35,
@@ -1654,7 +1654,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Не удалось загрузить главную',
+              'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РіР»Р°РІРЅСѓСЋ',
               style: TextStyle(
                 color: Color(0xFFB84C4C),
                 fontWeight: FontWeight.w800,
@@ -1727,7 +1727,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                             const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 2),
                               child: Text(
-                                'Дополнительно',
+                                'Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ',
                                 style: TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.w900,
@@ -1787,7 +1787,7 @@ class _PinnedAnnouncement {
   factory _PinnedAnnouncement.fromJson(Map<String, dynamic> json) {
     return _PinnedAnnouncement(
       announcementId: json['announcement_id']?.toString() ?? '',
-      title: json['title']?.toString() ?? 'Объявление',
+      title: json['title']?.toString() ?? 'РћР±СЉСЏРІР»РµРЅРёРµ',
       body: json['body']?.toString() ?? '',
       isAcknowledged: json['is_acknowledged'] == true,
       acknowledgedCount: (json['acknowledged_count'] as num?)?.toInt() ?? 0,
@@ -2499,4 +2499,3 @@ class _PressableState extends State<_Pressable>
     );
   }
 }
-

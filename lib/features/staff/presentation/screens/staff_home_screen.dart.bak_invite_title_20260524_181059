@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -906,7 +906,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                     ],
                   ),
                   child: Text(
-                    _isOwner ? 'ОБЪЯВЛЕНИЕ' : 'ВАЖНОЕ ОБЪЯВЛЕНИЕ',
+                    _isOwner ? 'РЕЖИМ ВЛАДЕЛЬЦА' : 'ГЛАВНЫЙ ЭКРАН',
                     style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w900,
@@ -1186,7 +1186,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Пригласить',
+                    'Пригласить клиента',
                     style: TextStyle(
                       color: kHomeInk,
                       fontSize: 19,
@@ -1196,7 +1196,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   ),
                   SizedBox(height: 6),
                   Text(
-                    'QR клиента и сотрудника для подключения к Flowru.',
+                    'Покажите QR заведения. Клиент добавит его в Flowru.',
                     style: TextStyle(
                       color: kHomeInkSoft,
                       fontSize: 13.5,
@@ -1460,7 +1460,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'История заведения',
+                    'История',
                     style: TextStyle(
                       fontSize: 18.5,
                       fontWeight: FontWeight.w900,
@@ -2499,4 +2499,3 @@ class _PressableState extends State<_Pressable>
     );
   }
 }
-

@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -293,172 +293,215 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
   Widget _topCard() {
     final client = _client!;
 
-    return _GlassCard(
-      radius: 32,
-      padding: const EdgeInsets.all(18),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -70,
-            right: -60,
-            child: Container(
-              width: 210,
-              height: 210,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    kClientAccent.withOpacity(0.20),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(34),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(34),
+            gradient: LinearGradient(
+              colors: [
+                Colors.white.withOpacity(0.88),
+                Colors.white.withOpacity(0.72),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ),
-          Positioned(
-            bottom: -90,
-            left: -70,
-            child: Container(
-              width: 230,
-              height: 230,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    kClientBlue.withOpacity(0.13),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  _AvatarGlyph(
-                    initials: client.initials,
-                    size: 76,
-                    innerSize: 54,
-                    fontSize: 21,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(999),
-                            gradient: const LinearGradient(
-                              colors: [kClientAccent, kClientAccentSoft],
-                            ),
-                          ),
-                          child: const Text(
-                            'КЛИЕНТ',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.8,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          client.displayName,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 28,
-                            height: 1.02,
-                            fontWeight: FontWeight.w900,
-                            color: kClientInk,
-                            letterSpacing: -0.8,
-                          ),
-                        ),
-                        const SizedBox(height: 7),
-                        Row(
-                          children: [
-                            Icon(
-                              CupertinoIcons.phone_fill,
-                              size: 15,
-                              color: kClientInkSoft.withOpacity(0.95),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                client.phone ?? 'Телефон не указан',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: kClientInkSoft,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(17),
-                      color: Colors.white.withOpacity(0.66),
-                      border: Border.all(color: Colors.white.withOpacity(0.85)),
-                    ),
-                    child: const Icon(
-                      CupertinoIcons.person_crop_circle_fill,
-                      size: 27,
-                      color: kClientInk,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: _bigMetricCard(
-                      title: 'Баланс',
-                      value: client.balanceLabel,
-                      subtitle: 'баллов',
-                      icon: CupertinoIcons.star_fill,
-                      colors: const [kClientBlue, kClientViolet],
-                    ),
-                  ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: _bigMetricCard(
-                      title: 'Визиты',
-                      value: client.visitsLabel,
-                      subtitle: 'всего',
-                      icon: CupertinoIcons.ticket_fill,
-                      colors: const [kClientPink, kClientViolet],
-                    ),
-                  ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: _bigMetricCard(
-                      title: 'Потрачено',
-                      value: client.spentLabel,
-                      subtitle: 'сумма',
-                      icon: CupertinoIcons.creditcard_fill,
-                      colors: const [Color(0xFF10B8A5), Color(0xFF4E7CFF)],
-                    ),
-                  ),
-                ],
+            border: Border.all(color: Colors.white.withOpacity(0.92)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.10),
+                blurRadius: 28,
+                offset: const Offset(0, 18),
               ),
             ],
           ),
-        ],
+          child: Stack(
+            children: [
+              Positioned(
+                top: -72,
+                right: -56,
+                child: Container(
+                  width: 210,
+                  height: 210,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        kClientAccent.withOpacity(0.22),
+                        kClientAccent.withOpacity(0.04),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -86,
+                left: -70,
+                child: Container(
+                  width: 230,
+                  height: 230,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        kClientBlue.withOpacity(0.17),
+                        kClientViolet.withOpacity(0.06),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _AvatarGlyph(
+                          initials: client.initials,
+                          size: 78,
+                          innerSize: 56,
+                          fontSize: 21,
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(999),
+                                    gradient: const LinearGradient(
+                                      colors: [kClientAccent, kClientAccentSoft],
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: kClientAccent.withOpacity(0.22),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 7),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Text(
+                                    'КЛИЕНТ',
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.8,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  client.displayName,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 28,
+                                    height: 1.02,
+                                    fontWeight: FontWeight.w900,
+                                    color: kClientInk,
+                                    letterSpacing: -0.9,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      CupertinoIcons.phone_fill,
+                                      size: 15,
+                                      color: kClientInkSoft.withOpacity(0.92),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        client.phone ?? 'Телефон не указан',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w800,
+                                          color: kClientInkSoft,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(17),
+                            color: Colors.white.withOpacity(0.66),
+                            border: Border.all(color: Colors.white.withOpacity(0.80)),
+                          ),
+                          child: const Icon(
+                            CupertinoIcons.person_crop_circle_fill,
+                            size: 27,
+                            color: kClientInk,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _bigMetricCard(
+                            title: 'Баланс',
+                            value: client.balanceLabel,
+                            subtitle: 'баллов',
+                            icon: CupertinoIcons.star_fill,
+                            colors: const [kClientBlue, kClientViolet],
+                          ),
+                        ),
+                        const SizedBox(width: 9),
+                        Expanded(
+                          child: _bigMetricCard(
+                            title: 'Визиты',
+                            value: client.visitsLabel,
+                            subtitle: 'всего',
+                            icon: CupertinoIcons.ticket_fill,
+                            colors: const [kClientPink, kClientViolet],
+                          ),
+                        ),
+                        const SizedBox(width: 9),
+                        Expanded(
+                          child: _bigMetricCard(
+                            title: 'Потрачено',
+                            value: client.spentLabel,
+                            subtitle: 'сумма',
+                            icon: CupertinoIcons.creditcard_fill,
+                            colors: const [Color(0xFF10B8A5), Color(0xFF4E7CFF)],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -472,39 +515,51 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     required List<Color> colors,
   }) {
     return Container(
-      height: 108,
+      height: 104,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        color: Colors.white.withOpacity(0.76),
-        border: Border.all(color: Colors.white.withOpacity(0.92)),
+        color: Colors.white.withOpacity(0.74),
+        border: Border.all(color: Colors.white.withOpacity(0.88)),
         boxShadow: [
           BoxShadow(
-            color: colors.first.withOpacity(0.09),
-            blurRadius: 14,
-            offset: const Offset(0, 8),
+            color: colors.first.withOpacity(0.10),
+            blurRadius: 16,
+            offset: const Offset(0, 9),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 31,
-            height: 31,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: colors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          Row(
+            children: [
+              Container(
+                width: 31,
+                height: 31,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: colors,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors.first.withOpacity(0.20),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  icon,
+                  color: Colors.white,
+                  size: 15,
+                ),
               ),
-            ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 15,
-            ),
+              const Spacer(),
+            ],
           ),
           const Spacer(),
           Text(
@@ -512,11 +567,11 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 20,
+              fontSize: 21,
               height: 1.0,
               fontWeight: FontWeight.w900,
               color: kClientInk,
-              letterSpacing: -0.4,
+              letterSpacing: -0.5,
             ),
           ),
           const SizedBox(height: 4),
@@ -622,134 +677,110 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
   }
 
   Widget _buildActionSection() {
-    final client = _client!;
-
-    return _GlassCard(
-      radius: 30,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: const LinearGradient(
-                    colors: [kClientAccent, kClientAccentSoft],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: const Icon(
-                  CupertinoIcons.bolt_fill,
-                  color: Colors.white,
-                  size: 21,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Действия с клиентом',
-                      style: TextStyle(
-                        color: kClientInk,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.3,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            'Действия с клиентом',
+            style: TextStyle(
+              fontSize: 21,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              letterSpacing: -0.4,
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: _actionButton(
+                title: 'Начислить',
+                subtitle: 'добавить бонусы',
+                icon: CupertinoIcons.plus_circle_fill,
+                colors: const [kClientGreen, kClientGreenSoft],
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => StaffClientAccrualScreen(
+                        establishmentId: widget.establishmentId,
+                        establishmentName: widget.establishmentName,
+                        clientId: widget.clientId,
+                        clientName: _client!.displayName,
                       ),
                     ),
-                    SizedBox(height: 3),
-                    Text(
-                      'Начисление, списание и история операций',
-                      style: TextStyle(
-                        color: kClientInkSoft,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        height: 1.25,
+                  );
+                  _load();
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _actionButton(
+                title: 'Списать',
+                subtitle: 'провести оплату',
+                icon: CupertinoIcons.minus_circle_fill,
+                colors: const [kClientRed, kClientRedSoft],
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => StaffClientSpendScreen(
+                        establishmentId: widget.establishmentId,
+                        establishmentName: widget.establishmentName,
+                        clientId: widget.clientId,
+                        clientName: _client!.displayName,
                       ),
                     ),
-                  ],
+                  );
+                  _load();
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _softActionTile(
+          title: 'История клиента',
+          subtitle: 'Посмотреть все операции и движения по клиенту',
+          icon: CupertinoIcons.time_solid,
+          glow: kClientBlue,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => StaffClientHistoryScreen(
+                  establishmentId: widget.establishmentId,
+                  establishmentName: widget.establishmentName,
+                  clientId: widget.clientId,
+                  clientName: _client!.displayName,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _actionButton(
-                  title: 'Начислить',
-                  subtitle: 'баллы за чек',
-                  icon: CupertinoIcons.plus_circle_fill,
-                  colors: const [kClientGreen, kClientGreenSoft],
-                  onTap: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => StaffClientAccrualScreen(
-                          establishmentId: widget.establishmentId,
-                          establishmentName: widget.establishmentName,
-                          clientId: widget.clientId,
-                          clientName: client.displayName,
-                        ),
-                      ),
-                    );
-                    if (mounted) _load();
-                  },
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        _softActionTile(
+          title: 'Награды',
+          subtitle: 'Доступные подарки и выдача награды клиенту',
+          icon: CupertinoIcons.gift_fill,
+          glow: kClientPink,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => StaffClientRewardsScreen(
+                  establishmentId: widget.establishmentId,
+                  establishmentName: widget.establishmentName,
+                  clientId: widget.clientId,
+                  clientName: _client!.displayName,
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _actionButton(
-                  title: 'Списать',
-                  subtitle: 'использовать баллы',
-                  icon: CupertinoIcons.minus_circle_fill,
-                  colors: const [kClientRed, kClientRedSoft],
-                  onTap: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => StaffClientSpendScreen(
-                          establishmentId: widget.establishmentId,
-                          establishmentName: widget.establishmentName,
-                          clientId: widget.clientId,
-                          clientName: client.displayName,
-                        ),
-                      ),
-                    );
-                    if (mounted) _load();
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _softActionTile(
-            title: 'История клиента',
-            subtitle: 'Все начисления, списания и движения по клиенту',
-            icon: CupertinoIcons.clock_fill,
-            glow: kClientBlue,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => StaffClientHistoryScreen(
-                    establishmentId: widget.establishmentId,
-                    establishmentName: widget.establishmentName,
-                    clientId: widget.clientId,
-                    clientName: client.displayName,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+            );
+          },
+        ),
+      ],
     );
   }
-
 
   Widget _actionButton({
     required String title,
@@ -758,89 +789,69 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     required List<Color> colors,
     required VoidCallback onTap,
   }) {
-    return _Pressable(
-      onTap: onTap,
-      borderRadius: 24,
-      child: Container(
-        height: 112,
-        padding: const EdgeInsets.all(13),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          color: Colors.white.withOpacity(0.76),
-          border: Border.all(color: Colors.white.withOpacity(0.90)),
-          boxShadow: [
-            BoxShadow(
-              color: colors.first.withOpacity(0.10),
-              blurRadius: 16,
-              offset: const Offset(0, 9),
-            ),
-          ],
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(colors: colors),
+        boxShadow: [
+          BoxShadow(
+            color: colors.first.withOpacity(0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          padding: const EdgeInsets.all(18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
         ),
-        child: Stack(
-          children: [
-            Positioned(
-              right: -20,
-              bottom: -24,
-              child: Container(
-                width: 76,
-                height: 76,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: colors.first.withOpacity(0.07),
+        child: SizedBox(
+          height: 76,
+          child: Row(
+            children: [
+              Icon(icon, color: Colors.white, size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.92),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(15),
-                    gradient: LinearGradient(
-                      colors: colors,
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: kClientInk,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: kClientInkSoft,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
-
 
   Widget _softActionTile({
     required String title,
@@ -852,13 +863,9 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     return _Pressable(
       onTap: onTap,
       borderRadius: 24,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          color: Colors.white.withOpacity(0.76),
-          border: Border.all(color: Colors.white.withOpacity(0.90)),
-        ),
+      child: _GlassCard(
+        radius: 24,
+        padding: const EdgeInsets.all(18),
         child: Row(
           children: [
             _MiniGlyph(
@@ -900,7 +907,6 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
       ),
     );
   }
-
 
   Widget _stateCard({
     required IconData icon,

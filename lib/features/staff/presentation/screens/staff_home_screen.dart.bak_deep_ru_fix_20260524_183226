@@ -906,7 +906,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                     ],
                   ),
                   child: Text(
-                    _isOwner ? 'ОБЪЯВЛЕНИЕ' : 'ВАЖНОЕ ОБЪЯВЛЕНИЕ',
+                    _isOwner ? 'Р Р•Р–РРњ Р’Р›РђР”Р•Р›Р¬Р¦Рђ' : 'ГЛАВНЫЙ ЭКРАН',
                     style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w900,
@@ -995,7 +995,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                     ],
                   ),
                   child: Text(
-                    _isOwner ? 'ОБЪЯВЛЕНИЕ' : 'ВАЖНОЕ ОБЪЯВЛЕНИЕ',
+                    _isOwner ? 'РћР‘РЄРЇР’Р›Р•РќРР•' : 'Р’РђР–РќРћР• РћР‘РЄРЇР’Р›Р•РќРР•',
                     style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w900,
@@ -1186,7 +1186,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Пригласить',
+                    'Пригласить клиента',
                     style: TextStyle(
                       color: kHomeInk,
                       fontSize: 19,
@@ -1196,7 +1196,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   ),
                   SizedBox(height: 6),
                   Text(
-                    'QR клиента и сотрудника для подключения к Flowru.',
+                    'Покажите QR заведения. Клиент добавит его в Flowru.',
                     style: TextStyle(
                       color: kHomeInkSoft,
                       fontSize: 13.5,
@@ -1460,7 +1460,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'История заведения',
+                    'РСЃС‚РѕСЂРёСЏ',
                     style: TextStyle(
                       fontSize: 18.5,
                       fontWeight: FontWeight.w900,
@@ -2499,4 +2499,3 @@ class _PressableState extends State<_Pressable>
     );
   }
 }
-

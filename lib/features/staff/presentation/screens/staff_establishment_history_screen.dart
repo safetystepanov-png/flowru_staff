@@ -10,6 +10,55 @@ import 'package:http/http.dart' as http;
 import '../../../auth/data/auth_storage.dart';
 import '../../../../core/config/app_config.dart';
 
+
+String flowruStaffNormalizeOperationType(String type) {
+  final value = type.trim().toLowerCase();
+
+  switch (value) {
+    case 'purchase':
+    case 'accrual':
+    case 'accrue':
+    case 'bonus':
+    case 'add':
+      return 'Начисление';
+
+    case 'redeem':
+    case 'spend':
+    case 'writeoff':
+    case 'write_off':
+    case 'subtract':
+      return 'Списание';
+
+    case 'reward_redeem':
+    case 'reward':
+    case 'coupon':
+      return 'Купон';
+
+    case 'referral':
+      return 'Реферальный бонус';
+
+    case 'expire_burn':
+    case 'burn':
+      return 'Сгорание баллов';
+
+    case 'visit':
+      return 'Визит';
+
+    case 'announcement':
+      return 'Объявление';
+
+    case 'schedule':
+      return 'График';
+
+    default:
+      if (type.trim().isEmpty) {
+        return 'Операция';
+      }
+      return type.trim();
+  }
+}
+
+
 const Color kHistMintTop = Color(0xFF0CB7B3);
 const Color kHistMintMid = Color(0xFF08A9AB);
 const Color kHistMintBottom = Color(0xFF067D87);
@@ -29,6 +78,18 @@ const Color kHistShadow = Color(0x22062E36);
 const Color kHistBlue = Color(0xFF4E7CFF);
 const Color kHistPink = Color(0xFFFF5F8F);
 const Color kHistViolet = Color(0xFF7A63FF);
+
+
+String flowruCleanText(String value) {
+  return value
+      .replaceAll('вЂў', '•')
+      .replaceAll('вЂ“', '–')
+      .replaceAll('вЂ”', '—')
+      .replaceAll('РІР‚Сћ', '•')
+      .replaceAll('РІР‚вЂњ', '–')
+      .replaceAll('РІР‚вЂќ', '—');
+}
+
 
 class StaffEstablishmentHistoryScreen extends StatefulWidget {
   final int establishmentId;
@@ -322,22 +383,11 @@ class _StaffEstablishmentHistoryScreenState
     }
   }
 
-  String _typeLabel(String type) {
-    switch (type.toLowerCase()) {
-      case 'accrual':
-        return 'Начисление';
-      case 'spend':
-        return 'Списание';
-      case 'visit':
-        return 'Визит';
-      case 'redeem':
-        return 'Погашение';
-      case 'earn':
-        return 'Начисление';
-      default:
-        return type.isEmpty ? 'Операция' : type;
-    }
+  
+String _typeLabel(String type) {
+    return flowruStaffNormalizeOperationType(type);
   }
+
 
   String _formatDate(String value) {
     if (value.isEmpty) return '';
@@ -815,7 +865,7 @@ class _EstablishmentHistoryItem {
     return _EstablishmentHistoryItem(
       id: json['id']?.toString() ?? '',
       operationType:
-          json['operation_type']?.toString() ?? json['type']?.toString() ?? '',
+          flowruStaffNormalizeOperationType(json['operation_type']?.toString() ?? json['type']?.toString() ?? ''),
       amount: parseNum(json['amount']),
       comment: json['comment']?.toString() ?? '',
       createdAt: json['created_at']?.toString() ?? '',
@@ -842,3 +892,8 @@ class _EstablishmentHistoryItem {
     return '';
   }
 }
+// STAFF_HUMAN_OPERATION_LABELS_20260523
+
+// STAFF_OPERATION_TYPE_NORMALIZE_20260523
+
+// STAFF_NORMALIZE_TOP_LEVEL_20260523

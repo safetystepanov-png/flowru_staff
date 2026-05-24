@@ -10,49 +10,6 @@ import 'package:http/http.dart' as http;
 import '../../../auth/data/auth_storage.dart';
 import '../../../../core/config/app_config.dart';
 
-
-String flowruStaffNormalizeOperationType(String type) {
-  final value = type.trim().toLowerCase();
-
-  switch (value) {
-    case 'purchase':
-    case 'accrual':
-    case 'accrue':
-    case 'bonus':
-    case 'add':
-      return 'Начисление';
-
-    case 'redeem':
-    case 'spend':
-    case 'writeoff':
-    case 'write_off':
-    case 'subtract':
-      return 'Списание';
-
-    case 'reward_redeem':
-    case 'reward':
-    case 'coupon':
-      return 'Купон';
-
-    case 'referral':
-      return 'Реферальный бонус';
-
-    case 'expire_burn':
-    case 'burn':
-      return 'Сгорание баллов';
-
-    case 'visit':
-      return 'Визит';
-
-    default:
-      if (type.trim().isEmpty) {
-        return 'Операция';
-      }
-      return type.trim();
-  }
-}
-
-
 const Color kClientHistoryMintTop = Color(0xFF0CB7B3);
 const Color kClientHistoryMintMid = Color(0xFF08A9AB);
 const Color kClientHistoryMintBottom = Color(0xFF067D87);
@@ -368,9 +325,84 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
   }
 
   
-String _typeLabel(String type) {
-    return flowruStaffNormalizeOperationType(type);
+String _normalizeOperationType(String type) {
+  final raw = type.trim();
+  if (raw == 'Начисление' || raw == 'Списание' || raw == 'Купон' || raw == 'Реферальный бонус' || raw == 'Сгорание баллов' || raw == 'Визит' || raw == 'Операция') return raw;
+  final value = raw.toLowerCase();
+
+  switch (value) {
+    case 'purchase':
+    case 'accrual':
+    case 'accrue':
+    case 'bonus':
+    case 'add':
+      return 'Начисление';
+
+    case 'redeem':
+    case 'spend':
+    case 'writeoff':
+    case 'subtract':
+      return 'Списание';
+
+    case 'reward_redeem':
+    case 'reward':
+    case 'coupon':
+      return 'Купон';
+
+    case 'referral':
+      return 'Реферальный бонус';
+
+    case 'expire_burn':
+    case 'burn':
+      return 'Сгорание баллов';
+
+    case 'visit':
+      return 'Визит';
+
+    default:
+      if (type.trim().isEmpty) {
+        return 'Операция';
+      }
+      return type.trim();
   }
+}
+
+String _typeLabel(String type) {
+  final value = type.trim().toLowerCase();
+
+  switch (value) {
+    case 'purchase':
+    case 'accrual':
+    case 'accrue':
+    case 'bonus':
+    case 'add':
+      return 'Начисление';
+
+    case 'redeem':
+    case 'spend':
+    case 'writeoff':
+    case 'subtract':
+      return 'Списание';
+
+    case 'reward_redeem':
+    case 'reward':
+    case 'coupon':
+      return 'Купон';
+
+    case 'referral':
+      return 'Реферальный бонус';
+
+    case 'expire_burn':
+    case 'burn':
+      return 'Сгорание баллов';
+
+    case 'visit':
+      return 'Визит';
+
+    default:
+      return 'Операция';
+  }
+}
 
 
   String _formatDate(String value) {
@@ -748,7 +780,7 @@ class _HistoryItem {
     return _HistoryItem(
       id: json['id']?.toString() ?? '',
       operationType:
-          flowruStaffNormalizeOperationType(json['operation_type']?.toString() ?? json['type']?.toString() ?? ''),
+          _normalizeOperationType(json['operation_type']?.toString() ?? json['type']?.toString() ?? ''),
       amount: parseNum(json['amount']),
       comment: json['comment']?.toString() ?? '',
       createdAt: json['created_at']?.toString() ?? '',
@@ -765,5 +797,3 @@ class _HistoryItem {
 // STAFF_HUMAN_OPERATION_LABELS_20260523
 
 // STAFF_OPERATION_TYPE_NORMALIZE_20260523
-
-// STAFF_NORMALIZE_TOP_LEVEL_20260523

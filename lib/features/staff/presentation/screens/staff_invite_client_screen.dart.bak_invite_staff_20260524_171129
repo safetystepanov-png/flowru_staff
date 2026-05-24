@@ -1,8 +1,6 @@
 ﻿import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../data/staff_invite_api.dart';
 
@@ -16,8 +14,6 @@ const Color kInviteAccent = Color(0xFFFFA51E);
 const Color kInviteAccentSoft = Color(0xFFFFD166);
 const Color kInviteBlue = Color(0xFF246BFF);
 const Color kInviteViolet = Color(0xFF7A4CFF);
-
-const String kFlowruStaffAppStoreUrl = 'https://apps.apple.com/us/app/flowru-staff/id6762253836';
 
 class StaffInviteClientScreen extends StatefulWidget {
   final int establishmentId;
@@ -61,23 +57,6 @@ class _StaffInviteClientScreenState extends State<StaffInviteClientScreen>
     super.dispose();
   }
 
-  Future<void> _shareStaffInvite() async {
-    const text = 'Установи Flowru Staff для работы с системой лояльности:\n$kFlowruStaffAppStoreUrl';
-
-    try {
-      await Share.share(text);
-    } catch (_) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Не удалось открыть меню отправки'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -119,7 +98,7 @@ class _StaffInviteClientScreenState extends State<StaffInviteClientScreen>
             child: Column(
               children: [
                 _InviteTopBar(
-                  title: 'Пригласить',
+                  title: 'Пригласить клиента',
                   subtitle: widget.establishmentName,
                   onBack: () => Navigator.of(context).pop(),
                   onReload: _load,
@@ -153,12 +132,6 @@ class _StaffInviteClientScreenState extends State<StaffInviteClientScreen>
 
                           _InviteStepsCard(
                             establishmentName: invite.establishmentName,
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          _InviteStaffCard(
-                            onShare: _shareStaffInvite,
                           ),
                         ],
                       ],
@@ -396,153 +369,6 @@ class _InviteHeroCard extends StatelessWidget {
               fontSize: 13.5,
               height: 1.35,
               fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InviteStaffCard extends StatelessWidget {
-  final VoidCallback onShare;
-
-  const _InviteStaffCard({
-    required this.onShare,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return _WhiteCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  gradient: const LinearGradient(
-                    colors: [kInviteBlue, kInviteViolet],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: kInviteBlue.withOpacity(0.22),
-                      blurRadius: 18,
-                      offset: const Offset(0, 9),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  CupertinoIcons.person_2_fill,
-                  color: Colors.white,
-                  size: 26,
-                ),
-              ),
-              const SizedBox(width: 14),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Пригласить сотрудника',
-                      style: TextStyle(
-                        color: kInviteInk,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Покажите QR сотруднику или отправьте ссылку в мессенджер. Он установит Flowru Staff и войдёт в рабочий контур.',
-                      style: TextStyle(
-                        color: kInviteInkSoft,
-                        fontSize: 13.5,
-                        height: 1.35,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 18),
-
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: const Color(0xFFE8EEF2)),
-                boxShadow: [
-                  BoxShadow(
-                    color: kInviteBlue.withOpacity(0.10),
-                    blurRadius: 24,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
-              child: QrImageView(
-                data: kFlowruStaffAppStoreUrl,
-                version: QrVersions.auto,
-                size: 210,
-                backgroundColor: Colors.white,
-                foregroundColor: kInviteInk,
-                eyeStyle: const QrEyeStyle(
-                  eyeShape: QrEyeShape.square,
-                  color: kInviteInk,
-                ),
-                dataModuleStyle: const QrDataModuleStyle(
-                  dataModuleShape: QrDataModuleShape.square,
-                  color: kInviteInk,
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          const Center(
-            child: Text(
-              'QR ведёт на Flowru Staff в App Store',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: kInviteInkSoft,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: onShare,
-              icon: const Icon(CupertinoIcons.share),
-              label: const Text('Поделиться ссылкой'),
-              style: ElevatedButton.styleFrom(
-                elevation: 0,
-                backgroundColor: kInviteBlue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                textStyle: const TextStyle(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
             ),
           ),
         ],
@@ -963,8 +789,3 @@ class _Blob extends StatelessWidget {
   }
 }
 
-
-// STAFF_INVITE_CLIENT_AND_STAFF_20260524
-
-
-// STAFF_INVITE_STAFF_QR_SHARE_20260524

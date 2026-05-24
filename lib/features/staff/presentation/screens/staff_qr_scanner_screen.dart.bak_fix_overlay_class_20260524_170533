@@ -562,7 +562,7 @@ class _ScannerOverlayPainter extends CustomPainter {
         ..color = Colors.black.withOpacity(0.50)
         ..style = PaintingStyle.fill,
     );
-  }
+
 
   @override
   bool shouldRepaint(covariant _ScannerOverlayPainter oldDelegate) {
@@ -571,5 +571,4 @@ class _ScannerOverlayPainter extends CustomPainter {
   }
 }
 
-
-// STAFF_SCANNER_OVERLAY_CLASS_FIXED_NO_CORNERS_20260523
+// STAFF_SCANNER_NO_CORNERS_EXACT_20260523

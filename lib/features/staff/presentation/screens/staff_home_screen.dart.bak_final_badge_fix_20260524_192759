@@ -906,7 +906,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                     ],
                   ),
                   child: Text(
-                    _isOwner ? 'ОБЪЯВЛЕНИЕ' : 'ВАЖНОЕ ОБЪЯВЛЕНИЕ',
+                    _isOwner ? 'Р Р•Р–РРњ Р’Р›РђР”Р•Р›Р¬Р¦Рђ' : 'ГЛАВНЫЙ ЭКРАН',
                     style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w900,
@@ -995,7 +995,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                     ],
                   ),
                   child: Text(
-                    _isOwner ? 'ОБЪЯВЛЕНИЕ' : 'ВАЖНОЕ ОБЪЯВЛЕНИЕ',
+                    _isOwner ? 'РћР‘РЄРЇР’Р›Р•РќРР•' : 'Р’РђР–РќРћР• РћР‘РЄРЇР’Р›Р•РќРР•',
                     style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w900,

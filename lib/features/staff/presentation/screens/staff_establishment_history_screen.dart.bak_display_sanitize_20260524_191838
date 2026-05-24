@@ -53,50 +53,46 @@ String flowruStaffNormalizeOperationType(String type) {
 }
 
 
-const Color kClientHistoryMintTop = Color(0xFF0CB7B3);
-const Color kClientHistoryMintMid = Color(0xFF08A9AB);
-const Color kClientHistoryMintBottom = Color(0xFF067D87);
-const Color kClientHistoryMintDeep = Color(0xFF055E66);
+const Color kHistMintTop = Color(0xFF0CB7B3);
+const Color kHistMintMid = Color(0xFF08A9AB);
+const Color kHistMintBottom = Color(0xFF067D87);
+const Color kHistMintDeep = Color(0xFF055E66);
 
-const Color kClientHistoryAccent = Color(0xFFFFA11D);
-const Color kClientHistoryAccentSoft = Color(0xFFFFC45E);
+const Color kHistAccent = Color(0xFFFFA11D);
+const Color kHistAccentSoft = Color(0xFFFFC45E);
 
-const Color kClientHistoryCard = Color(0xCCFFFFFF);
-const Color kClientHistoryCardStrong = Color(0xE8FFFFFF);
-const Color kClientHistoryStroke = Color(0xA6FFFFFF);
+const Color kHistCard = Color(0xCCFFFFFF);
+const Color kHistCardStrong = Color(0xE8FFFFFF);
+const Color kHistStroke = Color(0xA6FFFFFF);
 
-const Color kClientHistoryInk = Color(0xFF103238);
-const Color kClientHistoryInkSoft = Color(0xFF58767D);
-const Color kClientHistoryShadow = Color(0x22062E36);
+const Color kHistInk = Color(0xFF103238);
+const Color kHistInkSoft = Color(0xFF58767D);
+const Color kHistShadow = Color(0x22062E36);
 
-const Color kClientHistoryBlue = Color(0xFF4E7CFF);
-const Color kClientHistoryPink = Color(0xFFFF5F8F);
-const Color kClientHistoryViolet = Color(0xFF7A63FF);
+const Color kHistBlue = Color(0xFF4E7CFF);
+const Color kHistPink = Color(0xFFFF5F8F);
+const Color kHistViolet = Color(0xFF7A63FF);
 
-class StaffClientHistoryScreen extends StatefulWidget {
+class StaffEstablishmentHistoryScreen extends StatefulWidget {
   final int establishmentId;
   final String establishmentName;
-  final String clientId;
-  final String clientName;
 
-  const StaffClientHistoryScreen({
+  const StaffEstablishmentHistoryScreen({
     super.key,
     required this.establishmentId,
     required this.establishmentName,
-    required this.clientId,
-    required this.clientName,
   });
 
   @override
-  State<StaffClientHistoryScreen> createState() =>
-      _StaffClientHistoryScreenState();
+  State<StaffEstablishmentHistoryScreen> createState() =>
+      _StaffEstablishmentHistoryScreenState();
 }
 
-class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
-    with TickerProviderStateMixin {
+class _StaffEstablishmentHistoryScreenState
+    extends State<StaffEstablishmentHistoryScreen> with TickerProviderStateMixin {
   bool _loading = true;
   String? _error;
-  List<_HistoryItem> _items = [];
+  List<_EstablishmentHistoryItem> _items = [];
 
   late final AnimationController _bgController;
   late final AnimationController _introController;
@@ -104,7 +100,6 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
   @override
   void initState() {
     super.initState();
-
     _bgController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 6800),
@@ -143,7 +138,7 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
       final token = await _token();
 
       final uri = Uri.parse(
-        '${AppConfig.baseUrl}/api/v1/staff/clients/history?client_id=${Uri.encodeQueryComponent(widget.clientId)}&establishment_id=${widget.establishmentId}',
+        '${AppConfig.baseUrl}/api/v1/staff/establishment/history?establishment_id=${widget.establishmentId}',
       );
 
       final response = await http.get(
@@ -156,7 +151,7 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
 
       if (response.statusCode != 200) {
         throw Exception(
-          'client history failed: ${response.statusCode} ${response.body}',
+          'establishment history failed: ${response.statusCode} ${response.body}',
         );
       }
 
@@ -175,7 +170,10 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
 
       setState(() {
         _items = raw
-            .map((e) => _HistoryItem.fromJson(e as Map<String, dynamic>))
+            .map(
+              (e) =>
+                  _EstablishmentHistoryItem.fromJson(e as Map<String, dynamic>),
+            )
             .toList();
         _loading = false;
       });
@@ -185,7 +183,7 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Не удалось загрузить историю клиента';
+        _error = 'Не удалось загрузить историю заведения';
       });
       _introController.forward(from: 0);
     }
@@ -258,10 +256,10 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    kClientHistoryMintTop,
-                    kClientHistoryMintMid,
-                    kClientHistoryMintBottom,
-                    kClientHistoryMintDeep,
+                    kHistMintTop,
+                    kHistMintMid,
+                    kHistMintBottom,
+                    kHistMintDeep,
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -296,7 +294,7 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
                   height: 280,
                   colors: [
                     Colors.white.withOpacity(0.16),
-                    kClientHistoryAccent.withOpacity(0.12),
+                    kHistAccent.withOpacity(0.12),
                   ],
                 ),
               ),
@@ -311,7 +309,7 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
                   height: 220,
                   colors: [
                     Colors.white.withOpacity(0.10),
-                    kClientHistoryBlue.withOpacity(0.07),
+                    kHistBlue.withOpacity(0.07),
                   ],
                 ),
               ),
@@ -325,7 +323,7 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
                   width: 210,
                   height: 210,
                   colors: [
-                    kClientHistoryAccentSoft.withOpacity(0.10),
+                    kHistAccentSoft.withOpacity(0.10),
                     Colors.white.withOpacity(0.05),
                   ],
                 ),
@@ -342,13 +340,13 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
       case 'accrual':
       case 'visit':
       case 'earn':
-        return kClientHistoryBlue;
+        return kHistBlue;
       case 'spend':
       case 'redeem':
       case 'write_off':
-        return kClientHistoryPink;
+        return kHistPink;
       default:
-        return kClientHistoryViolet;
+        return kHistViolet;
     }
   }
 
@@ -405,7 +403,7 @@ String _typeLabel(String type) {
             style: const TextStyle(
               fontSize: 19,
               fontWeight: FontWeight.w900,
-              color: kClientHistoryInk,
+              color: kHistInk,
             ),
           ),
           const SizedBox(height: 8),
@@ -415,7 +413,7 @@ String _typeLabel(String type) {
             style: const TextStyle(
               fontSize: 14,
               height: 1.4,
-              color: kClientHistoryInkSoft,
+              color: kHistInkSoft,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -424,7 +422,7 @@ String _typeLabel(String type) {
     );
   }
 
-  Widget _itemCard(_HistoryItem item) {
+  Widget _itemCard(_EstablishmentHistoryItem item) {
     final color = _typeColor(item.operationType);
 
     return _GlassCard(
@@ -447,7 +445,7 @@ String _typeLabel(String type) {
                   style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w900,
-                    color: kClientHistoryInk,
+                    color: kHistInk,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -459,24 +457,35 @@ String _typeLabel(String type) {
                     color: color,
                   ),
                 ),
+                if (item.clientLabel.trim().isNotEmpty) ...[
+                  const SizedBox(height: 7),
+                  Text(
+                    item.clientLabel,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      color: kHistInk,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
                 if (item.comment.trim().isNotEmpty) ...[
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 5),
                   Text(
                     item.comment,
                     style: const TextStyle(
                       fontSize: 13.5,
                       height: 1.35,
-                      color: kClientHistoryInkSoft,
+                      color: kHistInkSoft,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
-                const SizedBox(height: 8),
+                const SizedBox(height: 9),
                 Text(
                   _formatDate(item.createdAt),
                   style: const TextStyle(
                     fontSize: 12.5,
-                    color: kClientHistoryInkSoft,
+                    color: kHistInkSoft,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -491,12 +500,12 @@ String _typeLabel(String type) {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kClientHistoryMintTop,
+      backgroundColor: kHistMintTop,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          'История клиента',
+          'История заведения',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w900,
@@ -519,14 +528,12 @@ String _typeLabel(String type) {
                         height: 42,
                         child: CircularProgressIndicator(
                           strokeWidth: 3,
-                          valueColor: AlwaysStoppedAnimation(
-                            kClientHistoryViolet,
-                          ),
+                          valueColor: AlwaysStoppedAnimation(kHistViolet),
                         ),
                       ),
                     )
                   : RefreshIndicator(
-                      color: kClientHistoryViolet,
+                      color: kHistViolet,
                       backgroundColor: Colors.white,
                       onRefresh: _load,
                       child: ListView(
@@ -547,7 +554,7 @@ String _typeLabel(String type) {
                               child: _stateCard(
                                 icon: CupertinoIcons.time_solid,
                                 title: 'История пока пустая',
-                                subtitle: 'По этому клиенту пока нет операций',
+                                subtitle: 'По заведению ещё нет операций',
                               ),
                             )
                           else
@@ -594,16 +601,16 @@ class _GlassCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(radius),
             gradient: LinearGradient(
               colors: [
-                kClientHistoryCardStrong,
-                kClientHistoryCard,
+                kHistCardStrong,
+                kHistCard,
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            border: Border.all(color: kClientHistoryStroke),
+            border: Border.all(color: kHistStroke),
             boxShadow: [
               BoxShadow(
-                color: kClientHistoryShadow.withOpacity(0.10),
+                color: kHistShadow.withOpacity(0.10),
                 blurRadius: 24,
                 offset: const Offset(0, 14),
               ),
@@ -611,6 +618,94 @@ class _GlassCard extends StatelessWidget {
           ),
           child: child,
         ),
+      ),
+    );
+  }
+}
+
+class _FloatingGlyph extends StatelessWidget {
+  final IconData icon;
+  final Color mainColor;
+  final Color secondaryColor;
+  final double size;
+  final double iconSize;
+
+  const _FloatingGlyph({
+    required this.icon,
+    required this.mainColor,
+    required this.secondaryColor,
+    this.size = 76,
+    this.iconSize = 34,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  mainColor.withOpacity(0.22),
+                  secondaryColor.withOpacity(0.16),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          Container(
+            width: size * 0.74,
+            height: size * 0.74,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.86),
+              boxShadow: [
+                BoxShadow(
+                  color: mainColor.withOpacity(0.20),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: size * 0.54,
+            height: size * 0.54,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [mainColor, secondaryColor],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: iconSize,
+            ),
+          ),
+          Positioned(
+            top: size * 0.11,
+            right: size * 0.14,
+            child: Container(
+              width: size * 0.14,
+              height: size * 0.14,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.90),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -696,8 +791,8 @@ class _EmptyOrb extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: LinearGradient(
                 colors: [
-                  kClientHistoryBlue.withOpacity(0.18),
-                  kClientHistoryViolet.withOpacity(0.10),
+                  kHistBlue.withOpacity(0.18),
+                  kHistViolet.withOpacity(0.10),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -713,7 +808,7 @@ class _EmptyOrb extends StatelessWidget {
             ),
             child: Icon(
               icon,
-              color: kClientHistoryInkSoft,
+              color: kHistInkSoft,
               size: 28,
             ),
           ),
@@ -723,35 +818,43 @@ class _EmptyOrb extends StatelessWidget {
   }
 }
 
-class _HistoryItem {
+class _EstablishmentHistoryItem {
   final String id;
   final String operationType;
   final double amount;
   final String comment;
   final String createdAt;
+  final String clientName;
+  final String clientPhone;
 
-  _HistoryItem({
+  _EstablishmentHistoryItem({
     required this.id,
     required this.operationType,
     required this.amount,
     required this.comment,
     required this.createdAt,
+    required this.clientName,
+    required this.clientPhone,
   });
 
-  factory _HistoryItem.fromJson(Map<String, dynamic> json) {
+  factory _EstablishmentHistoryItem.fromJson(Map<String, dynamic> json) {
     double parseNum(dynamic v) {
       if (v == null) return 0;
       if (v is num) return v.toDouble();
       return double.tryParse(v.toString()) ?? 0;
     }
 
-    return _HistoryItem(
+    return _EstablishmentHistoryItem(
       id: json['id']?.toString() ?? '',
       operationType:
           flowruStaffNormalizeOperationType(json['operation_type']?.toString() ?? json['type']?.toString() ?? ''),
       amount: parseNum(json['amount']),
       comment: json['comment']?.toString() ?? '',
       createdAt: json['created_at']?.toString() ?? '',
+      clientName:
+          json['client_name']?.toString() ?? json['full_name']?.toString() ?? '',
+      clientPhone:
+          json['client_phone']?.toString() ?? json['phone']?.toString() ?? '',
     );
   }
 
@@ -760,6 +863,15 @@ class _HistoryItem {
       return amount.toInt().toString();
     }
     return amount.toStringAsFixed(2);
+  }
+
+  String get clientLabel {
+    final name = clientName.trim();
+    final phone = clientPhone.trim();
+    if (name.isNotEmpty && phone.isNotEmpty) return '$name • $phone';
+    if (name.isNotEmpty) return name;
+    if (phone.isNotEmpty) return phone;
+    return '';
   }
 }
 // STAFF_HUMAN_OPERATION_LABELS_20260523

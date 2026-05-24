@@ -562,6 +562,24 @@ class _ScannerOverlayPainter extends CustomPainter {
         ..color = Colors.black.withOpacity(0.50)
         ..style = PaintingStyle.fill,
     );
+
+    final cornerPaint = Paint()
+      ..color = accentColor
+      ..strokeWidth = 5.5
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    const corner = 44.0;
+    final rect = cutoutRect;
+
+    canvas.drawLine(rect.topLeft + const Offset(24, 0), rect.topLeft + const Offset(corner, 0), cornerPaint);
+    canvas.drawLine(rect.topLeft + const Offset(0, 24), rect.topLeft + const Offset(0, corner), cornerPaint);
+    canvas.drawLine(rect.topRight - const Offset(24, 0), rect.topRight - const Offset(corner, 0), cornerPaint);
+    canvas.drawLine(rect.topRight + const Offset(0, 24), rect.topRight + const Offset(0, corner), cornerPaint);
+    canvas.drawLine(rect.bottomLeft + const Offset(24, 0), rect.bottomLeft + const Offset(corner, 0), cornerPaint);
+    canvas.drawLine(rect.bottomLeft - const Offset(0, 24), rect.bottomLeft - const Offset(0, corner), cornerPaint);
+    canvas.drawLine(rect.bottomRight - const Offset(24, 0), rect.bottomRight - const Offset(corner, 0), cornerPaint);
+    canvas.drawLine(rect.bottomRight - const Offset(0, 24), rect.bottomRight - const Offset(0, corner), cornerPaint);
   }
 
   @override
@@ -570,6 +588,3 @@ class _ScannerOverlayPainter extends CustomPainter {
         oldDelegate.accentColor != accentColor;
   }
 }
-
-
-// STAFF_SCANNER_OVERLAY_CLASS_FIXED_NO_CORNERS_20260523

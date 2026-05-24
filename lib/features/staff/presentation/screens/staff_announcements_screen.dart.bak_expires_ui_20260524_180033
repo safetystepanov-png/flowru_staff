@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -35,55 +35,6 @@ const Color kAnnSuccess = Color(0xFF22C55E);
 const Color kAnnSuccessSoft = Color(0xFF4ADE80);
 const Color kAnnWarn = Color(0xFFF97316);
 const Color kAnnWarnSoft = Color(0xFFFB923C);
-
-
-String flowruCleanText(String value) {
-  var s = value;
-
-  final replacements = <String, String>{
-    'РђРєС‚РёРІРЅРѕ': 'Активно',
-    'РђРєС‚РёРІРЅР°': 'Активна',
-    'Р—Р°РєСЂРµРїР»РµРЅРѕ': 'Закреплено',
-    'РћР·РЅР°РєРѕРјР»РµРЅ': 'Ознакомлен',
-    'РџСЂРѕС‡РёС‚Р°РЅРѕ': 'Прочитано',
-    'РќРµ РѕР·РЅР°РєРѕРјР»РµРЅ': 'Не ознакомлен',
-    'Р“СЂР°С„РёРє': 'График',
-    'РСЃС‚РѕСЂРёСЏ': 'История',
-    'РћР±СЉСЏРІР»РµРЅРёРµ': 'Объявление',
-    'РћР±СЉСЏРІР»РµРЅРёСЏ': 'Объявления',
-    'Р’Р°Р¶РЅРѕ': 'Важно',
-    'РќРѕРІРѕРµ': 'Новое',
-    'СЃРѕР·РґР°РЅРѕ': 'создано',
-    'СЂР°Р±РѕС‚С‹': 'работы',
-    'СЃРѕС‚СЂСѓРґРЅРёРє': 'сотрудник',
-    'вЂў': '•',
-    'вЂ“': '–',
-    'вЂ”': '—',
-  };
-
-  replacements.forEach((from, to) {
-    s = s.replaceAll(from, to);
-  });
-
-  final brokenMarkers = [
-    'Рђ', 'Рџ', 'Рќ', 'РЎ', 'Рћ', 'Р—', 'СЃ', 'С‚', 'СЂ', '╨', '╤', 'Ð', 'Ñ', 'вЂ'
-  ];
-
-  final stillBroken = brokenMarkers.any((m) => s.contains(m));
-  if (!stillBroken) return s;
-
-  // Для коротких жёлтых бейджей лучше не показывать мусор.
-  if (s.length <= 24) {
-    if (s.toLowerCase().contains('schedule') || s.contains('Граф')) return 'График';
-    if (s.toLowerCase().contains('announcement') || s.contains('Об')) return 'Объявление';
-    if (s.toLowerCase().contains('pinned')) return 'Закреплено';
-    if (s.toLowerCase().contains('ack')) return 'Ознакомлен';
-    return 'Статус';
-  }
-
-  return s;
-}
-
 
 class StaffAnnouncementsScreen extends StatefulWidget {
   final int establishmentId;
@@ -242,8 +193,6 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
     final titleController = TextEditingController();
     final bodyController = TextEditingController();
     bool pinned = false;
-    bool expiresEnabled = false;
-    DateTime? expiresAt;
 
     await showDialog<void>(
       context: context,
@@ -279,7 +228,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                           ),
                           const SizedBox(height: 8),
                           const Text(
-                            'Создайте объявление для сотрудников заведения',
+                            'Создай объявление для сотрудников заведения',
                             style: TextStyle(
                               fontSize: 14,
                               height: 1.4,
@@ -325,148 +274,6 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                   color: kAnnInk,
                                 ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(20),
-                              color: kAnnBlue.withOpacity(0.07),
-                              border: Border.all(
-                                color: kAnnBlue.withOpacity(0.10),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Срок действия',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                    color: kAnnInk,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _ExpiryChoiceButton(
-                                        selected: !expiresEnabled,
-                                        title: 'Бессрочно',
-                                        icon: CupertinoIcons.repeat,
-                                        onTap: () {
-                                          setLocalState(() {
-                                            expiresEnabled = false;
-                                            expiresAt = null;
-                                          });
-                                        },
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: _ExpiryChoiceButton(
-                                        selected: expiresEnabled,
-                                        title: expiresAt == null
-                                            ? 'До даты'
-                                            : 'До ${expiresAt!.day.toString().padLeft(2, '0')}.${expiresAt!.month.toString().padLeft(2, '0')}.${expiresAt!.year}',
-                                        icon: CupertinoIcons.calendar,
-                                        onTap: () async {
-                                          final now = DateTime.now();
-                                          DateTime selected = expiresAt ?? now.add(const Duration(days: 7));
-
-                                          await showCupertinoModalPopup<void>(
-                                            context: context,
-                                            builder: (pickerContext) {
-                                              return Container(
-                                                height: 330,
-                                                decoration: const BoxDecoration(
-                                                  color: Colors.white,
-                                                  borderRadius: BorderRadius.vertical(
-                                                    top: Radius.circular(26),
-                                                  ),
-                                                ),
-                                                child: SafeArea(
-                                                  top: false,
-                                                  child: Column(
-                                                    children: [
-                                                      Padding(
-                                                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-                                                        child: Row(
-                                                          children: [
-                                                            CupertinoButton(
-                                                              padding: EdgeInsets.zero,
-                                                              onPressed: () => Navigator.of(pickerContext).pop(),
-                                                              child: const Text(
-                                                                'Отмена',
-                                                                style: TextStyle(
-                                                                  color: kAnnInkSoft,
-                                                                  fontWeight: FontWeight.w800,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            const Spacer(),
-                                                            const Text(
-                                                              'Дата окончания',
-                                                              style: TextStyle(
-                                                                color: kAnnInk,
-                                                                fontSize: 16,
-                                                                fontWeight: FontWeight.w900,
-                                                              ),
-                                                            ),
-                                                            const Spacer(),
-                                                            CupertinoButton(
-                                                              padding: EdgeInsets.zero,
-                                                              onPressed: () {
-                                                                setLocalState(() {
-                                                                  expiresEnabled = true;
-                                                                  expiresAt = DateTime(
-                                                                    selected.year,
-                                                                    selected.month,
-                                                                    selected.day,
-                                                                    23,
-                                                                    59,
-                                                                    59,
-                                                                  );
-                                                                });
-                                                                Navigator.of(pickerContext).pop();
-                                                              },
-                                                              child: const Text(
-                                                                'Готово',
-                                                                style: TextStyle(
-                                                                  color: kAnnAccent,
-                                                                  fontWeight: FontWeight.w900,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                      const Divider(height: 1),
-                                                      Expanded(
-                                                        child: CupertinoDatePicker(
-                                                          mode: CupertinoDatePickerMode.date,
-                                                          initialDateTime: selected,
-                                                          minimumDate: DateTime(now.year, now.month, now.day),
-                                                          maximumDate: now.add(const Duration(days: 365 * 3)),
-                                                          onDateTimeChanged: (value) {
-                                                            selected = value;
-                                                          },
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
                             ),
                           ),
                           const SizedBox(height: 18),
@@ -517,7 +324,6 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                               title: title,
                                               body: body,
                                               pinned: pinned,
-                                              expiresAt: expiresEnabled ? expiresAt : null,
                                             );
                                           },
                                     style: ElevatedButton.styleFrom(
@@ -594,7 +400,6 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
     required String title,
     required String body,
     required bool pinned,
-    DateTime? expiresAt,
   }) async {
     setState(() {
       _saving = true;
@@ -616,7 +421,6 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
           'title': title,
           'body': body,
           'is_pinned': pinned,
-          'expires_at': expiresAt?.toUtc().toIso8601String(),
         }),
       );
 
@@ -713,7 +517,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Объявление СѓРґР°Р»РµРЅРѕ'),
+          content: Text('Объявление удалено'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -2045,67 +1849,6 @@ class _AnnouncementAudienceData {
   }
 }
 
-class _ExpiryChoiceButton extends StatelessWidget {
-  final bool selected;
-  final String title;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _ExpiryChoiceButton({
-    required this.selected,
-    required this.title,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Ink(
-          height: 46,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: selected ? kAnnAccent.withOpacity(0.15) : Colors.white,
-            border: Border.all(
-              color: selected
-                  ? kAnnAccent.withOpacity(0.45)
-                  : const Color(0xFFE7EEF0),
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: selected ? kAnnAccent : kAnnInkSoft,
-              ),
-              const SizedBox(width: 7),
-              Flexible(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: selected ? kAnnInk : kAnnInkSoft,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _AnnouncementItem {
   final String id;
   final String title;
@@ -2194,8 +1937,3 @@ class _AnnouncementItem {
     return text;
   }
 }
-// STAFF_ANNOUNCEMENT_EXPIRES_UI_20260524
-
-
-
-// STAFF_ANNOUNCEMENT_CUPERTINO_DATE_PICKER_20260524

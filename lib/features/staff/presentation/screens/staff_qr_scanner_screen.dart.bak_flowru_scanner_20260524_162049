@@ -28,14 +28,13 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
   static const Color _mintDeep = Color(0xFF055E66);
   static const Color _accent = Color(0xFFFFA11D);
   static const Color _ink = Color(0xFF103238);
-  static const Color _softText = Color(0xFF58767D);
 
   @override
   void initState() {
     super.initState();
     _lineController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1550),
+      duration: const Duration(milliseconds: 1650),
     )..repeat(reverse: true);
   }
 
@@ -103,19 +102,16 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
 
   @override
   Widget build(BuildContext context) {
-    final screen = MediaQuery.of(context).size;
-    final scanSize = (screen.width * 0.72).clamp(260.0, 340.0);
+    final scanSize = MediaQuery.of(context).size.width * 0.72;
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
           Positioned.fill(
-            child: MobileScanner(
-              controller: _controller,
-              onDetect: _onDetect,
-            ),
+            child: MobileScanner(controller: _controller, onDetect: _onDetect),
           ),
+
           Positioned.fill(
             child: CustomPaint(
               painter: _ScannerOverlayPainter(
@@ -124,17 +120,17 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
               ),
             ),
           ),
+
           Positioned.fill(
             child: IgnorePointer(
-              child: DecoratedBox(
+              child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Colors.black.withOpacity(0.64),
+                      Colors.black.withOpacity(0.38),
                       Colors.transparent,
                       Colors.black.withOpacity(0.72),
                     ],
-                    stops: const [0.0, 0.48, 1.0],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -142,6 +138,7 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
               ),
             ),
           ),
+
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
@@ -149,17 +146,69 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
                 children: [
                   _topBar(),
                   const Spacer(),
-                  _scanWindow(scanSize),
+                  SizedBox(
+                    width: scanSize,
+                    height: scanSize,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(34),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.24),
+                                width: 1.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                        AnimatedBuilder(
+                          animation: _lineController,
+                          builder: (context, _) {
+                            final top =
+                                18 + (_lineController.value * (scanSize - 38));
+
+                            return Positioned(
+                              left: 18,
+                              right: 18,
+                              top: top,
+                              child: Container(
+                                height: 3,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(999),
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Colors.transparent,
+                                      _accent,
+                                      Colors.transparent,
+                                    ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _accent.withOpacity(0.55),
+                                      blurRadius: 16,
+                                      spreadRadius: 1,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                   const Spacer(),
                   _bottomCard(),
                 ],
               ),
             ),
           ),
+
           if (_handled)
             Positioned.fill(
               child: Container(
-                color: Colors.black.withOpacity(0.38),
+                color: Colors.black.withOpacity(0.34),
                 child: const Center(child: _ProcessingCard()),
               ),
             ),
@@ -171,33 +220,19 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
   Widget _topBar() {
     return Row(
       children: [
-        _CircleButton(
-          icon: CupertinoIcons.xmark,
-          onTap: _closeScanner,
-        ),
+        _CircleButton(icon: CupertinoIcons.xmark, onTap: _closeScanner),
         const SizedBox(width: 12),
         Expanded(
           child: Container(
-            height: 50,
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.13),
               borderRadius: BorderRadius.circular(22),
               border: Border.all(color: Colors.white.withOpacity(0.16)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.12),
-                  blurRadius: 22,
-                  offset: const Offset(0, 10),
-                ),
-              ],
             ),
             child: const Text(
               'Сканирование клиента',
               textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,
@@ -219,94 +254,6 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
     );
   }
 
-  Widget _scanWindow(double scanSize) {
-    return SizedBox(
-      width: scanSize,
-      height: scanSize,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(36),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _accent.withOpacity(0.16),
-                      blurRadius: 32,
-                      spreadRadius: 1,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          AnimatedBuilder(
-            animation: _lineController,
-            builder: (context, _) {
-              final top = 24 + (_lineController.value * (scanSize - 52));
-
-              return Positioned(
-                left: 24,
-                right: 24,
-                top: top,
-                child: Container(
-                  height: 3,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    gradient: const LinearGradient(
-                      colors: [
-                        Colors.transparent,
-                        _accent,
-                        Colors.white,
-                        _accent,
-                        Colors.transparent,
-                      ],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _accent.withOpacity(0.75),
-                        blurRadius: 18,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: -44,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.34),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: Colors.white.withOpacity(0.12)),
-                ),
-                child: const Text(
-                  'Держите QR внутри рамки',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _bottomCard() {
     return Container(
       width: double.infinity,
@@ -315,13 +262,13 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
         borderRadius: BorderRadius.circular(32),
         gradient: LinearGradient(
           colors: [
-            Colors.white.withOpacity(0.97),
-            Colors.white.withOpacity(0.90),
+            Colors.white.withOpacity(0.96),
+            Colors.white.withOpacity(0.88),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        border: Border.all(color: Colors.white.withOpacity(0.76)),
+        border: Border.all(color: Colors.white.withOpacity(0.75)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.24),
@@ -375,9 +322,9 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Поддерживаются QR из приложения, Wallet, Telegram/MAX, код клиента и телефон.',
+                      'Поддерживаются QR из приложения, Telegram/MAX-карты, код клиента и телефон.',
                       style: TextStyle(
-                        color: _softText,
+                        color: Color(0xFF58767D),
                         fontSize: 13.5,
                         height: 1.24,
                         fontWeight: FontWeight.w700,
@@ -466,13 +413,6 @@ class _CircleButton extends StatelessWidget {
                 ? const Color(0xFFFFA11D).withOpacity(0.95)
                 : Colors.white.withOpacity(0.14),
             border: Border.all(color: Colors.white.withOpacity(0.18)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.12),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
           ),
           child: Icon(icon, color: Colors.white, size: 22),
         ),
@@ -490,7 +430,7 @@ class _ProcessingCard extends StatelessWidget {
       width: 230,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.96),
+        color: Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
@@ -562,6 +502,65 @@ class _ScannerOverlayPainter extends CustomPainter {
         ..color = Colors.black.withOpacity(0.50)
         ..style = PaintingStyle.fill,
     );
+
+    final cornerPaint = Paint()
+      ..color = accentColor
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    const corner = 42.0;
+    final r = RRect.fromRectAndRadius(cutoutRect, const Radius.circular(36));
+
+    final rect = r.outerRect;
+
+    // top left
+    canvas.drawLine(
+      rect.topLeft + const Offset(22, 0),
+      rect.topLeft + const Offset(corner, 0),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      rect.topLeft + const Offset(0, 22),
+      rect.topLeft + const Offset(0, corner),
+      cornerPaint,
+    );
+
+    // top right
+    canvas.drawLine(
+      rect.topRight + const Offset(-22, 0),
+      rect.topRight + const Offset(-corner, 0),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      rect.topRight + const Offset(0, 22),
+      rect.topRight + const Offset(0, corner),
+      cornerPaint,
+    );
+
+    // bottom left
+    canvas.drawLine(
+      rect.bottomLeft + const Offset(22, 0),
+      rect.bottomLeft + const Offset(corner, 0),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      rect.bottomLeft + const Offset(0, -22),
+      rect.bottomLeft + const Offset(0, -corner),
+      cornerPaint,
+    );
+
+    // bottom right
+    canvas.drawLine(
+      rect.bottomRight + const Offset(-22, 0),
+      rect.bottomRight + const Offset(-corner, 0),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      rect.bottomRight + const Offset(0, -22),
+      rect.bottomRight + const Offset(0, -corner),
+      cornerPaint,
+    );
   }
 
   @override
@@ -570,6 +569,3 @@ class _ScannerOverlayPainter extends CustomPainter {
         oldDelegate.accentColor != accentColor;
   }
 }
-
-
-// STAFF_SCANNER_OVERLAY_CLASS_FIXED_NO_CORNERS_20260523
