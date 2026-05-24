@@ -1,3 +1,6 @@
+import '../../../data/models/chat_message.dart';
+import 'package:equatable/equatable.dart';
+
 part of 'chat_cubit.dart';
 
 enum ChatStatus { initial, loading, success, failure }
