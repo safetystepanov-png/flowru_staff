@@ -464,6 +464,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
   }
 
 
+
   Widget _bigMetricCard({
     required String title,
     required String value,
@@ -471,6 +472,101 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     required IconData icon,
     required List<Color> colors,
   }) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 122),
+      padding: const EdgeInsets.fromLTRB(13, 13, 13, 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withOpacity(0.94),
+            Colors.white.withOpacity(0.78),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: Colors.white.withOpacity(0.96)),
+        boxShadow: [
+          BoxShadow(
+            color: colors.first.withOpacity(0.12),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.025),
+            blurRadius: 14,
+            offset: const Offset(0, 7),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                colors: colors,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: colors.first.withOpacity(0.22),
+                  blurRadius: 15,
+                  offset: const Offset(0, 7),
+                ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 19,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 22,
+              height: 1.0,
+              fontWeight: FontWeight.w900,
+              color: kClientInk,
+              letterSpacing: -0.55,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w900,
+              color: kClientInk,
+              letterSpacing: -0.1,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 11.2,
+              fontWeight: FontWeight.w700,
+              color: kClientInkSoft,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+) {
     return Container(
       height: 108,
       padding: const EdgeInsets.all(12),
@@ -751,6 +847,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
   }
 
 
+
   Widget _actionButton({
     required String title,
     required String subtitle,
@@ -758,6 +855,95 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     required List<Color> colors,
     required VoidCallback onTap,
   }) {
+    return _Pressable(
+      onTap: onTap,
+      borderRadius: 28,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 118),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          gradient: LinearGradient(
+            colors: [
+              Colors.white.withOpacity(0.94),
+              Colors.white.withOpacity(0.80),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(color: Colors.white.withOpacity(0.96)),
+          boxShadow: [
+            BoxShadow(
+              color: colors.first.withOpacity(0.16),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.035),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                gradient: LinearGradient(
+                  colors: colors,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: colors.first.withOpacity(0.26),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 23,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: kClientInk,
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.25,
+                height: 1.05,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: kClientInkSoft,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                height: 1.2,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+) {
     return _Pressable(
       onTap: onTap,
       borderRadius: 24,
@@ -778,18 +964,6 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
         ),
         child: Stack(
           children: [
-            Positioned(
-              right: -20,
-              bottom: -24,
-              child: Container(
-                width: 76,
-                height: 76,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: colors.first.withOpacity(0.07),
-                ),
-              ),
-            ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -842,6 +1016,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
   }
 
 
+
   Widget _softActionTile({
     required String title,
     required String subtitle,
@@ -849,6 +1024,104 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     required Color glow,
     required VoidCallback onTap,
   }) {
+    return _Pressable(
+      onTap: onTap,
+      borderRadius: 28,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 86),
+        padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          gradient: LinearGradient(
+            colors: [
+              Colors.white.withOpacity(0.94),
+              Colors.white.withOpacity(0.82),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(color: Colors.white.withOpacity(0.96)),
+          boxShadow: [
+            BoxShadow(
+              color: glow.withOpacity(0.12),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                color: glow.withOpacity(0.13),
+              ),
+              child: Icon(
+                icon,
+                color: glow,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: kClientInk,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.25,
+                      height: 1.05,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: kClientInkSoft,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                color: kClientInk.withOpacity(0.045),
+              ),
+              child: const Icon(
+                CupertinoIcons.chevron_right,
+                color: kClientInkSoft,
+                size: 18,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+) {
     return _Pressable(
       onTap: onTap,
       borderRadius: 24,

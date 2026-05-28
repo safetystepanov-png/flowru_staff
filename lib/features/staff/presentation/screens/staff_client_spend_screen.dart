@@ -735,12 +735,87 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen>
     );
   }
 
+
   Widget _metricCard({
     required String title,
     required String value,
     required Color glow,
     required IconData icon,
   }) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 104),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withOpacity(0.88),
+            glow.withOpacity(0.075),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: Colors.white.withOpacity(0.88)),
+        boxShadow: [
+          BoxShadow(
+            color: glow.withOpacity(0.10),
+            blurRadius: 18,
+            offset: const Offset(0, 9),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.025),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: glow.withOpacity(0.14),
+            ),
+            child: Icon(
+              icon,
+              size: 17,
+              color: glow,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: kSpendInk,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.3,
+              height: 1.05,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: kSpendInkSoft,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+              height: 1.15,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
