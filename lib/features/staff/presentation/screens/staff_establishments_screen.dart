@@ -483,7 +483,7 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
                   child: Text(
                     widget.forceChooser
                         ? 'ОСНОВНОЕ ЗАВЕДЕНИЕ'
-                        : (_hasOwnerRoles ? 'FLOWRU OWNER / STAFF' : 'FLOWRU STAFF'),
+                        : (_hasOwnerRoles ? 'FLOWRU OWNER / STAFF' : 'FLOWRU BUSINESS'),
                     style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w900,

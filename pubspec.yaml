@@ -1,8 +1,8 @@
-name: flowru_staff
-description: "Flowru Staff"
+name: flowru_business
+description: "Flowru Business"
 publish_to: 'none'
 
-version: 1.0.4+86
+version: 1.0.0+1
 
 environment:
   sdk: ^3.11.4

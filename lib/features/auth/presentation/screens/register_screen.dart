@@ -347,7 +347,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         ],
       ),
       child: const Text(
-        'FLOWRU STAFF',
+        'FLOWRU BUSINESS',
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w900,

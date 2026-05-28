@@ -64,7 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '992660960797',
     projectId: 'flowru-mobile-a05b7',
     storageBucket: 'flowru-mobile-a05b7.firebasestorage.app',
-    iosBundleId: 'com.flowru.staff',
+    iosBundleId: 'ru.flowru.business',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(

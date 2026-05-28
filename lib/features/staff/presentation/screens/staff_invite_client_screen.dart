@@ -62,7 +62,7 @@ class _StaffInviteClientScreenState extends State<StaffInviteClientScreen>
   }
 
   Future<void> _shareStaffInvite() async {
-    const text = 'Установи Flowru Staff для работы с системой лояльности:\n$kFlowruStaffAppStoreUrl';
+    const text = 'Установи Flowru Business для работы с системой лояльности:\n$kFlowruStaffAppStoreUrl';
 
     try {
       await Share.share(text);
@@ -459,7 +459,7 @@ class _InviteStaffCard extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Покажите QR сотруднику или отправьте ссылку в мессенджер. Он установит Flowru Staff и войдёт в рабочий контур.',
+                      'Покажите QR сотруднику или отправьте ссылку в мессенджер. Он установит Flowru Business и войдёт в рабочий контур.',
                       style: TextStyle(
                         color: kInviteInkSoft,
                         fontSize: 13.5,
@@ -512,7 +512,7 @@ class _InviteStaffCard extends StatelessWidget {
 
           const Center(
             child: Text(
-              'QR ведёт на Flowru Staff в App Store',
+              'QR ведёт на Flowru Business в App Store',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: kInviteInkSoft,

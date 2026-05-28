@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Flowru Staff</string>
+	<string>Flowru Business</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>flowru_staff</string>
+	<string>Flowru Business</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -28,22 +28,22 @@
 	<true/>
 
 	<key>NSCameraUsageDescription</key>
-	<string>Приложению нужен доступ к камере для сканирования QR-кодов клиентов.</string>
+	<string>Camera access is used to scan customer QR codes.</string>
 
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Приложению нужен доступ к геолокации для работы с адресами, картой и функциями, связанными с местоположением.</string>
+	<string>Location access is used for address, map and location-related business features.</string>
 
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Приложению нужен доступ к геолокации для работы с адресами, картой и функциями, связанными с местоположением.</string>
+	<string>Location access is used for address, map and location-related business features.</string>
 
 	<key>NSFaceIDUsageDescription</key>
-	<string>Face ID используется для быстрого входа в Flowru Staff.</string>
+	<string>Face ID is used for quick sign in to Flowru Business.</string>
 
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Приложению нужен доступ к фото, чтобы вы могли выбирать и отправлять изображения в чате.</string>
+	<string>Photo library access is used to select and send images in chat.</string>
 
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Приложению нужен доступ к микрофону, чтобы вы могли записывать и отправлять голосовые сообщения.</string>
+	<string>Microphone access is used to record and send voice messages.</string>
 
 	<key>UIBackgroundModes</key>
 	<array>

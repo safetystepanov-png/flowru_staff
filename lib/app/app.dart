@@ -32,7 +32,7 @@ class FlowruStaffApp extends StatelessWidget {
       ],
 
       debugShowCheckedModeBanner: false,
-      title: 'Flowru Staff',
+      title: 'Flowru Business',
       theme: ThemeData(
         fontFamily: 'SF Pro Display',
         scaffoldBackgroundColor: const Color(0xFFF6F7FB),
@@ -108,7 +108,7 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
     )..repeat();
 
     // Инициализация побуквенных анимаций — логика сохранена.
-    final letters = 'FLOWRU STAFF';
+    final letters = 'FLOWRU BUSINESS';
     for (int i = 0; i < letters.length; i++) {
       final delay = i * 0.08;
       final start = (0.01 + delay * 0.7).clamp(0.01, 0.70);
@@ -560,7 +560,7 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
   }
 
   Widget _titleBlock() {
-    final letters = 'FLOWRU STAFF';
+    final letters = 'FLOWRU BUSINESS';
 
     return FittedBox(
       fit: BoxFit.scaleDown,
@@ -1027,7 +1027,7 @@ class _AppBootstrapScreenState extends State<_AppBootstrapScreen> {
       }
 
       return await _localAuth.authenticate(
-        localizedReason: 'Войдите в Flowru Staff',
+        localizedReason: 'Войдите в Flowru Business',
         biometricOnly: true,
         persistAcrossBackgrounding: true,
       );

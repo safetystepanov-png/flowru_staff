@@ -238,7 +238,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
     
     try {
       final authenticated = await _localAuth.authenticate(
-        localizedReason: 'Войдите в Flowru Staff',
+        localizedReason: 'Войдите в Flowru Business',
         biometricOnly: true,
         persistAcrossBackgrounding: true,
       );
@@ -482,7 +482,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
         ],
       ),
       child: const Text(
-        'FLOWRU STAFF',
+        'FLOWRU BUSINESS',
         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.8, color: Colors.white),
       ),
     );
@@ -1027,7 +1027,7 @@ class _PasswordRecoverySheet extends StatefulWidget {
 }
 
 class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
-  static const String _botUrl = 'https://t.me/Flowru_Staff_Recovery_bot';
+  static const String _botUrl = 'mailto:support@flowru.ru';
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _codeController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
@@ -1251,7 +1251,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                             children: [
                               Icon(Icons.open_in_new_rounded, color: kLoginBlue, size: 19),
                               SizedBox(width: 11),
-                              Expanded(child: Text('@Flowru_Staff_Recovery_bot', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: kLoginBlue))),
+                              Expanded(child: Text('support@flowru.ru', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: kLoginBlue))),
                             ],
                           ),
                         ),
