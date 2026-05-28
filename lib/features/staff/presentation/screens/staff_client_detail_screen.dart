@@ -566,81 +566,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
       ),
     );
   }
-) {
-    return Container(
-      height: 108,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: Colors.white.withOpacity(0.76),
-        border: Border.all(color: Colors.white.withOpacity(0.92)),
-        boxShadow: [
-          BoxShadow(
-            color: colors.first.withOpacity(0.09),
-            blurRadius: 14,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 31,
-            height: 31,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: colors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 15,
-            ),
-          ),
-          const Spacer(),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 20,
-              height: 1.0,
-              fontWeight: FontWeight.w900,
-              color: kClientInk,
-              letterSpacing: -0.4,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w900,
-              color: kClientInk,
-            ),
-          ),
-          const SizedBox(height: 1),
-          Text(
-            subtitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-              color: kClientInkSoft,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
 
   Widget _detailLine({
@@ -943,77 +869,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
       ),
     );
   }
-) {
-    return _Pressable(
-      onTap: onTap,
-      borderRadius: 24,
-      child: Container(
-        height: 112,
-        padding: const EdgeInsets.all(13),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          color: Colors.white.withOpacity(0.76),
-          border: Border.all(color: Colors.white.withOpacity(0.90)),
-          boxShadow: [
-            BoxShadow(
-              color: colors.first.withOpacity(0.10),
-              blurRadius: 16,
-              offset: const Offset(0, 9),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(15),
-                    gradient: LinearGradient(
-                      colors: colors,
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: kClientInk,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: kClientInkSoft,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
 
 
@@ -1121,58 +977,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
       ),
     );
   }
-) {
-    return _Pressable(
-      onTap: onTap,
-      borderRadius: 24,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          color: Colors.white.withOpacity(0.76),
-          border: Border.all(color: Colors.white.withOpacity(0.90)),
-        ),
-        child: Row(
-          children: [
-            _MiniGlyph(
-              icon: icon,
-              color: glow,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: kClientInk,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      height: 1.35,
-                      fontWeight: FontWeight.w700,
-                      color: kClientInkSoft,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              CupertinoIcons.chevron_right,
-              color: kClientInk,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
 
   Widget _stateCard({

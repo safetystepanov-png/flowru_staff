@@ -817,42 +817,7 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
       ),
     );
   }
-) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: glow.withOpacity(0.08),
-        border: Border.all(color: glow.withOpacity(0.10)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _MiniGlyph(icon: icon, color: glow),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: kAccrualInk,
-              fontWeight: FontWeight.w900,
-              fontSize: 15,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: const TextStyle(
-              color: kAccrualInkSoft,
-              fontWeight: FontWeight.w700,
-              fontSize: 12.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _errorCard() {
     if (_error == null) return const SizedBox.shrink();
