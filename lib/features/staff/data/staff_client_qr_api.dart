@@ -191,7 +191,7 @@ class StaffClientQrApi {
     required String qrToken,
   }) async {
     final token = await _token();
-    final normalizedQrToken = _normalizeQrToken(qrToken);
+    final normalizedQrToken = qrToken.trim();
 
     final response = await http.post(
       Uri.parse('${AppConfig.baseUrl}/api/v1/staff/clients/resolve-qr'),
