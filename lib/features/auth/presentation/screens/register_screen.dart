@@ -486,7 +486,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                     _logoOrb(),
                     const SizedBox(height: 16),
                     const Text(
-                      'Регистрация сотрудника',
+                      'Первый вход сотрудника',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 30,
@@ -498,7 +498,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Введите телефон, который уже добавлен владельцем в админке,\nи придумайте пароль для входа.',
+                      'Введите телефон, который уже добавлен владельцем,\nи придумайте пароль своей учетной записи.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14.5,
@@ -618,7 +618,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 ),
                               )
                             : const Text(
-                                'Зарегистрироваться',
+                                'Активировать доступ',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,
@@ -646,7 +646,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         elevation: 0,
         foregroundColor: Colors.white,
         title: const Text(
-          'Регистрация',
+          'Первый вход',
           style: TextStyle(
             fontWeight: FontWeight.w900,
           ),

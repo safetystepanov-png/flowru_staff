@@ -934,7 +934,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                 ),
                                 SizedBox(height: isVerySmall ? 2 : 4),
                                 _outlineGlassButton(
-                                  text: 'Зарегистрироваться',
+                                  text: 'Активировать доступ',
                                   onTap: () => Navigator.push(
                                     context,
                                     MaterialPageRoute(builder: (_) => const RegisterScreen()),

@@ -59,6 +59,19 @@ class StaffResolvedQrClient {
 }
 
 class StaffClientQrApi {
+  static const List<String> _preferredKeys = [
+    'client_id',
+    'clientId',
+    'legacy_id',
+    'legacyId',
+    'qr_token',
+    'qrToken',
+    'token',
+    'code',
+    'payload',
+    'phone',
+  ];
+
   Future<String> _token() async {
     final token = await AuthStorage.getAccessToken();
     if (token == null || token.trim().isEmpty) {
@@ -67,11 +80,118 @@ class StaffClientQrApi {
     return token;
   }
 
+  String _firstUsefulValue(Map<dynamic, dynamic> map) {
+    for (final key in _preferredKeys) {
+      final value = map[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value.toString().trim();
+      }
+    }
+
+    for (final entry in map.entries) {
+      final value = entry.value;
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+
+    return '';
+  }
+
+  String _extractFromUri(Uri uri) {
+    for (final key in _preferredKeys) {
+      final value = uri.queryParameters[key];
+      if (value != null && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+
+    final segments = uri.pathSegments
+        .map((e) => Uri.decodeComponent(e).trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    for (int i = 0; i < segments.length; i++) {
+      final current = segments[i].toLowerCase();
+
+      if ((current == 'client' ||
+              current == 'clients' ||
+              current == 'client_id' ||
+              current == 'legacy_id' ||
+              current == 'qr' ||
+              current == 'wallet' ||
+              current == 'card') &&
+          i + 1 < segments.length &&
+          segments[i + 1].trim().isNotEmpty) {
+        return segments[i + 1].trim();
+      }
+    }
+
+    if (segments.isNotEmpty) {
+      return segments.last.trim();
+    }
+
+    return '';
+  }
+
+  String _extractByRegex(String value) {
+    final patterns = [
+      RegExp(r'(?:client_id|clientId|legacy_id|legacyId|qr_token|qrToken|token|code|payload|phone)=([^&\s]+)', caseSensitive: false),
+      RegExp(r'(?:client_id|clientId|legacy_id|legacyId|qr_token|qrToken|token|code|payload|phone):([^&\s]+)', caseSensitive: false),
+    ];
+
+    for (final pattern in patterns) {
+      final match = pattern.firstMatch(value);
+      if (match != null) {
+        final found = match.group(1);
+        if (found != null && found.trim().isNotEmpty) {
+          return Uri.decodeComponent(found.trim());
+        }
+      }
+    }
+
+    return '';
+  }
+
+  String _normalizeQrToken(String rawToken) {
+    var value = rawToken.replaceAll('\uFEFF', '').trim();
+
+    if (value.isEmpty) return value;
+
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is Map) {
+        final fromJson = _firstUsefulValue(decoded);
+        if (fromJson.isNotEmpty) return fromJson;
+      }
+    } catch (_) {}
+
+    final regexValue = _extractByRegex(value);
+    if (regexValue.isNotEmpty) return regexValue;
+
+    final uri = Uri.tryParse(value);
+    if (uri != null && (uri.hasScheme || uri.hasAuthority || uri.queryParameters.isNotEmpty)) {
+      final fromUri = _extractFromUri(uri);
+      if (fromUri.isNotEmpty) return fromUri;
+    }
+
+    if (value.startsWith('flowru://')) {
+      final flowruUri = Uri.tryParse(value);
+      if (flowruUri != null) {
+        final fromFlowru = _extractFromUri(flowruUri);
+        if (fromFlowru.isNotEmpty) return fromFlowru;
+      }
+    }
+
+    return value;
+  }
+
   Future<StaffResolvedQrClient> resolveClientQr({
     required int establishmentId,
     required String qrToken,
   }) async {
     final token = await _token();
+    final normalizedQrToken = _normalizeQrToken(qrToken);
 
     final response = await http.post(
       Uri.parse('${AppConfig.baseUrl}/api/v1/staff/clients/resolve-qr'),
@@ -81,7 +201,7 @@ class StaffClientQrApi {
       },
       body: jsonEncode({
         'establishment_id': establishmentId,
-        'qr_token': qrToken,
+        'qr_token': normalizedQrToken,
       }),
     );
 
