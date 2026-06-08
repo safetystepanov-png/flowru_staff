@@ -67,7 +67,7 @@ Future<void> main() async {
     await _requestNotificationPermissions();
     await _printFcmToken();
     StaffPushDeviceApi.listenTokenRefresh();
-    StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(appVersion: '1.0.1+14');
+    StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(appVersion: '1.0.1+15');
     _setupForegroundMessageHandler();
 
     if (!kIsWeb) {
@@ -83,6 +83,7 @@ Future<void> main() async {
 
   runApp(const FlowruStaffApp());
 }
+
 
 
 
