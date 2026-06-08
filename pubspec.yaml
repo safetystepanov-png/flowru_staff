@@ -2,7 +2,7 @@
 description: "Flowru Business"
 publish_to: 'none'
 
-version: 1.0.0+9
+version: 1.0.1+10
 
 environment:
   sdk: ^3.11.4
@@ -50,4 +50,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+
 
