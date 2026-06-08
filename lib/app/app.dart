@@ -969,7 +969,7 @@ class _AppBootstrapScreenState extends State<_AppBootstrapScreen> {
 
   Future<_BootstrapState> _resolve() async {
     String? token = await AuthStorage.getAccessToken();
-    await StaffPushDeviceApi.registerCurrentDeviceToken(appVersion: '1.0.1+11');
+    await StaffPushDeviceApi.registerCurrentDeviceToken(appVersion: '1.0.1+12');
     final refreshToken = await AuthStorage.getRefreshToken();
     final biometricEnabled = await AuthStorage.isBiometricEnabled();
 
@@ -1051,7 +1051,7 @@ class _AppBootstrapScreenState extends State<_AppBootstrapScreen> {
       if (!result.ok) return null;
 
       await AuthStorage.saveAccessToken(result.accessToken);
-      await StaffPushDeviceApi.registerCurrentDeviceToken(appVersion: '1.0.1+11');
+      await StaffPushDeviceApi.registerCurrentDeviceToken(appVersion: '1.0.1+12');
       await AuthStorage.saveRefreshToken(result.refreshToken);
 
       return result.accessToken;
@@ -1396,5 +1396,6 @@ class _AppLoadingScreen extends StatelessWidget {
 }
 
 // FLOWRU_APP_RU_LOCALIZATIONS_20260524
+
 
 
