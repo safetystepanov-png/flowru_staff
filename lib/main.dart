@@ -1,4 +1,4 @@
-﻿import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -67,7 +67,7 @@ Future<void> main() async {
     await _requestNotificationPermissions();
     await _printFcmToken();
     StaffPushDeviceApi.listenTokenRefresh();
-    await StaffPushDeviceApi.registerCurrentDeviceToken(appVersion: '1.0.0+8');
+    await StaffPushDeviceApi.registerCurrentDeviceToken(appVersion: '1.0.1+11');
     _setupForegroundMessageHandler();
 
     if (!kIsWeb) {
@@ -83,3 +83,5 @@ Future<void> main() async {
 
   runApp(const FlowruStaffApp());
 }
+
+

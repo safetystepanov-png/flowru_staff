@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../features/auth/data/auth_storage.dart';
+import '../features/push/data/staff_push_device_api.dart';
 import '../features/auth/data/user_api.dart';
 import '../features/auth/presentation/screens/login_phone_screen.dart';
 import '../features/staff/presentation/screens/staff_establishments_screen.dart';
@@ -968,6 +969,7 @@ class _AppBootstrapScreenState extends State<_AppBootstrapScreen> {
 
   Future<_BootstrapState> _resolve() async {
     String? token = await AuthStorage.getAccessToken();
+    await StaffPushDeviceApi.registerCurrentDeviceToken(appVersion: '1.0.1+11');
     final refreshToken = await AuthStorage.getRefreshToken();
     final biometricEnabled = await AuthStorage.isBiometricEnabled();
 
@@ -1049,6 +1051,7 @@ class _AppBootstrapScreenState extends State<_AppBootstrapScreen> {
       if (!result.ok) return null;
 
       await AuthStorage.saveAccessToken(result.accessToken);
+      await StaffPushDeviceApi.registerCurrentDeviceToken(appVersion: '1.0.1+11');
       await AuthStorage.saveRefreshToken(result.refreshToken);
 
       return result.accessToken;
@@ -1393,3 +1396,5 @@ class _AppLoadingScreen extends StatelessWidget {
 }
 
 // FLOWRU_APP_RU_LOCALIZATIONS_20260524
+
+
