@@ -13,6 +13,7 @@ import '../../../../core/config/app_config.dart';
 import '../../../staff/presentation/screens/staff_establishments_screen.dart';
 import '../../data/auth_storage.dart';
 import '../../data/user_api.dart';
+import '../../../push/data/staff_push_device_api.dart';
 
 // === ЦВЕТОВАЯ ПАЛИТРА ===
 const Color kLoginMintTop = Color(0xFF0FCAC5);
@@ -185,6 +186,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
     try {
       await AuthStorage.saveAccessToken(result.accessToken);
       await AuthStorage.saveRefreshToken(result.refreshToken);
+      await StaffPushDeviceApi.registerCurrentDeviceToken(appVersion: '1.0.0+8');
       TextInput.finishAutofillContext(shouldSave: true);
       
       if (saveCredentials) {
@@ -272,6 +274,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
       
       await AuthStorage.saveAccessToken(result.accessToken);
       await AuthStorage.saveRefreshToken(result.refreshToken);
+      await StaffPushDeviceApi.registerCurrentDeviceToken(appVersion: '1.0.0+8');
       await AuthStorage.setBiometricEnabled(true);
       
       if (!mounted) return;
@@ -1362,3 +1365,4 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
     );
   }
 }
+

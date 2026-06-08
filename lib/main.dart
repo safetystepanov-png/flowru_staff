@@ -1,10 +1,11 @@
-import 'package:firebase_core/firebase_core.dart';
+﻿import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app/app.dart';
 import 'firebase_options.dart';
+import 'features/push/data/staff_push_device_api.dart';
 
 Future<void> _requestNotificationPermissions() async {
   final messaging = FirebaseMessaging.instance;
@@ -65,6 +66,8 @@ Future<void> main() async {
   if (Firebase.apps.isNotEmpty) {
     await _requestNotificationPermissions();
     await _printFcmToken();
+    StaffPushDeviceApi.listenTokenRefresh();
+    await StaffPushDeviceApi.registerCurrentDeviceToken(appVersion: '1.0.0+8');
     _setupForegroundMessageHandler();
 
     if (!kIsWeb) {
