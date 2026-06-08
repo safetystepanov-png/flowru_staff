@@ -65,6 +65,49 @@ class StaffPushDeviceApi {
     }
   }
 
+  static Future<bool> _waitForApnsToken({
+    required String appVersion,
+  }) async {
+    if (kIsWeb || !Platform.isIOS) {
+      return true;
+    }
+
+    for (var attempt = 1; attempt <= 8; attempt++) {
+      try {
+        final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+        if (apnsToken != null && apnsToken.trim().isNotEmpty) {
+          await _sendDebug(
+            stage: 'apns_token_ok',
+            message: 'APNS token received on attempt $attempt',
+            appVersion: appVersion,
+          );
+          return true;
+        }
+
+        await _sendDebug(
+          stage: 'apns_token_wait',
+          message: 'APNS token is empty on attempt $attempt',
+          appVersion: appVersion,
+        );
+      } catch (e) {
+        await _sendDebug(
+          stage: 'apns_token_error',
+          message: 'attempt $attempt: $e',
+          appVersion: appVersion,
+        );
+      }
+
+      await Future.delayed(Duration(milliseconds: 700 * attempt));
+    }
+
+    await _sendDebug(
+      stage: 'apns_token_timeout',
+      message: 'APNS token was not available after retries',
+      appVersion: appVersion,
+    );
+    return false;
+  }
+
   static Future<void> registerCurrentDeviceToken({
     String appVersion = '',
   }) async {
@@ -78,6 +121,23 @@ class StaffPushDeviceApi {
       final accessToken = await AuthStorage.getAccessToken();
       if (accessToken == null || accessToken.trim().isEmpty) {
         debugPrint('Staff push register skipped: no access token');
+        return;
+      }
+
+      final permission = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      await _sendDebug(
+        stage: 'permission_status',
+        message: permission.authorizationStatus.toString(),
+        appVersion: appVersion,
+      );
+
+      final apnsReady = await _waitForApnsToken(appVersion: appVersion);
+      if (!apnsReady) {
         return;
       }
 
@@ -137,6 +197,12 @@ class StaffPushDeviceApi {
           message: 'status=${response.statusCode} body=${response.body}',
           appVersion: appVersion,
         );
+      } else {
+        await _sendDebug(
+          stage: 'register_success',
+          message: 'push token saved',
+          appVersion: appVersion,
+        );
       }
     } catch (e, st) {
       debugPrint('Staff push register error: $e');
@@ -152,7 +218,7 @@ class StaffPushDeviceApi {
   static void listenTokenRefresh() {
     FirebaseMessaging.instance.onTokenRefresh.listen((token) async {
       debugPrint('Staff FCM token refreshed: $token');
-      await registerCurrentDeviceToken(appVersion: '1.0.1+12');
+      await registerCurrentDeviceToken(appVersion: '1.0.1+13');
     });
   }
 }
