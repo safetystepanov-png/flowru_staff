@@ -108,6 +108,13 @@ class StaffPushDeviceApi {
     return false;
   }
 
+  static void registerCurrentDeviceTokenInBackground({
+    String appVersion = '',
+  }) {
+    Future<void>(() async {
+      await registerCurrentDeviceToken(appVersion: appVersion);
+    });
+  }
   static Future<void> registerCurrentDeviceToken({
     String appVersion = '',
   }) async {
@@ -222,3 +229,4 @@ class StaffPushDeviceApi {
     });
   }
 }
+
