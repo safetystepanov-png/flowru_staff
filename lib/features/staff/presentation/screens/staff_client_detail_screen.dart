@@ -293,42 +293,51 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
   Widget _topCard() {
     final client = _client!;
 
-    return _GlassCard(
-      radius: 32,
+    return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(34),
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF064E58),
+            Color(0xFF078D95),
+            Color(0xFF10B8A5),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: kClientMintDeep.withOpacity(0.34),
+            blurRadius: 34,
+            offset: const Offset(0, 18),
+          ),
+        ],
+      ),
       child: Stack(
         children: [
           Positioned(
             top: -70,
-            right: -60,
+            right: -54,
             child: Container(
-              width: 210,
-              height: 210,
+              width: 190,
+              height: 190,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    kClientAccent.withOpacity(0.20),
-                    Colors.transparent,
-                  ],
-                ),
+                color: Colors.white.withOpacity(0.10),
               ),
             ),
           ),
           Positioned(
-            bottom: -90,
-            left: -70,
+            bottom: -76,
+            left: -58,
             child: Container(
-              width: 230,
-              height: 230,
+              width: 170,
+              height: 170,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    kClientBlue.withOpacity(0.13),
-                    Colors.transparent,
-                  ],
-                ),
+                color: kClientAccent.withOpacity(0.18),
               ),
             ),
           ),
@@ -336,12 +345,27 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _AvatarGlyph(
-                    initials: client.initials,
-                    size: 76,
-                    innerSize: 54,
-                    fontSize: 21,
+                  Container(
+                    width: 62,
+                    height: 62,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(0.18),
+                      border: Border.all(color: Colors.white.withOpacity(0.34)),
+                    ),
+                    child: Center(
+                      child: Text(
+                        client.initials,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -349,20 +373,19 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(999),
-                            gradient: const LinearGradient(
-                              colors: [kClientAccent, kClientAccentSoft],
-                            ),
+                            color: Colors.white.withOpacity(0.16),
+                            border: Border.all(color: Colors.white.withOpacity(0.24)),
                           ),
                           child: const Text(
                             'КЛИЕНТ',
                             style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.8,
                               color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.0,
                             ),
                           ),
                         ),
@@ -372,11 +395,11 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 28,
-                            height: 1.02,
+                            color: Colors.white,
+                            fontSize: 27,
+                            height: 1.03,
                             fontWeight: FontWeight.w900,
-                            color: kClientInk,
-                            letterSpacing: -0.8,
+                            letterSpacing: -0.7,
                           ),
                         ),
                         const SizedBox(height: 7),
@@ -384,8 +407,8 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                           children: [
                             Icon(
                               CupertinoIcons.phone_fill,
-                              size: 15,
-                              color: kClientInkSoft.withOpacity(0.95),
+                              color: Colors.white.withOpacity(0.78),
+                              size: 14,
                             ),
                             const SizedBox(width: 6),
                             Expanded(
@@ -393,10 +416,10 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                                 client.phone ?? 'Телефон не указан',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 14,
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.82),
+                                  fontSize: 13.5,
                                   fontWeight: FontWeight.w800,
-                                  color: kClientInkSoft,
                                 ),
                               ),
                             ),
@@ -405,53 +428,69 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(17),
-                      color: Colors.white.withOpacity(0.66),
-                      border: Border.all(color: Colors.white.withOpacity(0.85)),
-                    ),
-                    child: const Icon(
-                      CupertinoIcons.person_crop_circle_fill,
-                      size: 27,
-                      color: kClientInk,
-                    ),
-                  ),
                 ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 26),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  color: Colors.white.withOpacity(0.16),
+                  border: Border.all(color: Colors.white.withOpacity(0.24)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Баллы',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.78),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      client.balanceLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 42,
+                        height: 1.0,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'доступно для списания',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.72),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
-                    child: _bigMetricCard(
-                      title: 'Баллы',
-                      value: client.balanceLabel,
-                      subtitle: 'баллов',
-                      icon: CupertinoIcons.star_fill,
-                      colors: const [kClientBlue, kClientViolet],
-                    ),
-                  ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: _bigMetricCard(
-                      title: 'Визиты',
-                      value: client.visitsLabel,
-                      subtitle: 'всего',
+                    child: _clientCompactStat(
                       icon: CupertinoIcons.ticket_fill,
-                      colors: const [kClientPink, kClientViolet],
+                      label: 'Визиты',
+                      value: client.visitsLabel,
                     ),
                   ),
-                  const SizedBox(width: 9),
+                  const SizedBox(width: 10),
                   Expanded(
-                    child: _bigMetricCard(
-                      title: 'Потрачено',
-                      value: client.spentLabel,
-                      subtitle: 'сумма',
+                    child: _clientCompactStat(
                       icon: CupertinoIcons.creditcard_fill,
-                      colors: const [Color(0xFF10B8A5), Color(0xFF4E7CFF)],
+                      label: 'Потрачено',
+                      value: client.spentLabel,
                     ),
                   ),
                 ],
@@ -463,9 +502,70 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     );
   }
 
+  Widget _clientCompactStat({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: Colors.white.withOpacity(0.92),
+        border: Border.all(color: Colors.white.withOpacity(0.55)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: kClientMintDeep.withOpacity(0.08),
+            ),
+            child: Icon(
+              icon,
+              color: kClientMintDeep,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: kClientInk,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.25,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: kClientInkSoft,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
 
-  Widget _bigMetricCard({
+  Widget _bigMetricCard  Widget _bigMetricCard({
     required String title,
     required String value,
     required String subtitle,
