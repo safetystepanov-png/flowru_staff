@@ -565,7 +565,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
   }
 
 
-  Widget _bigMetricCard  Widget _bigMetricCard({
+  Widget _bigMetricCard({
     required String title,
     required String value,
     required String subtitle,
