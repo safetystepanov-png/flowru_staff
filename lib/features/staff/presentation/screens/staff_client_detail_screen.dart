@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -427,7 +427,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                 children: [
                   Expanded(
                     child: _bigMetricCard(
-                      title: 'Баланс',
+                      title: 'Баллы',
                       value: client.balanceLabel,
                       subtitle: 'баллов',
                       icon: CupertinoIcons.star_fill,
@@ -1384,10 +1384,10 @@ class _ClientDetail {
             json['bonuses_balance'],
       ),
       visits: parseInt(
-        json['visits'] ?? json['client_visits'] ?? json['visits_count'],
+        json['visits_count'] ?? json['visits'] ?? json['client_visits'] ?? json['visit_count'],
       ),
       totalSpent: parseNum(
-        json['total_spent'] ?? json['client_total_spent'],
+        json['total_spent'] ?? json['sales_total'] ?? json['client_total_spent'],
       ),
     );
   }
@@ -1417,6 +1417,21 @@ class _ClientDetail {
   }
 
   String get visitsLabel => visits.toString();
+  static String _formatMoney(double value) {
+    final rounded = value.round();
+    final raw = rounded.toString();
+    final buffer = StringBuffer();
 
-  String get spentLabel => '${totalSpent.toStringAsFixed(0)} ₽';
+    for (int i = 0; i < raw.length; i++) {
+      final left = raw.length - i;
+      buffer.write(raw[i]);
+      if (left > 1 && left % 3 == 1) {
+        buffer.write(' ');
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  String get spentLabel => '${_formatMoney(totalSpent)} ₽';
 }

@@ -231,89 +231,15 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen>
 
       if (!mounted) return;
 
-      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      if (!mounted) return;
 
-      await showDialog<void>(
-        context: context,
-        builder: (context) => Dialog(
-          backgroundColor: Colors.transparent,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(30),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(
-                padding: const EdgeInsets.all(22),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.94),
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: Colors.white.withOpacity(0.96)),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const _ResultOrb(
-                      icon: CupertinoIcons.check_mark_circled_solid,
-                      color: kSpendRed,
-                    ),
-                    const SizedBox(height: 14),
-                    const Text(
-                      'Списание выполнено',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: kSpendInk,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      decoded['message']?.toString() ?? 'Списание прошло успешно',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        height: 1.4,
-                        fontWeight: FontWeight.w700,
-                        color: kSpendInkSoft,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        gradient: const LinearGradient(
-                          colors: [kSpendRed, kSpendRedDark],
-                        ),
-                      ),
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 28,
-                            vertical: 14,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                        ),
-                        child: const Text(
-                          'Готово',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Списание выполнено'),
+          duration: Duration(seconds: 1),
         ),
       );
 
-      if (!mounted) return;
       Navigator.of(context).pop(true);
     } catch (_) {
       if (!mounted) return;
