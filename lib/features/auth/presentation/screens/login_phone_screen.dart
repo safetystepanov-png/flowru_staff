@@ -186,7 +186,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
     try {
       await AuthStorage.saveAccessToken(result.accessToken);
       await AuthStorage.saveRefreshToken(result.refreshToken);
-      StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(appVersion: '1.0.1+15');
+      StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(appVersion: '1.0.1+16');
       TextInput.finishAutofillContext(shouldSave: true);
       
       if (saveCredentials) {
@@ -274,7 +274,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
       
       await AuthStorage.saveAccessToken(result.accessToken);
       await AuthStorage.saveRefreshToken(result.refreshToken);
-      StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(appVersion: '1.0.1+15');
+      StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(appVersion: '1.0.1+16');
       await AuthStorage.setBiometricEnabled(true);
       
       if (!mounted) return;
@@ -1365,6 +1365,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
     );
   }
 }
+
 
 
 
