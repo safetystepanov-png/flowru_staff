@@ -969,7 +969,7 @@ class _AppBootstrapScreenState extends State<_AppBootstrapScreen> {
 
   Future<_BootstrapState> _resolve() async {
     String? token = await AuthStorage.getAccessToken();
-    StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(appVersion: '1.0.1+16');
+    StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(appVersion: '1.0.1+17');
     final refreshToken = await AuthStorage.getRefreshToken();
     final biometricEnabled = await AuthStorage.isBiometricEnabled();
 
@@ -1051,7 +1051,7 @@ class _AppBootstrapScreenState extends State<_AppBootstrapScreen> {
       if (!result.ok) return null;
 
       await AuthStorage.saveAccessToken(result.accessToken);
-      StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(appVersion: '1.0.1+16');
+      StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(appVersion: '1.0.1+17');
       await AuthStorage.saveRefreshToken(result.refreshToken);
 
       return result.accessToken;
