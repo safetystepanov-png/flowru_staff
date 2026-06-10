@@ -221,7 +221,9 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
         body: jsonEncode({
           'establishment_id': widget.establishmentId,
           'client_id': widget.clientId,
-          'amount': preview.checkAmount,
+          'amount': preview.added,
+          'check_amount': preview.checkAmount,
+          'comment': preview.label,
         }),
       );
 
