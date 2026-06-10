@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -195,7 +195,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
       case 'ready':
         return kPreorderGreen;
       case 'completed':
-        return const Color(0xFF64748B);
+        return kPreorderGreen;
       case 'cancelled':
         return kPreorderRed;
       default:
@@ -285,30 +285,6 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
       ),
       child: Stack(
         children: [
-          Positioned(
-            right: -46,
-            top: -48,
-            child: Container(
-              width: 160,
-              height: 160,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.13),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 24,
-            bottom: -58,
-            child: Container(
-              width: 118,
-              height: 118,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.08),
-              ),
-            ),
-          ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -334,7 +310,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Заказы к приходу',
+                          'Заказы',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 28,
@@ -523,7 +499,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.clientName.isEmpty ? 'Клиент' : item.clientName,
+                      item.clientName.isEmpty ? 'Клиент' : 'Заказал: ',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -665,7 +641,9 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              item.orderText,
+              item.clientName.isEmpty
+                  ? item.orderText
+                  : 'Заказал:   ',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -748,7 +726,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Когда клиент отправит заказ к приходу, он появится здесь.',
+            'Когда клиент отправит заказ, он появится здесь.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: kPreorderSoft,
