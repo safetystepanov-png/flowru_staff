@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -17,6 +17,7 @@ import 'staff_announcements_screen.dart';
 import 'staff_chat_screen.dart';
 import 'staff_client_search_screen.dart';
 import 'staff_invite_client_screen.dart';
+import 'staff_preorders_screen.dart';
 import 'staff_establishment_history_screen.dart';
 import 'staff_establishments_screen.dart';
 import 'staff_work_schedule_screen.dart';
@@ -1227,6 +1228,88 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     );
   }
 
+
+  void _openPreorders() {
+    Navigator.of(context)
+        .push(
+          _buildAnimatedRoute(
+            StaffPreordersScreen(
+              establishmentId: widget.establishmentId,
+              establishmentName: widget.establishmentName,
+            ),
+          ),
+        )
+        .then((_) => _loadDashboard());
+  }
+
+  Widget _buildPreordersCard() {
+    return GestureDetector(
+      onTap: _openPreorders,
+      child: _GlassCard(
+        radius: 30,
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                gradient: const LinearGradient(
+                  colors: [kHomeAccent, kHomeAccentSoft],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: kHomeAccent.withOpacity(0.26),
+                    blurRadius: 22,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                CupertinoIcons.bag_fill,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Предзаказы',
+                    style: TextStyle(
+                      color: kHomeInk,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Заказы клиентов к приходу',
+                    style: TextStyle(
+                      color: kHomeInkSoft,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              CupertinoIcons.chevron_right,
+              color: kHomeInkSoft,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   Widget _buildSearchHeroCard() {
     return _Pressable(
       onTap: _openClientSearch,
@@ -1716,6 +1799,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                           staggered(_buildSearchHeroCard()),
                           const SizedBox(height: 18),
                           staggered(_buildInviteClientCard()),
+                          const SizedBox(height: 16),
+                          staggered(_buildPreordersCard()),
                           const SizedBox(height: 14),
                           staggered(_buildTopModulesRow()),
                           const SizedBox(height: 16),
