@@ -16,6 +16,7 @@ const Color kPreorderOrange = Color(0xFFFFA51E);
 const Color kPreorderBlue = Color(0xFF246BFF);
 const Color kPreorderGreen = Color(0xFF22C55E);
 const Color kPreorderRed = Color(0xFFFF6A5E);
+const Color kPreorderViolet = Color(0xFF7A4CFF);
 
 class StaffPreordersScreen extends StatefulWidget {
   final int establishmentId;
@@ -219,11 +220,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
     }
   }
 
-  Widget _metricChip({
-    required String label,
-    required int value,
-    required Color color,
-  }) {
+  Widget _heroMetric(String label, int value) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
@@ -239,7 +236,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
               value.toString(),
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 24,
+                fontSize: 26,
                 height: 1,
                 fontWeight: FontWeight.w900,
               ),
@@ -265,34 +262,50 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
     final activeCount = _activeItems.length;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(34),
         gradient: const LinearGradient(
-          colors: [kPreorderMint, kPreorderDeep],
+          colors: [
+            Color(0xFFFFA51E),
+            Color(0xFFFF6A5E),
+            Color(0xFF7A4CFF),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         boxShadow: [
           BoxShadow(
-            color: kPreorderDeep.withOpacity(0.22),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
+            color: kPreorderViolet.withOpacity(0.28),
+            blurRadius: 34,
+            offset: const Offset(0, 18),
           ),
         ],
       ),
       child: Stack(
         children: [
           Positioned(
-            right: -40,
-            top: -42,
+            right: -46,
+            top: -48,
             child: Container(
-              width: 140,
-              height: 140,
+              width: 160,
+              height: 160,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.10),
+                color: Colors.white.withOpacity(0.13),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 24,
+            bottom: -58,
+            child: Container(
+              width: 118,
+              height: 118,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.08),
               ),
             ),
           ),
@@ -302,16 +315,17 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
               Row(
                 children: [
                   Container(
-                    width: 54,
-                    height: 54,
+                    width: 58,
+                    height: 58,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.18),
-                      borderRadius: BorderRadius.circular(22),
+                      color: Colors.white.withOpacity(0.20),
+                      borderRadius: BorderRadius.circular(23),
+                      border: Border.all(color: Colors.white.withOpacity(0.22)),
                     ),
                     child: const Icon(
                       CupertinoIcons.bag_fill,
                       color: Colors.white,
-                      size: 27,
+                      size: 29,
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -320,7 +334,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Предзаказы',
+                          'Заказы к приходу',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 28,
@@ -329,14 +343,14 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
                             letterSpacing: -0.8,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 7),
                         Text(
                           activeCount > 0
-                              ? 'Есть активные заказы  не забудьте обработать'
-                              : 'Активных заказов сейчас нет',
+                              ? 'Активных заказов: $activeCount'
+                              : 'Очередь свободна, активных заказов нет',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.82),
-                            fontSize: 13.5,
+                            color: Colors.white.withOpacity(0.86),
+                            fontSize: 14,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -348,11 +362,11 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
               const SizedBox(height: 18),
               Row(
                 children: [
-                  _metricChip(label: 'новые', value: _newCount, color: kPreorderOrange),
+                  _heroMetric('новые', _newCount),
                   const SizedBox(width: 9),
-                  _metricChip(label: 'в работе', value: _inWorkCount, color: kPreorderBlue),
+                  _heroMetric('в работе', _inWorkCount),
                   const SizedBox(width: 9),
-                  _metricChip(label: 'готовы', value: _readyCount, color: kPreorderGreen),
+                  _heroMetric('готовы', _readyCount),
                 ],
               ),
             ],
@@ -364,7 +378,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
 
   Widget _sectionTitle(String title, String subtitle) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 10, 2, 10),
+      padding: const EdgeInsets.fromLTRB(2, 12, 2, 10),
       child: Row(
         children: [
           Expanded(
@@ -372,9 +386,9 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
               title,
               style: const TextStyle(
                 color: kPreorderInk,
-                fontSize: 20,
+                fontSize: 21,
                 fontWeight: FontWeight.w900,
-                letterSpacing: -0.4,
+                letterSpacing: -0.45,
               ),
             ),
           ),
@@ -467,13 +481,13 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: isActive ? statusColor.withOpacity(0.26) : const Color(0xFFE3EEF3),
-          width: isActive ? 1.4 : 1,
+          color: isActive ? statusColor.withOpacity(0.35) : const Color(0xFFE3EEF3),
+          width: isActive ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: (isActive ? statusColor : Colors.black).withOpacity(isActive ? 0.13 : 0.045),
-            blurRadius: isActive ? 24 : 18,
+            color: (isActive ? statusColor : Colors.black).withOpacity(isActive ? 0.16 : 0.045),
+            blurRadius: isActive ? 26 : 16,
             offset: const Offset(0, 12),
           ),
         ],
@@ -491,7 +505,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
                   gradient: LinearGradient(
                     colors: [
                       statusColor,
-                      statusColor.withOpacity(0.68),
+                      statusColor.withOpacity(0.62),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -535,7 +549,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.12),
+                  color: statusColor.withOpacity(0.13),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -562,30 +576,18 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
             ),
           ),
           const SizedBox(height: 13),
-          Container(
-            padding: const EdgeInsets.all(11),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3FAFB),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFE1EEF3)),
-            ),
-            child: Column(
-              children: [
-                _timeLine(
-                  icon: CupertinoIcons.arrow_down_circle_fill,
-                  label: 'Поступил',
-                  value: item.createdLabel,
-                  color: kPreorderBlue,
-                ),
-                const SizedBox(height: 7),
-                _timeLine(
-                  icon: CupertinoIcons.clock_fill,
-                  label: 'Забрать',
-                  value: item.pickupLabel,
-                  color: kPreorderOrange,
-                ),
-              ],
-            ),
+          _timeLine(
+            icon: CupertinoIcons.arrow_down_circle_fill,
+            label: 'Поступил',
+            value: item.createdLabel,
+            color: kPreorderBlue,
+          ),
+          const SizedBox(height: 7),
+          _timeLine(
+            icon: CupertinoIcons.clock_fill,
+            label: 'Забрать',
+            value: item.pickupLabel,
+            color: kPreorderOrange,
           ),
           const SizedBox(height: 14),
           if (item.status == 'new') ...[
@@ -642,6 +644,51 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
     );
   }
 
+  Widget _doneCompactRow(_PreorderItem item) {
+    final statusColor = _statusColor(item.status);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.78),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE3EEF3)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            _statusIcon(item.status),
+            color: statusColor,
+            size: 19,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              item.orderText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: kPreorderInk,
+                fontSize: 13.2,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            item.createdLabel,
+            style: const TextStyle(
+              color: kPreorderSoft,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _ordersGrid(List<_PreorderItem> items) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -656,7 +703,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: 14,
             mainAxisSpacing: 14,
-            childAspectRatio: isWide ? 1.02 : 0.92,
+            childAspectRatio: isWide ? 1.04 : 0.96,
           ),
           itemBuilder: (context, index) => _orderCard(items[index]),
         );
@@ -678,12 +725,14 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
             width: 66,
             height: 66,
             decoration: BoxDecoration(
-              color: kPreorderMint.withOpacity(0.12),
+              gradient: const LinearGradient(
+                colors: [kPreorderOrange, kPreorderViolet],
+              ),
               borderRadius: BorderRadius.circular(26),
             ),
             child: const Icon(
               CupertinoIcons.bag_badge_plus,
-              color: kPreorderMint,
+              color: Colors.white,
               size: 30,
             ),
           ),
@@ -716,7 +765,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
   @override
   Widget build(BuildContext context) {
     final activeItems = _activeItems;
-    final doneItems = _doneItems.take(12).toList();
+    final doneItems = _doneItems.take(10).toList();
 
     return Scaffold(
       backgroundColor: kPreorderBg,
@@ -772,10 +821,10 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
                     if (doneItems.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       _sectionTitle(
-                        'Недавние завершённые',
+                        'Недавние',
                         '${doneItems.length}',
                       ),
-                      _ordersGrid(doneItems),
+                      ...doneItems.map(_doneCompactRow),
                     ],
                   ],
                 ),
