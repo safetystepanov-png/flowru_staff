@@ -283,75 +283,70 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
           ),
         ],
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.20),
-                      borderRadius: BorderRadius.circular(23),
-                      border: Border.all(color: Colors.white.withOpacity(0.22)),
-                    ),
-                    child: const Icon(
-                      CupertinoIcons.bag_fill,
-                      color: Colors.white,
-                      size: 29,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Заказы',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            height: 1,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.8,
-                          ),
-                        ),
-                        const SizedBox(height: 7),
-                        Text(
-                          activeCount > 0
-                              ? 'Активных заказов: $activeCount'
-                              : 'Очередь свободна, активных заказов нет',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.86),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.20),
+                  borderRadius: BorderRadius.circular(23),
+                  border: Border.all(color: Colors.white.withOpacity(0.22)),
+                ),
+                child: const Icon(
+                  CupertinoIcons.bag_fill,
+                  color: Colors.white,
+                  size: 29,
+                ),
               ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  _heroMetric('новые', _newCount),
-                  const SizedBox(width: 9),
-                  _heroMetric('в работе', _inWorkCount),
-                  const SizedBox(width: 9),
-                  _heroMetric('готовы', _readyCount),
-                ],
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Заказы',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        height: 1,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      activeCount > 0
+                          ? '$activeCount активных'
+                          : 'Активных заказов нет',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.86),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              _heroMetric('новые', _newCount),
+              const SizedBox(width: 9),
+              _heroMetric('в работе', _inWorkCount),
+              const SizedBox(width: 9),
+              _heroMetric('готовы', _readyCount),
             ],
           ),
         ],
       ),
     );
   }
-
   Widget _sectionTitle(String title, String subtitle) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(2, 12, 2, 10),
@@ -671,24 +666,33 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= 680;
-        final crossAxisCount = isWide ? 2 : 1;
+
+        if (!isWide) {
+          return Column(
+            children: [
+              for (int i = 0; i < items.length; i++) ...[
+                _orderCard(items[i]),
+                if (i != items.length - 1) const SizedBox(height: 12),
+              ],
+            ],
+          );
+        }
 
         return GridView.builder(
           itemCount: items.length,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
             crossAxisSpacing: 14,
             mainAxisSpacing: 14,
-            childAspectRatio: isWide ? 1.04 : 0.96,
+            childAspectRatio: 1.34,
           ),
           itemBuilder: (context, index) => _orderCard(items[index]),
         );
       },
     );
   }
-
   Widget _emptyState() {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -872,6 +876,17 @@ class _PreorderItem {
     } catch (_) {
       return raw;
     }
+  }
+
+  String get doneCompactTitle {
+    final order = orderText.trim().isEmpty ? 'Заказ без описания' : orderText.trim();
+    final name = clientName.trim();
+
+    if (name.isEmpty) {
+      return order;
+    }
+
+    return 'Заказал:   ';
   }
 
   String get createdLabel => _formatTime(createdAt);
