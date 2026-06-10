@@ -32,16 +32,28 @@ class StaffPreordersScreen extends StatefulWidget {
   State<StaffPreordersScreen> createState() => _StaffPreordersScreenState();
 }
 
-class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
+class _StaffPreordersScreenState extends State<StaffPreordersScreen>
+    with SingleTickerProviderStateMixin {
   bool _loading = true;
   bool _updating = false;
   String? _error;
   List<_PreorderItem> _items = [];
+  late final AnimationController _pulseController;
 
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 950),
+    )..repeat(reverse: true);
     _load();
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
   }
 
   Future<String> _token() async {
@@ -355,6 +367,8 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
           Expanded(
             child: Text(
               title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: kPreorderInk,
                 fontSize: 21,
@@ -375,7 +389,6 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
       ),
     );
   }
-
   Widget _actionButton({
     required String text,
     required Color color,
@@ -446,8 +459,8 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
     final statusColor = _statusColor(item.status);
     final isActive = item.status == 'new' || item.status == 'in_work' || item.status == 'ready';
 
-    return Container(
-      padding: const EdgeInsets.all(15),
+    Widget card = Container(
+      padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
@@ -494,7 +507,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.clientName.isEmpty ? 'Клиент' : 'Заказал: ',
+                      item.clientName.isEmpty ? 'Клиент' : 'Заказал: ${item.clientName}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -534,10 +547,10 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 13),
+          const SizedBox(height: 9),
           Text(
             item.orderText,
-            maxLines: 5,
+            maxLines: 3,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: kPreorderInk,
@@ -546,7 +559,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 13),
+          const SizedBox(height: 9),
           _timeLine(
             icon: CupertinoIcons.arrow_down_circle_fill,
             label: 'Поступил',
@@ -560,7 +573,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
             value: item.pickupLabel,
             color: kPreorderOrange,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           if (item.status == 'new') ...[
             Row(
               children: [
@@ -613,6 +626,20 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
         ],
       ),
     );
+
+    if (!isActive) return card;
+
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, child) {
+        final scale = 1.0 + (_pulseController.value * 0.018);
+        return Transform.scale(
+          scale: scale,
+          child: child,
+        );
+      },
+      child: card,
+    );
   }
 
   Widget _doneCompactRow(_PreorderItem item) {
@@ -636,9 +663,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              item.clientName.isEmpty
-                  ? item.orderText
-                  : 'Заказал:   ',
+              item.doneCompactTitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -718,7 +743,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
               size: 30,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           const Text(
             'Активных предзаказов нет',
             textAlign: TextAlign.center,
@@ -886,9 +911,8 @@ class _PreorderItem {
       return order;
     }
 
-    return 'Заказал:   ';
+    return 'Заказал: $name  $order';
   }
-
   String get createdLabel => _formatTime(createdAt);
 
   String get pickupLabel {
