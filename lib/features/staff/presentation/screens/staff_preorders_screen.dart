@@ -11,7 +11,11 @@ const Color kPreorderMint = Color(0xFF0BAEBB);
 const Color kPreorderDeep = Color(0xFF064B64);
 const Color kPreorderInk = Color(0xFF0A2B47);
 const Color kPreorderSoft = Color(0xFF557186);
-const Color kPreorderBg = Color(0xFFF4FAFB);
+const Color kPreorderBg = Color(0xFFF3FAFB);
+const Color kPreorderOrange = Color(0xFFFFA51E);
+const Color kPreorderBlue = Color(0xFF246BFF);
+const Color kPreorderGreen = Color(0xFF22C55E);
+const Color kPreorderRed = Color(0xFFFF6A5E);
 
 class StaffPreordersScreen extends StatefulWidget {
   final int establishmentId;
@@ -81,7 +85,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
             .toList();
         _loading = false;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -131,6 +135,39 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
     }
   }
 
+  List<_PreorderItem> get _activeItems {
+    final result = _items
+        .where((e) => e.status == 'new' || e.status == 'in_work' || e.status == 'ready')
+        .toList();
+
+    result.sort((a, b) {
+      int rank(String status) {
+        if (status == 'new') return 1;
+        if (status == 'in_work') return 2;
+        if (status == 'ready') return 3;
+        return 9;
+      }
+
+      final r = rank(a.status).compareTo(rank(b.status));
+      if (r != 0) return r;
+      return b.id.compareTo(a.id);
+    });
+
+    return result;
+  }
+
+  List<_PreorderItem> get _doneItems {
+    final result = _items
+        .where((e) => e.status == 'completed' || e.status == 'cancelled')
+        .toList();
+    result.sort((a, b) => b.id.compareTo(a.id));
+    return result;
+  }
+
+  int get _newCount => _items.where((e) => e.status == 'new').length;
+  int get _inWorkCount => _items.where((e) => e.status == 'in_work').length;
+  int get _readyCount => _items.where((e) => e.status == 'ready').length;
+
   String _statusText(String status) {
     switch (status) {
       case 'new':
@@ -151,18 +188,207 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
   Color _statusColor(String status) {
     switch (status) {
       case 'new':
-        return const Color(0xFFFFA51E);
+        return kPreorderOrange;
       case 'in_work':
-        return const Color(0xFF246BFF);
+        return kPreorderBlue;
       case 'ready':
-        return const Color(0xFF22C55E);
+        return kPreorderGreen;
       case 'completed':
         return const Color(0xFF64748B);
       case 'cancelled':
-        return const Color(0xFFFF6A5E);
+        return kPreorderRed;
       default:
         return kPreorderSoft;
     }
+  }
+
+  IconData _statusIcon(String status) {
+    switch (status) {
+      case 'new':
+        return CupertinoIcons.bell_fill;
+      case 'in_work':
+        return CupertinoIcons.flame_fill;
+      case 'ready':
+        return CupertinoIcons.checkmark_seal_fill;
+      case 'completed':
+        return CupertinoIcons.archivebox_fill;
+      case 'cancelled':
+        return CupertinoIcons.xmark_circle_fill;
+      default:
+        return CupertinoIcons.bag_fill;
+    }
+  }
+
+  Widget _metricChip({
+    required String label,
+    required int value,
+    required Color color,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.18),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.18)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value.toString(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                height: 1,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.82),
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _headerCard() {
+    final activeCount = _activeItems.length;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(32),
+        gradient: const LinearGradient(
+          colors: [kPreorderMint, kPreorderDeep],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: kPreorderDeep.withOpacity(0.22),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -40,
+            top: -42,
+            child: Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.10),
+              ),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: const Icon(
+                      CupertinoIcons.bag_fill,
+                      color: Colors.white,
+                      size: 27,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Предзаказы',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            height: 1,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.8,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          activeCount > 0
+                              ? 'Есть активные заказы  не забудьте обработать'
+                              : 'Активных заказов сейчас нет',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.82),
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  _metricChip(label: 'новые', value: _newCount, color: kPreorderOrange),
+                  const SizedBox(width: 9),
+                  _metricChip(label: 'в работе', value: _inWorkCount, color: kPreorderBlue),
+                  const SizedBox(width: 9),
+                  _metricChip(label: 'готовы', value: _readyCount, color: kPreorderGreen),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String title, String subtitle) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 10, 2, 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: kPreorderInk,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.4,
+              ),
+            ),
+          ),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: kPreorderSoft,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _actionButton({
@@ -197,20 +423,57 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
     );
   }
 
+  Widget _timeLine({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: color),
+        const SizedBox(width: 7),
+        Text(
+          '$label: ',
+          style: const TextStyle(
+            color: kPreorderSoft,
+            fontSize: 12.2,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: kPreorderInk,
+              fontSize: 12.4,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _orderCard(_PreorderItem item) {
     final statusColor = _statusColor(item.status);
+    final isActive = item.status == 'new' || item.status == 'in_work' || item.status == 'ready';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: const Color(0xFFE3EEF3)),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: isActive ? statusColor.withOpacity(0.26) : const Color(0xFFE3EEF3),
+          width: isActive ? 1.4 : 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.055),
-            blurRadius: 22,
+            color: (isActive ? statusColor : Colors.black).withOpacity(isActive ? 0.13 : 0.045),
+            blurRadius: isActive ? 24 : 18,
             offset: const Offset(0, 12),
           ),
         ],
@@ -225,17 +488,22 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
                 height: 46,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(18),
-                  gradient: const LinearGradient(
-                    colors: [kPreorderMint, kPreorderDeep],
+                  gradient: LinearGradient(
+                    colors: [
+                      statusColor,
+                      statusColor.withOpacity(0.68),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
                 ),
-                child: const Icon(
-                  CupertinoIcons.bag_fill,
+                child: Icon(
+                  _statusIcon(item.status),
                   color: Colors.white,
                   size: 22,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 11),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,7 +514,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: kPreorderInk,
-                        fontSize: 17,
+                        fontSize: 16.5,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -257,7 +525,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: kPreorderSoft,
-                        fontSize: 13,
+                        fontSize: 12.7,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -274,41 +542,50 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
                   _statusText(item.status),
                   style: TextStyle(
                     color: statusColor,
-                    fontSize: 12,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 13),
           Text(
             item.orderText,
+            maxLines: 5,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: kPreorderInk,
-              fontSize: 15.5,
+              fontSize: 15.2,
               height: 1.35,
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Icon(
-                CupertinoIcons.clock_fill,
-                size: 15,
-                color: kPreorderSoft,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                item.pickupLabel,
-                style: const TextStyle(
-                  color: kPreorderSoft,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
+          const SizedBox(height: 13),
+          Container(
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3FAFB),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFE1EEF3)),
+            ),
+            child: Column(
+              children: [
+                _timeLine(
+                  icon: CupertinoIcons.arrow_down_circle_fill,
+                  label: 'Поступил',
+                  value: item.createdLabel,
+                  color: kPreorderBlue,
                 ),
-              ),
-            ],
+                const SizedBox(height: 7),
+                _timeLine(
+                  icon: CupertinoIcons.clock_fill,
+                  label: 'Забрать',
+                  value: item.pickupLabel,
+                  color: kPreorderOrange,
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 14),
           if (item.status == 'new') ...[
@@ -316,13 +593,13 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
               children: [
                 _actionButton(
                   text: 'В работе',
-                  color: const Color(0xFF246BFF),
+                  color: kPreorderBlue,
                   onTap: () => _setStatus(item, 'in_work'),
                 ),
                 const SizedBox(width: 8),
                 _actionButton(
                   text: 'Отменить',
-                  color: const Color(0xFFFF6A5E),
+                  color: kPreorderRed,
                   onTap: () => _setStatus(item, 'cancelled'),
                 ),
               ],
@@ -332,13 +609,13 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
               children: [
                 _actionButton(
                   text: 'Готов',
-                  color: const Color(0xFF22C55E),
+                  color: kPreorderGreen,
                   onTap: () => _setStatus(item, 'ready'),
                 ),
                 const SizedBox(width: 8),
                 _actionButton(
                   text: 'Отменить',
-                  color: const Color(0xFFFF6A5E),
+                  color: kPreorderRed,
                   onTap: () => _setStatus(item, 'cancelled'),
                 ),
               ],
@@ -354,7 +631,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
                 const SizedBox(width: 8),
                 _actionButton(
                   text: 'Отменить',
-                  color: const Color(0xFFFF6A5E),
+                  color: kPreorderRed,
                   onTap: () => _setStatus(item, 'cancelled'),
                 ),
               ],
@@ -365,8 +642,82 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
     );
   }
 
+  Widget _ordersGrid(List<_PreorderItem> items) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 680;
+        final crossAxisCount = isWide ? 2 : 1;
+
+        return GridView.builder(
+          itemCount: items.length,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
+            childAspectRatio: isWide ? 1.02 : 0.92,
+          ),
+          itemBuilder: (context, index) => _orderCard(items[index]),
+        );
+      },
+    );
+  }
+
+  Widget _emptyState() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: const Color(0xFFE3EEF3)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 66,
+            height: 66,
+            decoration: BoxDecoration(
+              color: kPreorderMint.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(26),
+            ),
+            child: const Icon(
+              CupertinoIcons.bag_badge_plus,
+              color: kPreorderMint,
+              size: 30,
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Активных предзаказов нет',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: kPreorderInk,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Когда клиент отправит заказ к приходу, он появится здесь.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: kPreorderSoft,
+              fontSize: 13.5,
+              height: 1.35,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final activeItems = _activeItems;
+    final doneItems = _doneItems.take(12).toList();
+
     return Scaffold(
       backgroundColor: kPreorderBg,
       appBar: AppBar(
@@ -390,79 +741,42 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen> {
             : RefreshIndicator(
                 onRefresh: _load,
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
+                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 30),
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(18),
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(28),
-                        gradient: const LinearGradient(
-                          colors: [kPreorderMint, kPreorderDeep],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Заказы к приходу',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Новые заявки клиентов, которые хотят забрать заказ без ожидания в очереди.',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.82),
-                              fontSize: 13.5,
-                              height: 1.35,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    _headerCard(),
                     if (_error != null) ...[
                       Container(
                         padding: const EdgeInsets.all(14),
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFF6A5E).withOpacity(0.10),
+                          color: kPreorderRed.withOpacity(0.10),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           _error!,
                           style: const TextStyle(
-                            color: Color(0xFFFF6A5E),
+                            color: kPreorderRed,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                       ),
                     ],
-                    if (_items.isEmpty)
-                      Container(
-                        padding: const EdgeInsets.all(22),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(26),
-                        ),
-                        child: const Text(
-                          'Предзаказов пока нет',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: kPreorderSoft,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      )
+                    _sectionTitle(
+                      'Активные',
+                      '${activeItems.length} заказов',
+                    ),
+                    if (activeItems.isEmpty)
+                      _emptyState()
                     else
-                      ..._items.map(_orderCard),
+                      _ordersGrid(activeItems),
+                    if (doneItems.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      _sectionTitle(
+                        'Недавние завершённые',
+                        '${doneItems.length}',
+                      ),
+                      _ordersGrid(doneItems),
+                    ],
                   ],
                 ),
               ),
@@ -482,6 +796,7 @@ class _PreorderItem {
   final int? pickupMinutes;
   final String status;
   final String createdAt;
+  final String? pickupAt;
 
   _PreorderItem({
     required this.id,
@@ -494,6 +809,7 @@ class _PreorderItem {
     required this.pickupMinutes,
     required this.status,
     required this.createdAt,
+    required this.pickupAt,
   });
 
   factory _PreorderItem.fromJson(Map<String, dynamic> json) {
@@ -514,14 +830,33 @@ class _PreorderItem {
       pickupMinutes: parseInt(json['pickup_minutes']),
       status: json['status']?.toString() ?? 'new',
       createdAt: json['created_at']?.toString() ?? '',
+      pickupAt: json['pickup_at']?.toString(),
     );
   }
 
+  String _formatTime(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '';
+
+    try {
+      final dt = DateTime.parse(raw).toLocal();
+      final hh = dt.hour.toString().padLeft(2, '0');
+      final mm = dt.minute.toString().padLeft(2, '0');
+      return '$hh:$mm';
+    } catch (_) {
+      return raw;
+    }
+  }
+
+  String get createdLabel => _formatTime(createdAt);
+
   String get pickupLabel {
-    if (pickupType == 'asap') return 'Как можно скорее';
-    if (pickupType == 'at_time') return 'К определённому времени';
+    final exact = _formatTime(pickupAt);
+    if (exact != '') return exact;
+
+    if (pickupType == 'asap') return 'как можно скорее';
+    if (pickupType == 'at_time') return 'к выбранному времени';
     final minutes = pickupMinutes ?? 0;
-    if (minutes <= 0) return 'Как можно скорее';
-    return 'Забрать через $minutes мин.';
+    if (minutes <= 0) return 'как можно скорее';
+    return 'через $minutes мин.';
   }
 }
