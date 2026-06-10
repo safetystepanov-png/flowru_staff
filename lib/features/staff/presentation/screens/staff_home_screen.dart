@@ -1229,6 +1229,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   }
 
 
+
   void _openPreorders() {
     Navigator.of(context)
         .push(
@@ -1242,72 +1243,219 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         .then((_) => _loadDashboard());
   }
 
-  Widget _buildPreordersCard() {
-    return GestureDetector(
-      onTap: _openPreorders,
-      child: _GlassCard(
-        radius: 30,
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              width: 58,
-              height: 58,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
-                gradient: const LinearGradient(
-                  colors: [kHomeAccent, kHomeAccentSoft],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: kHomeAccent.withOpacity(0.26),
-                    blurRadius: 22,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                CupertinoIcons.bag_fill,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
-            const SizedBox(width: 16),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Предзаказы',
-                    style: TextStyle(
-                      color: kHomeInk,
-                      fontSize: 19,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Заказы клиентов к приходу',
-                    style: TextStyle(
-                      color: kHomeInkSoft,
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              CupertinoIcons.chevron_right,
-              color: kHomeInkSoft,
-              size: 20,
-            ),
-          ],
+  Future<Map<String, int>> _loadPreorderSummary() async {
+    try {
+      final token = await _token();
+      final response = await http.get(
+        Uri.parse(
+          '${AppConfig.baseUrl}/api/v1/staff/preorders?establishment_id=${widget.establishmentId}&limit=100',
         ),
-      ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        return {
+          'active': 0,
+          'new': 0,
+          'in_work': 0,
+          'ready': 0,
+        };
+      }
+
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final items = (decoded['items'] as List?) ?? const [];
+
+      var active = 0;
+      var newCount = 0;
+      var inWork = 0;
+      var ready = 0;
+
+      for (final item in items) {
+        if (item is! Map) continue;
+        final status = item['status']?.toString() ?? '';
+
+        if (status == 'new' || status == 'in_work' || status == 'ready') {
+          active += 1;
+        }
+        if (status == 'new') newCount += 1;
+        if (status == 'in_work') inWork += 1;
+        if (status == 'ready') ready += 1;
+      }
+
+      return {
+        'active': active,
+        'new': newCount,
+        'in_work': inWork,
+        'ready': ready,
+      };
+    } catch (_) {
+      return {
+        'active': 0,
+        'new': 0,
+        'in_work': 0,
+        'ready': 0,
+      };
+    }
+  }
+
+  Widget _buildPreordersCard() {
+    return FutureBuilder<Map<String, int>>(
+      future: _loadPreorderSummary(),
+      builder: (context, snapshot) {
+        final data = snapshot.data ??
+            {
+              'active': 0,
+              'new': 0,
+              'in_work': 0,
+              'ready': 0,
+            };
+
+        final active = data['active'] ?? 0;
+        final newCount = data['new'] ?? 0;
+        final inWork = data['in_work'] ?? 0;
+        final ready = data['ready'] ?? 0;
+
+        final hasActive = active > 0;
+        final hasNew = newCount > 0;
+
+        final List<Color> gradient = hasNew
+            ? const [Color(0xFFFFA51E), Color(0xFFFF6A5E), Color(0xFF7A4CFF)]
+            : hasActive
+                ? const [Color(0xFF246BFF), Color(0xFF0BAEBB), Color(0xFF064B64)]
+                : const [Color(0xFFFFFFFF), Color(0xE8FFFFFF)];
+
+        final Color titleColor = hasActive ? Colors.white : kHomeInk;
+        final Color subtitleColor = hasActive ? Colors.white.withOpacity(0.84) : kHomeInkSoft;
+        final Color iconBg = hasActive ? Colors.white.withOpacity(0.20) : kHomeAccent.withOpacity(0.14);
+        final Color iconColor = hasActive ? Colors.white : kHomeAccent;
+
+        return GestureDetector(
+          onTap: _openPreorders,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(32),
+              gradient: LinearGradient(
+                colors: gradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(
+                color: hasActive ? Colors.white.withOpacity(0.18) : kHomeStroke,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: (hasActive ? kHomeAccentRed : kHomeShadow).withOpacity(hasActive ? 0.28 : 0.14),
+                  blurRadius: hasActive ? 34 : 24,
+                  offset: const Offset(0, 16),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                if (hasActive)
+                  Positioned(
+                    right: -34,
+                    top: -42,
+                    child: Container(
+                      width: 132,
+                      height: 132,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.12),
+                      ),
+                    ),
+                  ),
+                Row(
+                  children: [
+                    Container(
+                      width: 62,
+                      height: 62,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        color: iconBg,
+                        border: Border.all(
+                          color: hasActive ? Colors.white.withOpacity(0.22) : Colors.transparent,
+                        ),
+                      ),
+                      child: Icon(
+                        hasNew ? CupertinoIcons.bell_fill : CupertinoIcons.bag_fill,
+                        color: iconColor,
+                        size: 30,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            hasNew
+                                ? 'Новые предзаказы'
+                                : hasActive
+                                    ? 'Активные предзаказы'
+                                    : 'Предзаказы',
+                            style: TextStyle(
+                              color: titleColor,
+                              fontSize: 20.5,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.35,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            hasActive
+                                ? '$active активных  $newCount новых  $inWork в работе  $ready готовы'
+                                : 'Заказы клиентов к приходу',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: subtitleColor,
+                              fontSize: 13.3,
+                              height: 1.25,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    if (hasActive)
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(17),
+                        ),
+                        child: Center(
+                          child: Text(
+                            active.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      const Icon(
+                        CupertinoIcons.chevron_right,
+                        color: kHomeInkSoft,
+                        size: 20,
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
   Widget _buildSearchHeroCard() {

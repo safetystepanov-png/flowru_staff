@@ -67,7 +67,7 @@ Future<void> main() async {
     await _requestNotificationPermissions();
     await _printFcmToken();
     StaffPushDeviceApi.listenTokenRefresh();
-    StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(appVersion: '1.0.1+22');
+    StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(appVersion: '1.0.1+23');
     _setupForegroundMessageHandler();
 
     if (!kIsWeb) {
