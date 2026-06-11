@@ -455,6 +455,41 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     );
   }
 
+  Widget _paymentLine(_PreorderItem item) {
+    final isCard = item.paymentMethod == 'card';
+    final isCash = item.paymentMethod == 'cash';
+
+    final color = isCard
+        ? kPreorderBlue
+        : isCash
+            ? kPreorderGreen
+            : kPreorderSoft;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withOpacity(0.22)),
+      ),
+      child: Row(
+        children: [
+          Icon(item.paymentIcon, size: 18, color: color),
+          const SizedBox(width: 8),
+          Text(
+            item.paymentLabel,
+            style: TextStyle(
+              color: color,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _orderCard(_PreorderItem item) {
     final statusColor = _statusColor(item.status);
     final isActive = item.status == 'new' || item.status == 'in_work' || item.status == 'ready';
@@ -573,6 +608,8 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
             value: item.pickupLabel,
             color: kPreorderOrange,
           ),
+          const SizedBox(height: 7),
+          _paymentLine(item),
           const SizedBox(height: 10),
           if (item.status == 'new') ...[
             Row(
@@ -851,6 +888,7 @@ class _PreorderItem {
   final String pickupType;
   final int? pickupMinutes;
   final String status;
+  final String paymentMethod;
   final String createdAt;
   final String? pickupAt;
 
@@ -864,6 +902,7 @@ class _PreorderItem {
     required this.pickupType,
     required this.pickupMinutes,
     required this.status,
+    required this.paymentMethod,
     required this.createdAt,
     required this.pickupAt,
   });
@@ -885,6 +924,7 @@ class _PreorderItem {
       pickupType: json['pickup_type']?.toString() ?? 'in_minutes',
       pickupMinutes: parseInt(json['pickup_minutes']),
       status: json['status']?.toString() ?? 'new',
+      paymentMethod: json['payment_method']?.toString() ?? 'unknown',
       createdAt: json['created_at']?.toString() ?? '',
       pickupAt: json['pickup_at']?.toString(),
     );
@@ -913,6 +953,28 @@ class _PreorderItem {
 
     return 'Заказал: $name  $order';
   }
+  String get paymentLabel {
+    switch (paymentMethod) {
+      case 'card':
+        return 'Оплата картой';
+      case 'cash':
+        return 'Наличными';
+      default:
+        return 'Оплата не указана';
+    }
+  }
+
+  IconData get paymentIcon {
+    switch (paymentMethod) {
+      case 'card':
+        return Icons.credit_card_rounded;
+      case 'cash':
+        return Icons.payments_rounded;
+      default:
+        return Icons.help_outline_rounded;
+    }
+  }
+
   String get createdLabel => _formatTime(createdAt);
 
   String get pickupLabel {
