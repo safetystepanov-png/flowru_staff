@@ -171,7 +171,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
 
   List<_PreorderItem> get _doneItems {
     final result = _items
-        .where((e) => e.status == 'completed' || e.status == 'cancelled')
+        .where((e) => e.status == 'completed' || e.status == 'cancelled' || e.status == 'expired')
         .toList();
     result.sort((a, b) => b.id.compareTo(a.id));
     return result;
@@ -193,6 +193,8 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
         return 'Выдан';
       case 'cancelled':
         return 'Отменён';
+      case 'expired':
+        return 'Пропущен';
       default:
         return status;
     }
@@ -210,6 +212,8 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
         return kPreorderGreen;
       case 'cancelled':
         return kPreorderRed;
+      case 'expired':
+        return kPreorderOrange;
       default:
         return kPreorderSoft;
     }
@@ -946,6 +950,13 @@ class _PreorderItem {
   String get doneCompactTitle {
     final order = orderText.trim().isEmpty ? 'Заказ без описания' : orderText.trim();
     final name = clientName.trim();
+
+    if (status == 'expired') {
+      if (name.isEmpty) {
+        return 'Пропущен: $order';
+      }
+      return 'Пропущен: $name  $order';
+    }
 
     if (name.isEmpty) {
       return order;
