@@ -8,6 +8,8 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../auth/data/auth_storage.dart';
+import '../../../auth/data/session_expired_exception.dart';
+import '../../../auth/presentation/screens/login_phone_screen.dart';
 import '../../../../core/config/app_config.dart';
 import 'staff_client_detail_screen.dart';
 import '../../data/staff_client_qr_api.dart';
@@ -87,10 +89,40 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
 
   Future<String> _token() async {
     final token = await AuthStorage.getAccessToken();
-    if (token == null || token.isEmpty) {
-      throw Exception('Access token not found');
+    if (token == null || token.trim().isEmpty) {
+      await AuthStorage.clearSessionButKeepBiometric();
+      throw const SessionExpiredException();
     }
-    return token;
+    return token.trim();
+  }
+
+  Future<void> _handleSessionExpired() async {
+    await AuthStorage.clearSessionButKeepBiometric();
+
+    if (!mounted) return;
+
+    await showCupertinoDialog<void>(
+      context: context,
+      builder: (_) => CupertinoAlertDialog(
+        title: const Text('Сессия истекла'),
+        content: const Text('Войдите снова, чтобы продолжить работу.'),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Войти'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => const LoginPhoneScreen(),
+      ),
+      (route) => false,
+    );
   }
 
   void _resetSearch() {
@@ -138,6 +170,11 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
         },
       );
 
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        await AuthStorage.clearSessionButKeepBiometric();
+        throw const SessionExpiredException();
+      }
+
       if (response.statusCode != 200) {
         throw Exception(
           'search failed: ${response.statusCode} ${response.body}',
@@ -171,6 +208,13 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
       });
 
       _introController.forward(from: 0);
+    } on SessionExpiredException {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = null;
+      });
+      await _handleSessionExpired();
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -220,6 +264,10 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
       if (mounted) {
         _resetSearch();
       }
+    } on SessionExpiredException {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      await _handleSessionExpired();
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context).pop();

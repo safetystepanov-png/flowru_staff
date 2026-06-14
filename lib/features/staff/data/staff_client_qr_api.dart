@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../../../core/config/app_config.dart';
 import '../../auth/data/auth_storage.dart';
+import '../../auth/data/session_expired_exception.dart';
 import '../../auth/data/user_api.dart';
 
 class StaffResolvedQrClient {
@@ -65,7 +66,8 @@ class StaffClientQrApi {
   Future<String> _token() async {
     final token = await AuthStorage.getAccessToken();
     if (token == null || token.trim().isEmpty) {
-      throw Exception('Сессия истекла. Войдите заново.');
+      await AuthStorage.clearSessionButKeepBiometric();
+      throw const SessionExpiredException();
     }
     return token.trim();
   }
@@ -73,7 +75,8 @@ class StaffClientQrApi {
   Future<String> _refreshAccessToken() async {
     final refreshToken = await AuthStorage.getRefreshToken();
     if (refreshToken == null || refreshToken.trim().isEmpty) {
-      throw Exception('Сессия истекла. Войдите заново.');
+      await AuthStorage.clearSessionButKeepBiometric();
+      throw const SessionExpiredException();
     }
 
     final result = await _userApi.refresh(
@@ -84,7 +87,9 @@ class StaffClientQrApi {
 
     if (!result.ok || result.accessToken.trim().isEmpty) {
       await AuthStorage.clearSessionButKeepBiometric();
-      throw Exception(result.message.isNotEmpty ? result.message : 'Сессия истекла. Войдите заново.');
+      throw SessionExpiredException(
+        result.message.isNotEmpty ? result.message : 'Сессия истекла. Войдите снова.',
+      );
     }
 
     await AuthStorage.saveAccessToken(result.accessToken);
@@ -153,7 +158,7 @@ class StaffClientQrApi {
       qrToken: normalizedQrToken,
     );
 
-    if (response.statusCode == 401) {
+    if (response.statusCode == 401 || response.statusCode == 403) {
       accessToken = await _refreshAccessToken();
 
       response = await _postResolveQr(
@@ -161,6 +166,11 @@ class StaffClientQrApi {
         establishmentId: establishmentId,
         qrToken: normalizedQrToken,
       );
+    }
+
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      await AuthStorage.clearSessionButKeepBiometric();
+      throw const SessionExpiredException();
     }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {

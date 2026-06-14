@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../../../core/config/app_config.dart';
 import '../../auth/data/auth_storage.dart';
+import '../../auth/data/session_expired_exception.dart';
 
 class StaffClientSearchItem {
   final String clientId;
@@ -72,10 +73,18 @@ class StaffClientDetailItem {
 class StaffClientApi {
   Future<String> _token() async {
     final accessToken = await AuthStorage.getAccessToken();
-    if (accessToken == null || accessToken.isEmpty) {
-      throw Exception('Access token not found');
+    if (accessToken == null || accessToken.trim().isEmpty) {
+      await AuthStorage.clearSessionButKeepBiometric();
+      throw const SessionExpiredException();
     }
-    return accessToken;
+    return accessToken.trim();
+  }
+
+  Future<void> _throwIfSessionExpired(http.Response response) async {
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      await AuthStorage.clearSessionButKeepBiometric();
+      throw const SessionExpiredException();
+    }
   }
 
   Future<List<StaffClientSearchItem>> searchClients({
@@ -95,6 +104,8 @@ class StaffClientApi {
         'Authorization': 'Bearer $accessToken',
       },
     );
+
+    await _throwIfSessionExpired(response);
 
     if (response.statusCode != 200) {
       throw Exception(
@@ -131,6 +142,8 @@ class StaffClientApi {
         'Authorization': 'Bearer $accessToken',
       },
     );
+
+    await _throwIfSessionExpired(response);
 
     if (response.statusCode != 200) {
       throw Exception(
