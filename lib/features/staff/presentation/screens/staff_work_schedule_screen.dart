@@ -175,8 +175,9 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
   }
 
   String _draftActionLabel() {
-    return 'Составить график';
-  }
+    if (_monthPublished || _draftState == _ScheduleApprovalState.approved) {
+      return 'График согласован';
+    }
 
     if (_draftState == _ScheduleApprovalState.pending) {
       return 'Составить график';
@@ -945,7 +946,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                   icon: _showOnlyMine
                       ? CupertinoIcons.person_crop_circle_fill
                       : CupertinoIcons.person_2,
-                  label: '',
+                  label: _showOnlyMine ? 'Только мои' : 'Вся команда',
                   onTap: () {
                     setState(() {
                       _showOnlyMine = !_showOnlyMine;
@@ -962,7 +963,16 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
   }
 
   Widget _buildTopInfoRow() {
-    return const SizedBox.shrink();
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: _buildLegend()),
+          const SizedBox(width: 12),
+          Expanded(child: _buildMySummary()),
+        ],
+      ),
+    );
   }
 
   Widget _buildMySummary() {
@@ -992,7 +1002,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                 const SizedBox(width: 10),
                 const Expanded(
                   child: Text(
-                    '',
+                    'Мои смены',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
