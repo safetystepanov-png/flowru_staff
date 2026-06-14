@@ -175,8 +175,12 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
   }
 
   String _draftActionLabel() {
-    if (_monthPublished) {
+    if (_monthPublished || _draftState == _ScheduleApprovalState.approved) {
       return 'График согласован';
+    }
+
+    if (_draftState == _ScheduleApprovalState.pending) {
+      return 'Изменить заявку';
     }
 
     return 'Заполнить график';
@@ -643,7 +647,11 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                                 });
 
                                 Navigator.of(dialogContext).pop();
-                                _showSnack('Запрос отправлен владельцу.');
+                                _showSnack(
+                                  _draftState == _ScheduleApprovalState.pending
+                                      ? 'Заявка обновлена и отправлена владельцу.'
+                                      : 'График отправлен на согласование.',
+                                );
                               } catch (e) {
                                 _showSnack('Ошибка отправки: $e');
                               } finally {
@@ -1078,9 +1086,9 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
           'Ваши дни уже согласованы. После публикации владельцем здесь появятся смены.';
       icon = CupertinoIcons.calendar;
     } else if (isPending) {
-      title = 'Заявка на график отправлена';
+      title = 'График отправлен на согласование';
       text =
-          'Дождитесь согласования владельцем. После этого график появится в календаре.';
+          'Владелец ещё не принял решение. Вы можете открыть заявку и изменить выбранные даты.';
       icon = CupertinoIcons.time;
     } else {
       title = 'Нет данных по графику';

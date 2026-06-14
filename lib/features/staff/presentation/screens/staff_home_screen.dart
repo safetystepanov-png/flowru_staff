@@ -73,6 +73,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   late final AnimationController _ambientController;
 
   List<_PinnedAnnouncement> _pinnedAnnouncements = <_PinnedAnnouncement>[];
+  int _ownerPendingRequestsCount = 0;
   int _heroCarouselIndex = 0;
   Timer? _heroTimer;
   bool _pinActionLoading = false;
@@ -252,6 +253,10 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         '${AppConfig.baseUrl}/api/v1/staff/announcements/pinned?establishment_id=${widget.establishmentId}',
       );
 
+      final ownerRequestsUri = Uri.parse(
+        '${AppConfig.baseUrl}/api/v1/staff/owner/requests?establishment_id=${widget.establishmentId}',
+      );
+
       final responses = await Future.wait([
         http.get(
           chatUri,
@@ -274,11 +279,20 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
             'Accept': 'application/json',
           },
         ),
+        if (_isOwner)
+          http.get(
+            ownerRequestsUri,
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/json',
+            },
+          ),
       ]);
 
       final chatResponse = responses[0];
       final annResponse = responses[1];
       final pinnedResponse = responses[2];
+      final ownerRequestsResponse = _isOwner && responses.length > 3 ? responses[3] : null;
 
       if (chatResponse.statusCode != 200) {
         throw Exception(
@@ -296,9 +310,17 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         );
       }
 
+      if (ownerRequestsResponse != null && ownerRequestsResponse.statusCode != 200) {
+        throw Exception(
+          'owner requests failed: ${ownerRequestsResponse.statusCode} body=${ownerRequestsResponse.body}',
+        );
+      }
+
       final chatDecoded = jsonDecode(chatResponse.body);
       final annDecoded = jsonDecode(annResponse.body);
       final pinnedDecoded = jsonDecode(pinnedResponse.body);
+      final ownerRequestsDecoded =
+          ownerRequestsResponse == null ? null : jsonDecode(ownerRequestsResponse.body);
 
       List<dynamic> chatItems;
       if (chatDecoded is List) {
@@ -350,6 +372,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         _announcementsHasNew = hasNewAnnouncements;
         _latestAnnouncementMarker = latestMarker;
         _pinnedAnnouncements = pinned;
+        _ownerPendingRequestsCount = ownerPendingRequestsCount;
         if (_heroCarouselIndex >= _heroSlidesCount) {
           _heroCarouselIndex = 0;
         }
@@ -1772,6 +1795,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
   }
 
   Widget _buildOwnerRequestsCard() {
+    final bool hasPendingRequests = _ownerPendingRequestsCount > 0;
+
     return _Pressable(
       onTap: _openOwnerRequests,
       borderRadius: 30,
@@ -1780,34 +1805,71 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         radius: 30,
         child: Row(
           children: [
-            const _FloatingGlyph(
-              icon: Icons.fact_check_rounded,
-              mainColor: kHomeAccent,
-              secondaryColor: kHomePink,
+            _FloatingGlyph(
+              icon: hasPendingRequests
+                  ? Icons.notification_important_rounded
+                  : Icons.fact_check_rounded,
+              mainColor: hasPendingRequests ? const Color(0xFFFF8A00) : kHomeAccent,
+              secondaryColor: hasPendingRequests ? const Color(0xFFFFC107) : kHomePink,
               size: 68,
               iconSize: 30,
             ),
             const SizedBox(width: 15),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'График и согласования',
-                    style: TextStyle(
-                      fontSize: 18.5,
-                      fontWeight: FontWeight.w900,
-                      color: kHomeInk,
-                    ),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'График и согласования',
+                          style: TextStyle(
+                            fontSize: 18.5,
+                            fontWeight: FontWeight.w900,
+                            color: kHomeInk,
+                          ),
+                        ),
+                      ),
+                      if (hasPendingRequests)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(999),
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFF8A00), Color(0xFFFFC107)],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFF8A00).withOpacity(0.30),
+                                blurRadius: 14,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            '$_ownerPendingRequestsCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
-                    'Запросы сотрудников, замены и публикация графика',
+                    hasPendingRequests
+                        ? 'Есть $_ownerPendingRequestsCount запросов, ожидающих решения'
+                        : 'Запросы сотрудников, замены и публикация графика',
                     style: TextStyle(
                       fontSize: 13.5,
                       height: 1.35,
-                      fontWeight: FontWeight.w700,
-                      color: kHomeInkSoft,
+                      fontWeight: FontWeight.w800,
+                      color: hasPendingRequests
+                          ? const Color(0xFFE36A00)
+                          : kHomeInkSoft,
                     ),
                   ),
                 ],
@@ -1819,8 +1881,14 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
               height: 44,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
-                color: Colors.white.withOpacity(0.72),
-                border: Border.all(color: Colors.white.withOpacity(0.72)),
+                color: hasPendingRequests
+                    ? const Color(0xFFFF8A00).withOpacity(0.16)
+                    : Colors.white.withOpacity(0.72),
+                border: Border.all(
+                  color: hasPendingRequests
+                      ? const Color(0xFFFF8A00).withOpacity(0.45)
+                      : Colors.white.withOpacity(0.72),
+                ),
               ),
               child: const Icon(
                 CupertinoIcons.chevron_right,

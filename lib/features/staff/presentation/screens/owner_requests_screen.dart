@@ -129,8 +129,12 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Запрос согласован'),
+        SnackBar(
+          content: Text(
+            item.isSchedule
+                ? 'График согласован и опубликован'
+                : 'Запрос согласован',
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -791,9 +795,12 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
                           borderRadius: BorderRadius.circular(18),
                         ),
                       ),
-                      child: const Text(
-                        'Согласовать',
-                        style: TextStyle(
+                      child: Text(
+                        item.isSchedule
+                            ? 'Согласовать и опубликовать'
+                            : 'Согласовать',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w900,
                         ),
