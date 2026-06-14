@@ -894,7 +894,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> with TickerProvider
                                         icon: Icons.lock_outline_rounded,
                                         obscureText: !_showPassword,
                                         keyboardType: TextInputType.number,
-                                        inputFormatters: const [
+                                        inputFormatters: [
                                           FilteringTextInputFormatter.digitsOnly,
                                         ],
                                         autofillHints: const [AutofillHints.password],

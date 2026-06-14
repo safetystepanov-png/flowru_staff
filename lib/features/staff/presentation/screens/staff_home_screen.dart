@@ -359,6 +359,20 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
               ))
           .toList();
 
+      int ownerPendingRequestsCount = 0;
+      if (ownerRequestsDecoded is Map<String, dynamic>) {
+        final scheduleRequests = ownerRequestsDecoded['schedule_requests'];
+        final swapRequests = ownerRequestsDecoded['swap_requests'];
+
+        if (scheduleRequests is List) {
+          ownerPendingRequestsCount += scheduleRequests.length;
+        }
+
+        if (swapRequests is List) {
+          ownerPendingRequestsCount += swapRequests.length;
+        }
+      }
+
       final latestMarker = _buildLatestAnnouncementMarker(annItems);
       final seenMarker = await _getSeenAnnouncementsMarker();
       final hasNewAnnouncements =
