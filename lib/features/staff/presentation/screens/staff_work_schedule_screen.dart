@@ -175,16 +175,9 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
   }
 
   String _draftActionLabel() {
-    if (_monthPublished || _draftState == _ScheduleApprovalState.approved) {
-      return 'График согласован';
-    }
-
-    if (_draftState == _ScheduleApprovalState.pending) {
-      return 'Составить график';
-    }
-
     return 'Составить график';
   }
+
 
   Future<void> _loadAll() async {
     if (!mounted) return;
@@ -770,7 +763,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                         text: rawItems.isEmpty
                             ? 'Этот день можно запросить через кнопку «Составить график».'
                             : (_showOnlyMine
-                                ? 'Отключите фильтр «Только мои», чтобы посмотреть всю команду.'
+                                ? 'Откройте день, чтобы посмотреть смены.'
                                 : 'Для уже назначенных смен используйте запрос замены.'),
                       )
                     else
@@ -940,21 +933,6 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                   isApproved: _monthPublished,
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _ActionPill(
-                  icon: _showOnlyMine
-                      ? CupertinoIcons.person_crop_circle_fill
-                      : CupertinoIcons.person_2,
-                  label: _showOnlyMine ? 'Только мои' : 'Вся команда',
-                  onTap: () {
-                    setState(() {
-                      _showOnlyMine = !_showOnlyMine;
-                    });
-                  },
-                  isActive: _showOnlyMine,
-                ),
-              ),
             ],
           ),
         ],
@@ -1002,7 +980,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                 const SizedBox(width: 10),
                 const Expanded(
                   child: Text(
-                    'Мои смены',
+                    '',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
