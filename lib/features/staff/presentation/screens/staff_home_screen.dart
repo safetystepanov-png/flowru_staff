@@ -1823,8 +1823,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
               icon: hasPendingRequests
                   ? Icons.notification_important_rounded
                   : Icons.fact_check_rounded,
-              mainColor: hasPendingRequests ? const Color(0xFFFF8A00) : kHomeAccent,
-              secondaryColor: hasPendingRequests ? const Color(0xFFFFC107) : kHomePink,
+              mainColor: hasPendingRequests ? const Color(0xFFFF8A00) : const Color(0xFF10B981),
+              secondaryColor: hasPendingRequests ? const Color(0xFFFFC107) : const Color(0xFF34D399),
               size: 68,
               iconSize: 30,
             ),

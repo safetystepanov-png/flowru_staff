@@ -175,15 +175,14 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
   }
 
   String _draftActionLabel() {
-    if (_monthPublished || _draftState == _ScheduleApprovalState.approved) {
-      return 'График согласован';
-    }
+    return 'Составить график';
+  }
 
     if (_draftState == _ScheduleApprovalState.pending) {
-      return 'Изменить заявку';
+      return 'Составить график';
     }
 
-    return 'Заполнить график';
+    return 'Составить график';
   }
 
   Future<void> _loadAll() async {
@@ -649,7 +648,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                                 Navigator.of(dialogContext).pop();
                                 _showSnack(
                                   _draftState == _ScheduleApprovalState.pending
-                                      ? 'Заявка обновлена и отправлена владельцу.'
+                                      ? 'Заявка обновлена и отправлена на согласование.'
                                       : 'График отправлен на согласование.',
                                 );
                               } catch (e) {
@@ -946,7 +945,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                   icon: _showOnlyMine
                       ? CupertinoIcons.person_crop_circle_fill
                       : CupertinoIcons.person_2,
-                  label: _showOnlyMine ? 'Только мои' : 'Вся команда',
+                  label: '',
                   onTap: () {
                     setState(() {
                       _showOnlyMine = !_showOnlyMine;
@@ -963,16 +962,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
   }
 
   Widget _buildTopInfoRow() {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(child: _buildLegend()),
-          const SizedBox(width: 12),
-          Expanded(child: _buildMySummary()),
-        ],
-      ),
-    );
+    return const SizedBox.shrink();
   }
 
   Widget _buildMySummary() {
@@ -1002,7 +992,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                 const SizedBox(width: 10),
                 const Expanded(
                   child: Text(
-                    'Мои смены',
+                    '',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
@@ -1093,7 +1083,7 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
     } else {
       title = 'Нет данных по графику';
       text =
-          'На этот месяц вы ещё не отправляли доступные дни. Нажмите «Заполнить график».';
+          'На этот месяц вы ещё не отправляли доступные дни. Нажмите «Составить график».';
       icon = CupertinoIcons.calendar_badge_plus;
     }
 
