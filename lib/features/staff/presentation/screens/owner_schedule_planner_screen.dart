@@ -528,7 +528,7 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
                             width: double.infinity,
                             child: _OwnerFooterButton(
                               label: 'Добавить сотрудника',
-                              isPrimary: false,
+                              isPrimary: true,
                               onTap: addManualEmployee,
                             ),
                           ),
@@ -952,7 +952,7 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
 
     return _OwnerGlassCard(
       radius: 26,
-      padding: const EdgeInsets.fromLTRB(10, 14, 10, 14),
+      padding: const EdgeInsets.fromLTRB(6, 12, 6, 12),
       child: Column(
         children: [
           Row(
@@ -982,9 +982,9 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
             itemCount: days.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: 0.74,
+              mainAxisSpacing: 6,
+              crossAxisSpacing: 4,
+              childAspectRatio: 0.82,
             ),
             itemBuilder: (context, index) {
               final date = days[index];
