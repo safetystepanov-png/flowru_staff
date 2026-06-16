@@ -17,7 +17,7 @@ const Color kInviteAccentSoft = Color(0xFFFFD166);
 const Color kInviteBlue = Color(0xFF246BFF);
 const Color kInviteViolet = Color(0xFF7A4CFF);
 
-const String kFlowruStaffAppStoreUrl = 'https://apps.apple.com/us/app/flowru-staff/id6762253836';
+const String kFlowruStaffAppStoreUrl = 'https://apps.apple.com/ru/app/flowru-business/id6774183750';
 
 class StaffInviteClientScreen extends StatefulWidget {
   final int establishmentId;
@@ -65,7 +65,16 @@ class _StaffInviteClientScreenState extends State<StaffInviteClientScreen>
     const text = 'Установи Flowru Business для работы с системой лояльности:\n$kFlowruStaffAppStoreUrl';
 
     try {
-      await Share.share(text);
+      final box = context.findRenderObject() as RenderBox?;
+      final origin = box == null
+          ? const Rect.fromLTWH(0, 0, 1, 1)
+          : box.localToGlobal(Offset.zero) & box.size;
+
+      await Share.share(
+        text,
+        subject: 'Приглашение в Flowru Business',
+        sharePositionOrigin: origin,
+      );
     } catch (_) {
       if (!mounted) return;
 
