@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
 
     <application
-        android:label="flowru_staff"
+        android:label="Flowru Business"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
