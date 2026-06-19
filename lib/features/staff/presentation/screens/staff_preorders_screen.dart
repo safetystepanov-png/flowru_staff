@@ -107,7 +107,181 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     }
   }
 
-  Future<void> _setStatus(_PreorderItem item, String status) async {
+  double? _parseAmount(String raw) {
+    final normalized = raw
+        .trim()
+        .replaceAll(' ', '')
+        .replaceAll('₽', '')
+        .replaceAll(',', '.');
+
+    if (normalized.isEmpty) return null;
+
+    final value = double.tryParse(normalized);
+    if (value == null || value <= 0) return null;
+
+    return value;
+  }
+
+  String _formatMoney(double value) {
+    if (value == value.roundToDouble()) {
+      return value.round().toString();
+    }
+    return value.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '');
+  }
+
+  Future<double?> _askCompletedAmount(_PreorderItem item) async {
+    final controller = TextEditingController(
+      text: item.amountTotal != null && item.amountTotal! > 0
+          ? _formatMoney(item.amountTotal!)
+          : '',
+    );
+
+    String? localError;
+
+    final result = await showDialog<double>(
+      context: context,
+      barrierDismissible: !_updating,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              title: const Text(
+                'Сумма чека',
+                style: TextStyle(
+                  color: kPreorderInk,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Введите сумму, которую клиент оплатил за заказ. После выдачи Flowru автоматически начислит бонусы по правилам заведения.',
+                    style: TextStyle(
+                      color: kPreorderSoft,
+                      fontSize: 13.5,
+                      height: 1.35,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration(
+                      labelText: 'Сумма чека, ₽',
+                      hintText: 'Например, 350',
+                      errorText: localError,
+                      filled: true,
+                      fillColor: kPreorderBg,
+                      prefixIcon: const Icon(Icons.payments_rounded),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: const BorderSide(color: Color(0xFFE3EEF3)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: const BorderSide(color: Color(0xFFE3EEF3)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: const BorderSide(color: kPreorderDeep, width: 1.5),
+                      ),
+                    ),
+                    onSubmitted: (_) {
+                      final amount = _parseAmount(controller.text);
+                      if (amount == null) {
+                        setDialogState(() {
+                          localError = 'Введите сумму больше 0';
+                        });
+                        return;
+                      }
+                      Navigator.of(dialogContext).pop(amount);
+                    },
+                  ),
+                ],
+              ),
+              actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text(
+                    'Назад',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final amount = _parseAmount(controller.text);
+                    if (amount == null) {
+                      setDialogState(() {
+                        localError = 'Введите сумму больше 0';
+                      });
+                      return;
+                    }
+                    Navigator.of(dialogContext).pop(amount);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kPreorderDeep,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: const Text(
+                    'Выдать',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    controller.dispose();
+    return result;
+  }
+
+  Future<void> _completePreorder(_PreorderItem item) async {
+    if (_updating) return;
+
+    final amount = await _askCompletedAmount(item);
+    if (amount == null) return;
+
+    await _setStatus(item, 'completed', amountTotal: amount);
+  }
+
+  String _statusErrorMessage(int statusCode, String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map && decoded['detail'] != null) {
+        return decoded['detail'].toString();
+      }
+    } catch (_) {}
+
+    if (statusCode == 400) {
+      return 'Проверьте сумму чека и настройки начисления';
+    }
+    if (statusCode == 401 || statusCode == 403) {
+      return 'Нет доступа или сессия истекла';
+    }
+    return 'Не удалось обновить статус';
+  }
+
+  Future<void> _setStatus(
+    _PreorderItem item,
+    String status, {
+    double? amountTotal,
+  }) async {
     if (_updating) return;
 
     setState(() {
@@ -117,6 +291,14 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
 
     try {
       final token = await _token();
+      final payload = <String, dynamic>{
+        'status': status,
+      };
+
+      if (status == 'completed') {
+        payload['amount_total'] = amountTotal;
+      }
+
       final response = await http.post(
         Uri.parse('${AppConfig.baseUrl}/api/v1/staff/preorders/${item.id}/status'),
         headers: {
@@ -124,20 +306,19 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'status': status,
-        }),
+        body: jsonEncode(payload),
       );
 
       if (response.statusCode != 200) {
-        throw Exception('status failed: ${response.statusCode} ${response.body}');
+        throw Exception(_statusErrorMessage(response.statusCode, response.body));
       }
 
       await _load();
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Не удалось обновить статус';
+        final message = e.toString().replaceFirst('Exception: ', '').trim();
+        _error = message.isEmpty ? 'Не удалось обновить статус' : message;
       });
     } finally {
       if (mounted) {
@@ -494,6 +675,53 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     );
   }
 
+  Widget _accrualLine(_PreorderItem item) {
+    final amount = item.amountTotal;
+    final bonus = item.bonusAccrued;
+
+    final parts = <String>[];
+    if (amount != null && amount > 0) {
+      parts.add('Чек ${_formatMoney(amount)} ₽');
+    }
+    if (bonus != null && bonus > 0) {
+      parts.add('начислено ${_formatMoney(bonus)} баллов');
+    }
+
+    if (parts.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: kPreorderGreen.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: kPreorderGreen.withOpacity(0.22)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            CupertinoIcons.sparkles,
+            size: 18,
+            color: kPreorderGreen,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              parts.join(' • '),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: kPreorderGreen,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _orderCard(_PreorderItem item) {
     final statusColor = _statusColor(item.status);
     final isActive = item.status == 'new' || item.status == 'in_work' || item.status == 'ready';
@@ -614,6 +842,10 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
           ),
           const SizedBox(height: 7),
           _paymentLine(item),
+          if (item.amountTotal != null || item.bonusAccrued != null) ...[
+            const SizedBox(height: 7),
+            _accrualLine(item),
+          ],
           const SizedBox(height: 10),
           if (item.status == 'new') ...[
             Row(
@@ -653,7 +885,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                 _actionButton(
                   text: 'Выдан',
                   color: kPreorderDeep,
-                  onTap: () => _setStatus(item, 'completed'),
+                  onTap: () => _completePreorder(item),
                 ),
                 const SizedBox(width: 8),
                 _actionButton(
@@ -895,6 +1127,8 @@ class _PreorderItem {
   final String paymentMethod;
   final String createdAt;
   final String? pickupAt;
+  final double? amountTotal;
+  final double? bonusAccrued;
 
   _PreorderItem({
     required this.id,
@@ -909,6 +1143,8 @@ class _PreorderItem {
     required this.paymentMethod,
     required this.createdAt,
     required this.pickupAt,
+    required this.amountTotal,
+    required this.bonusAccrued,
   });
 
   factory _PreorderItem.fromJson(Map<String, dynamic> json) {
@@ -916,6 +1152,12 @@ class _PreorderItem {
       if (v == null) return null;
       if (v is int) return v;
       return int.tryParse(v.toString());
+    }
+
+    double? parseDouble(dynamic v) {
+      if (v == null) return null;
+      if (v is num) return v.toDouble();
+      return double.tryParse(v.toString().replaceAll(',', '.'));
     }
 
     return _PreorderItem(
@@ -931,6 +1173,8 @@ class _PreorderItem {
       paymentMethod: json['payment_method']?.toString() ?? 'unknown',
       createdAt: json['created_at']?.toString() ?? '',
       pickupAt: json['pickup_at']?.toString(),
+      amountTotal: parseDouble(json['amount_total']),
+      bonusAccrued: parseDouble(json['bonus_accrued']),
     );
   }
 
