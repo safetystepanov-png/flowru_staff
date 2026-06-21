@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
@@ -14,8 +15,8 @@ const Color _mintLight = Color(0xFF42E8DF);
 const Color _deep = Color(0xFF064B64);
 const Color _ink = Color(0xFF0A2B47);
 const Color _soft = Color(0xFF557186);
-const Color _bg = Color(0xFFF3FAFB);
-const Color _stroke = Color(0xFFE3EEF3);
+const Color _bg = Color(0xFFEFF8F9);
+const Color _stroke = Color(0xFFD8E9EE);
 const Color _orange = Color(0xFFFFA51E);
 const Color _blue = Color(0xFF246BFF);
 const Color _green = Color(0xFF22C55E);
@@ -42,19 +43,28 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
   String? _error;
   List<_PreorderItem> _items = [];
   late final AnimationController _motion;
+  Timer? _urgencyTicker;
 
   @override
   void initState() {
     super.initState();
     _motion = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1100),
     )..repeat(reverse: true);
+
+    _urgencyTicker = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+
     _load();
   }
 
   @override
   void dispose() {
+    _urgencyTicker?.cancel();
     _motion.dispose();
     super.dispose();
   }
@@ -229,7 +239,11 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                     height: 46,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [_mintLight, _mint, _deep],
+                        colors: [
+                          Color(0xFF1ECAD3),
+                          Color(0xFF118EAF),
+                          Color(0xFF0B4E73),
+                        ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -589,7 +603,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(36),
             gradient: const LinearGradient(
-              colors: [_mintLight, _mint, _deep],
+              colors: [Color(0xFF1ECAD3), Color(0xFF118EAF), Color(0xFF0B4E73)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -639,9 +653,9 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                     width: 62,
                     height: 62,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.18),
+                      color: Colors.white.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.white.withOpacity(0.22)),
+                      border: Border.all(color: Colors.white.withOpacity(0.16)),
                     ),
                     child: const Icon(
                       CupertinoIcons.bag_fill,
@@ -716,7 +730,11 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(99),
               gradient: const LinearGradient(
-                colors: [_mintLight, _mint, _deep],
+                colors: [
+                  Color(0xFF1ECAD3),
+                  Color(0xFF118EAF),
+                  Color(0xFF0B4E73),
+                ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -897,6 +915,9 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
   }
 
   Widget _orderCard(_PreorderItem item, int index) {
+    final attentionColor = _attentionColor(item);
+    final pulse = _needsPulse(item);
+
     final statusColor = _statusColor(item.status);
     final isActive =
         item.status == 'new' ||
@@ -1076,6 +1097,8 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                     _accrualLine(item),
                   ],
                   const SizedBox(height: 12),
+                  _attentionBanner(item),
+                  const SizedBox(height: 12),
                   if (item.status == 'new')
                     Row(
                       children: [
@@ -1188,6 +1211,155 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     );
   }
 
+  DateTime? _parseLocalDate(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
+    try {
+      return DateTime.parse(raw).toLocal();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  DateTime? _deadlineOf(_PreorderItem item) {
+    final pickupAt = _parseLocalDate(item.pickupAt);
+    if (pickupAt != null) return pickupAt;
+
+    final createdAt = _parseLocalDate(item.createdAt);
+    final minutes = item.pickupMinutes ?? 0;
+    if (createdAt == null || minutes <= 0) return null;
+
+    return createdAt.add(Duration(minutes: minutes));
+  }
+
+  int? _minutesLeft(_PreorderItem item) {
+    final deadline = _deadlineOf(item);
+    if (deadline == null) return null;
+    return deadline.difference(DateTime.now()).inMinutes;
+  }
+
+  bool _isIgnoredNewOrder(_PreorderItem item) {
+    if (item.status != 'new') return false;
+    final createdAt = _parseLocalDate(item.createdAt);
+    if (createdAt == null) return false;
+    return DateTime.now().difference(createdAt).inSeconds >= 90;
+  }
+
+  bool _isWarningOrder(_PreorderItem item) {
+    if (item.status != 'in_work') return false;
+    final left = _minutesLeft(item);
+    if (left == null) return false;
+    return left <= 10 && left > 5;
+  }
+
+  bool _isCriticalOrder(_PreorderItem item) {
+    if (item.status != 'in_work') return false;
+    final left = _minutesLeft(item);
+    if (left == null) return false;
+    return left <= 5 && left >= 0;
+  }
+
+  bool _isOverdueOrder(_PreorderItem item) {
+    if (item.status != 'in_work') return false;
+    final left = _minutesLeft(item);
+    if (left == null) return false;
+    return left < 0;
+  }
+
+  bool _needsPulse(_PreorderItem item) {
+    return _isIgnoredNewOrder(item) ||
+        _isCriticalOrder(item) ||
+        _isOverdueOrder(item);
+  }
+
+  Color _attentionColor(_PreorderItem item) {
+    if (_isOverdueOrder(item)) return const Color(0xFFE95436);
+    if (_isCriticalOrder(item)) return const Color(0xFFFF7A1A);
+    if (_isWarningOrder(item)) return const Color(0xFFF6A92B);
+    if (_isIgnoredNewOrder(item)) return const Color(0xFF0BAEBB);
+    return _mint;
+  }
+
+  String? _attentionText(_PreorderItem item) {
+    if (_isOverdueOrder(item)) return 'Срок выдачи уже наступил';
+    if (_isCriticalOrder(item)) return 'Время на приготовление истекает';
+    if (_isWarningOrder(item)) return 'До выдачи осталось мало времени';
+    if (_isIgnoredNewOrder(item)) return 'Заказ ждёт принятия в работу';
+    return null;
+  }
+
+  Widget _attentionBanner(_PreorderItem item) {
+    final text = _attentionText(item);
+    if (text == null) return const SizedBox.shrink();
+
+    final color = _attentionColor(item);
+    final left = _minutesLeft(item);
+    String? trailing;
+
+    if (item.status == 'in_work' && left != null) {
+      trailing = left >= 0 ? '$left мин' : 'просрочено';
+    }
+
+    return AnimatedBuilder(
+      animation: _motion,
+      builder: (context, _) {
+        final pulse = _needsPulse(item);
+        final opacity = pulse ? 0.11 + (_motion.value * 0.08) : 0.11;
+
+        return Container(
+          margin: const EdgeInsets.only(top: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: color.withOpacity(opacity),
+            borderRadius: BorderRadius.circular(17),
+            border: Border.all(
+              color: color.withOpacity(
+                pulse ? 0.28 + (_motion.value * 0.18) : 0.22,
+              ),
+              width: pulse ? 1.4 : 1,
+            ),
+            boxShadow: pulse
+                ? [
+                    BoxShadow(
+                      color: color.withOpacity(0.12 + (_motion.value * 0.10)),
+                      blurRadius: 22,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            children: [
+              Icon(CupertinoIcons.time_solid, color: color, size: 17),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  text,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 12.5,
+                    height: 1.2,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              if (trailing != null) ...[
+                const SizedBox(width: 8),
+                Text(
+                  trailing,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _ordersList(List<_PreorderItem> items) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1225,8 +1397,8 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
       child: Container(
         padding: const EdgeInsets.all(26),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
+          color: Colors.white.withOpacity(0.92),
+          borderRadius: BorderRadius.circular(28),
           border: Border.all(color: _stroke),
           boxShadow: [
             BoxShadow(
@@ -1243,14 +1415,14 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
               height: 74,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [_mintLight, _mint, _deep],
+                  colors: [_deep, _mint],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(24),
               ),
               child: const Icon(
-                CupertinoIcons.bag_badge_plus,
+                CupertinoIcons.tray,
                 color: Colors.white,
                 size: 32,
               ),
@@ -1289,9 +1461,9 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
       padding: const EdgeInsets.all(14),
       margin: const EdgeInsets.only(top: 14),
       decoration: BoxDecoration(
-        color: _red.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _red.withOpacity(0.18)),
+        color: _red.withOpacity(0.09),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _red.withOpacity(0.20)),
       ),
       child: Row(
         children: [
@@ -1328,14 +1500,22 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         foregroundColor: _ink,
+        centerTitle: false,
         title: const Text(
           'Предзаказы',
-          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -0.35),
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.45,
+            fontSize: 24,
+          ),
         ),
         actions: [
-          IconButton(
-            onPressed: _load,
-            icon: const Icon(CupertinoIcons.refresh_bold),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              onPressed: _load,
+              icon: const Icon(CupertinoIcons.refresh_bold),
+            ),
           ),
         ],
       ),
@@ -1346,7 +1526,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                 onRefresh: _load,
                 color: _mint,
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 32),
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 34),
                   children: [
                     _fadeIn(child: _heroCard()),
                     _errorBanner(),
