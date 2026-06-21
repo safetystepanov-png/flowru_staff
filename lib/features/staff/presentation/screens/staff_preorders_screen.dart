@@ -9,19 +9,17 @@ import '../../../auth/data/auth_storage.dart';
 import '../../../auth/data/user_api.dart';
 import '../../../../core/config/app_config.dart';
 
-const Color kPreorderMint = Color(0xFF0BAEBB);
-const Color kPreorderMintLight = Color(0xFF42E8DF);
-const Color kPreorderDeep = Color(0xFF064B64);
-const Color kPreorderInk = Color(0xFF0A2B47);
-const Color kPreorderSoft = Color(0xFF557186);
-const Color kPreorderBg = Color(0xFFF3FAFB);
-const Color kPreorderOrange = Color(0xFFFFA51E);
-const Color kPreorderBlue = Color(0xFF246BFF);
-const Color kPreorderGreen = Color(0xFF22C55E);
-const Color kPreorderRed = Color(0xFFFF6A5E);
-const Color kPreorderViolet = Color(0xFF7A4CFF);
-const Color kPreorderCard = Color(0xFFFFFFFF);
-const Color kPreorderStroke = Color(0xFFE3EEF3);
+const Color _mint = Color(0xFF0BAEBB);
+const Color _mintLight = Color(0xFF42E8DF);
+const Color _deep = Color(0xFF064B64);
+const Color _ink = Color(0xFF0A2B47);
+const Color _soft = Color(0xFF557186);
+const Color _bg = Color(0xFFF3FAFB);
+const Color _stroke = Color(0xFFE3EEF3);
+const Color _orange = Color(0xFFFFA51E);
+const Color _blue = Color(0xFF246BFF);
+const Color _green = Color(0xFF22C55E);
+const Color _red = Color(0xFFFF6A5E);
 
 class StaffPreordersScreen extends StatefulWidget {
   final int establishmentId;
@@ -43,30 +41,28 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
   bool _updating = false;
   String? _error;
   List<_PreorderItem> _items = [];
-  late final AnimationController _pulseController;
+  late final AnimationController _motion;
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
+    _motion = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1150),
+      duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
     _load();
   }
 
   @override
   void dispose() {
-    _pulseController.dispose();
+    _motion.dispose();
     super.dispose();
   }
 
   Future<String> _token() async {
     final token = await AuthStorage.getAccessToken();
     if (token == null || token.trim().isEmpty) {
-      throw Exception(
-        'Р РЋР ВµРЎРѓРЎРѓР С‘РЎРЏ Р С‘РЎРѓРЎвЂљР ВµР С”Р В»Р В°. Р вЂ™Р С•Р в„–Р Т‘Р С‘РЎвЂљР Вµ Р В·Р В°Р Р…Р С•Р Р†Р С•.',
-      );
+      throw Exception('Сессия истекла. Войдите заново.');
     }
     return token.trim();
   }
@@ -74,9 +70,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
   Future<String> _refreshAccessToken() async {
     final refreshToken = await AuthStorage.getRefreshToken();
     if (refreshToken == null || refreshToken.trim().isEmpty) {
-      throw Exception(
-        'Р РЋР ВµРЎРѓРЎРѓР С‘РЎРЏ Р С‘РЎРѓРЎвЂљР ВµР С”Р В»Р В°. Р вЂ™Р С•Р в„–Р Т‘Р С‘РЎвЂљР Вµ Р В·Р В°Р Р…Р С•Р Р†Р С•.',
-      );
+      throw Exception('Сессия истекла. Войдите заново.');
     }
 
     final result = await UserApi().refresh(
@@ -86,9 +80,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     );
 
     if (!result.ok || result.accessToken.trim().isEmpty) {
-      throw Exception(
-        'Р РЋР ВµРЎРѓРЎРѓР С‘РЎРЏ Р С‘РЎРѓРЎвЂљР ВµР С”Р В»Р В°. Р вЂ™Р С•Р в„–Р Т‘Р С‘РЎвЂљР Вµ Р В·Р В°Р Р…Р С•Р Р†Р С•.',
-      );
+      throw Exception('Сессия истекла. Войдите заново.');
     }
 
     await AuthStorage.saveAccessToken(result.accessToken.trim());
@@ -100,7 +92,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     return result.accessToken.trim();
   }
 
-  Future<Map<String, String>> _authorizedHeaders({
+  Future<Map<String, String>> _headers({
     bool json = false,
     bool forceRefresh = false,
   }) async {
@@ -124,12 +116,12 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
         '${AppConfig.baseUrl}/api/v1/staff/preorders?establishment_id=${widget.establishmentId}&limit=100',
       );
 
-      var response = await http.get(uri, headers: await _authorizedHeaders());
+      var response = await http.get(uri, headers: await _headers());
 
       if (response.statusCode == 401 || response.statusCode == 403) {
         response = await http.get(
           uri,
-          headers: await _authorizedHeaders(forceRefresh: true),
+          headers: await _headers(forceRefresh: true),
         );
       }
 
@@ -156,18 +148,41 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
       setState(() {
         final message = e.toString().replaceFirst('Exception: ', '').trim();
         _loading = false;
-        _error = message.isEmpty
-            ? 'Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р В·Р В°Р С–РЎР‚РЎС“Р В·Р С‘РЎвЂљРЎРЉ Р С—РЎР‚Р ВµР Т‘Р В·Р В°Р С”Р В°Р В·РЎвЂ№'
-            : message;
+        _error = message.isEmpty ? 'Не удалось загрузить предзаказы' : message;
       });
     }
+  }
+
+  String _statusErrorMessage(int statusCode, String body) {
+    if (statusCode == 401 || statusCode == 403) {
+      return 'Сессия истекла. Войдите заново.';
+    }
+
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map && decoded['detail'] != null) {
+        final detail = decoded['detail'].toString().trim();
+
+        if (detail.toLowerCase().contains('invalid token')) {
+          return 'Сессия истекла. Войдите заново.';
+        }
+
+        if (detail.isNotEmpty) return detail;
+      }
+    } catch (_) {}
+
+    if (statusCode == 400) {
+      return 'Проверьте сумму чека и настройки начисления';
+    }
+
+    return 'Не удалось обновить статус';
   }
 
   double? _parseAmount(String raw) {
     final normalized = raw
         .trim()
         .replaceAll(' ', '')
-        .replaceAll('РІвЂљР…', '')
+        .replaceAll('₽', '')
         .replaceAll(',', '.');
 
     if (normalized.isEmpty) return null;
@@ -179,9 +194,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
   }
 
   String _formatMoney(double value) {
-    if (value == value.roundToDouble()) {
-      return value.round().toString();
-    }
+    if (value == value.roundToDouble()) return value.round().toString();
     return value.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '');
   }
 
@@ -216,33 +229,24 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                     height: 46,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [kPreorderMint, kPreorderDeep],
+                        colors: [_mintLight, _mint, _deep],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: kPreorderMint.withOpacity(0.28),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
                     ),
                     child: const Icon(
                       Icons.payments_rounded,
                       color: Colors.white,
-                      size: 23,
                     ),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Text(
-                      'Р РЋРЎС“Р СР СР В° РЎвЂЎР ВµР С”Р В°',
+                      'Сумма чека',
                       style: TextStyle(
-                        color: kPreorderInk,
+                        color: _ink,
                         fontWeight: FontWeight.w900,
-                        letterSpacing: -0.4,
                       ),
                     ),
                   ),
@@ -253,9 +257,9 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Р вЂ™Р Р†Р ВµР Т‘Р С‘РЎвЂљР Вµ РЎРѓРЎС“Р СР СРЎС“, Р С”Р С•РЎвЂљР С•РЎР‚РЎС“РЎР‹ Р С”Р В»Р С‘Р ВµР Р…РЎвЂљ Р С•Р С—Р В»Р В°РЎвЂљР С‘Р В» Р В·Р В° Р В·Р В°Р С”Р В°Р В·. Р СџР С•РЎРѓР В»Р Вµ Р Р†РЎвЂ№Р Т‘Р В°РЎвЂЎР С‘ Flowru Р В°Р Р†РЎвЂљР С•Р СР В°РЎвЂљР С‘РЎвЂЎР ВµРЎРѓР С”Р С‘ Р Р…Р В°РЎвЂЎР С‘РЎРѓР В»Р С‘РЎвЂљ Р В±Р С•Р Р…РЎС“РЎРѓРЎвЂ№ Р С—Р С• Р С—РЎР‚Р В°Р Р†Р С‘Р В»Р В°Р С Р В·Р В°Р Р†Р ВµР Т‘Р ВµР Р…Р С‘РЎРЏ.',
+                    'Введите сумму, которую клиент оплатил за заказ. После выдачи Flowru автоматически начислит бонусы.',
                     style: TextStyle(
-                      color: kPreorderSoft,
+                      color: _soft,
                       fontSize: 13.5,
                       height: 1.35,
                       fontWeight: FontWeight.w700,
@@ -270,35 +274,30 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                     ),
                     textInputAction: TextInputAction.done,
                     decoration: InputDecoration(
-                      labelText:
-                          'Р РЋРЎС“Р СР СР В° РЎвЂЎР ВµР С”Р В°, РІвЂљР…',
-                      hintText: 'Р СњР В°Р С—РЎР‚Р С‘Р СР ВµРЎР‚, 350',
+                      labelText: 'Сумма чека, ₽',
+                      hintText: 'Например, 350',
                       errorText: localError,
                       filled: true,
-                      fillColor: kPreorderBg,
+                      fillColor: _bg,
                       prefixIcon: const Icon(Icons.payments_rounded),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
-                        borderSide: const BorderSide(color: kPreorderStroke),
+                        borderSide: const BorderSide(color: _stroke),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
-                        borderSide: const BorderSide(color: kPreorderStroke),
+                        borderSide: const BorderSide(color: _stroke),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
-                        borderSide: const BorderSide(
-                          color: kPreorderMint,
-                          width: 1.7,
-                        ),
+                        borderSide: const BorderSide(color: _mint, width: 1.7),
                       ),
                     ),
                     onSubmitted: (_) {
                       final amount = _parseAmount(controller.text);
                       if (amount == null) {
                         setDialogState(() {
-                          localError =
-                              'Р вЂ™Р Р†Р ВµР Т‘Р С‘РЎвЂљР Вµ РЎРѓРЎС“Р СР СРЎС“ Р В±Р С•Р В»РЎРЉРЎв‚¬Р Вµ 0';
+                          localError = 'Введите сумму больше 0';
                         });
                         return;
                       }
@@ -311,11 +310,8 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
                   child: const Text(
-                    'Р СњР В°Р В·Р В°Р Т‘',
-                    style: TextStyle(
-                      color: kPreorderSoft,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    'Назад',
+                    style: TextStyle(color: _soft, fontWeight: FontWeight.w900),
                   ),
                 ),
                 ElevatedButton(
@@ -323,15 +319,14 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                     final amount = _parseAmount(controller.text);
                     if (amount == null) {
                       setDialogState(() {
-                        localError =
-                            'Р вЂ™Р Р†Р ВµР Т‘Р С‘РЎвЂљР Вµ РЎРѓРЎС“Р СР СРЎС“ Р В±Р С•Р В»РЎРЉРЎв‚¬Р Вµ 0';
+                        localError = 'Введите сумму больше 0';
                       });
                       return;
                     }
                     Navigator.of(dialogContext).pop(amount);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kPreorderDeep,
+                    backgroundColor: _deep,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(
@@ -343,7 +338,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                     ),
                   ),
                   child: const Text(
-                    'Р вЂ™РЎвЂ№Р Т‘Р В°РЎвЂљРЎРЉ',
+                    'Выдать',
                     style: TextStyle(fontWeight: FontWeight.w900),
                   ),
                 ),
@@ -365,33 +360,6 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     if (amount == null) return;
 
     await _setStatus(item, 'completed', amountTotal: amount);
-  }
-
-  String _statusErrorMessage(int statusCode, String body) {
-    if (statusCode == 401 || statusCode == 403) {
-      return 'Р РЋР ВµРЎРѓРЎРѓР С‘РЎРЏ Р С‘РЎРѓРЎвЂљР ВµР С”Р В»Р В°. Р вЂ™Р С•Р в„–Р Т‘Р С‘РЎвЂљР Вµ Р В·Р В°Р Р…Р С•Р Р†Р С•.';
-    }
-
-    try {
-      final decoded = jsonDecode(body);
-      if (decoded is Map && decoded['detail'] != null) {
-        final detail = decoded['detail'].toString().trim();
-
-        if (detail.toLowerCase().contains('invalid token')) {
-          return 'Р РЋР ВµРЎРѓРЎРѓР С‘РЎРЏ Р С‘РЎРѓРЎвЂљР ВµР С”Р В»Р В°. Р вЂ™Р С•Р в„–Р Т‘Р С‘РЎвЂљР Вµ Р В·Р В°Р Р…Р С•Р Р†Р С•.';
-        }
-
-        if (detail.isNotEmpty) {
-          return detail;
-        }
-      }
-    } catch (_) {}
-
-    if (statusCode == 400) {
-      return 'Р СџРЎР‚Р С•Р Р†Р ВµРЎР‚РЎРЉРЎвЂљР Вµ РЎРѓРЎС“Р СР СРЎС“ РЎвЂЎР ВµР С”Р В° Р С‘ Р Р…Р В°РЎРѓРЎвЂљРЎР‚Р С•Р в„–Р С”Р С‘ Р Р…Р В°РЎвЂЎР С‘РЎРѓР В»Р ВµР Р…Р С‘РЎРЏ';
-    }
-
-    return 'Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р С•Р В±Р Р…Р С•Р Р†Р С‘РЎвЂљРЎРЉ РЎРѓРЎвЂљР В°РЎвЂљРЎС“РЎРѓ';
   }
 
   Future<void> _setStatus(
@@ -419,14 +387,14 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
 
       var response = await http.post(
         uri,
-        headers: await _authorizedHeaders(json: true),
+        headers: await _headers(json: true),
         body: jsonEncode(payload),
       );
 
       if (response.statusCode == 401 || response.statusCode == 403) {
         response = await http.post(
           uri,
-          headers: await _authorizedHeaders(json: true, forceRefresh: true),
+          headers: await _headers(json: true, forceRefresh: true),
           body: jsonEncode(payload),
         );
       }
@@ -442,9 +410,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
       if (!mounted) return;
       setState(() {
         final message = e.toString().replaceFirst('Exception: ', '').trim();
-        _error = message.isEmpty
-            ? 'Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р С•Р В±Р Р…Р С•Р Р†Р С‘РЎвЂљРЎРЉ РЎРѓРЎвЂљР В°РЎвЂљРЎС“РЎРѓ'
-            : message;
+        _error = message.isEmpty ? 'Не удалось обновить статус' : message;
       });
     } finally {
       if (mounted) {
@@ -499,17 +465,17 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
   String _statusText(String status) {
     switch (status) {
       case 'new':
-        return 'Р СњР С•Р Р†РЎвЂ№Р в„–';
+        return 'Новый';
       case 'in_work':
-        return 'Р вЂ™ РЎР‚Р В°Р В±Р С•РЎвЂљР Вµ';
+        return 'В работе';
       case 'ready':
-        return 'Р вЂњР С•РЎвЂљР С•Р Р†';
+        return 'Готов';
       case 'completed':
-        return 'Р вЂ™РЎвЂ№Р Т‘Р В°Р Р…';
+        return 'Выдан';
       case 'cancelled':
-        return 'Р С›РЎвЂљР СР ВµР Р…РЎвЂР Р…';
+        return 'Отменён';
       case 'expired':
-        return 'Р СџРЎР‚Р С•Р С—РЎС“РЎвЂ°Р ВµР Р…';
+        return 'Пропущен';
       default:
         return status;
     }
@@ -518,19 +484,19 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
   Color _statusColor(String status) {
     switch (status) {
       case 'new':
-        return kPreorderOrange;
+        return _orange;
       case 'in_work':
-        return kPreorderBlue;
+        return _blue;
       case 'ready':
-        return kPreorderGreen;
+        return _green;
       case 'completed':
-        return kPreorderGreen;
+        return _green;
       case 'cancelled':
-        return kPreorderRed;
+        return _red;
       case 'expired':
-        return kPreorderOrange;
+        return _orange;
       default:
-        return kPreorderSoft;
+        return _soft;
     }
   }
 
@@ -553,84 +519,85 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     }
   }
 
+  Widget _fadeIn({required Widget child, int delay = 0}) {
+    return TweenAnimationBuilder<double>(
+      duration: Duration(milliseconds: 420 + delay),
+      tween: Tween(begin: 0, end: 1),
+      curve: Curves.easeOutCubic,
+      builder: (context, t, _) {
+        return Opacity(
+          opacity: t,
+          child: Transform.translate(
+            offset: Offset(0, 18 * (1 - t)),
+            child: child,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+
   Widget _heroMetric(String label, int value, IconData icon) {
     return Expanded(
-      child: TweenAnimationBuilder<double>(
-        duration: const Duration(milliseconds: 520),
-        tween: Tween(begin: 0, end: 1),
-        curve: Curves.easeOutCubic,
-        builder: (context, t, child) {
-          return Transform.translate(
-            offset: Offset(0, 12 * (1 - t)),
-            child: Opacity(opacity: t, child: child),
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.16),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withOpacity(0.20)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, color: Colors.white.withOpacity(0.90), size: 18),
-              const SizedBox(height: 9),
-              Text(
-                value.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 27,
-                  height: 1,
-                  fontWeight: FontWeight.w900,
-                ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: Colors.white.withOpacity(0.20)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: Colors.white.withOpacity(0.88), size: 18),
+            const SizedBox(height: 9),
+            Text(
+              value.toString(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 27,
+                height: 1,
+                fontWeight: FontWeight.w900,
               ),
-              const SizedBox(height: 5),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.82),
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w900,
-                ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.82),
+                fontSize: 11.5,
+                fontWeight: FontWeight.w900,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _headerCard() {
+  Widget _heroCard() {
     final activeCount = _activeItems.length;
 
     return AnimatedBuilder(
-      animation: _pulseController,
+      animation: _motion,
       builder: (context, child) {
-        final glow = 0.20 + (_pulseController.value * 0.12);
+        final glow = 0.16 + (_motion.value * 0.10);
         return Container(
           padding: const EdgeInsets.all(22),
-          margin: const EdgeInsets.only(bottom: 18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(36),
             gradient: const LinearGradient(
-              colors: [kPreorderMintLight, kPreorderMint, kPreorderDeep],
+              colors: [_mintLight, _mint, _deep],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             boxShadow: [
               BoxShadow(
-                color: kPreorderMint.withOpacity(glow),
-                blurRadius: 38,
-                offset: const Offset(0, 20),
-              ),
-              BoxShadow(
-                color: kPreorderDeep.withOpacity(0.12),
-                blurRadius: 22,
-                offset: const Offset(0, 10),
+                color: _mint.withOpacity(glow),
+                blurRadius: 36,
+                offset: const Offset(0, 18),
               ),
             ],
           ),
@@ -640,8 +607,8 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
       child: Stack(
         children: [
           Positioned(
-            right: -28,
-            top: -34,
+            right: -26,
+            top: -32,
             child: Container(
               width: 118,
               height: 118,
@@ -652,7 +619,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
             ),
           ),
           Positioned(
-            right: 36,
+            right: 34,
             bottom: -42,
             child: Container(
               width: 92,
@@ -668,28 +635,18 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
             children: [
               Row(
                 children: [
-                  TweenAnimationBuilder<double>(
-                    duration: const Duration(milliseconds: 700),
-                    tween: Tween(begin: 0.92, end: 1),
-                    curve: Curves.elasticOut,
-                    builder: (context, scale, child) {
-                      return Transform.scale(scale: scale, child: child);
-                    },
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.20),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.24),
-                        ),
-                      ),
-                      child: const Icon(
-                        CupertinoIcons.bag_fill,
-                        color: Colors.white,
-                        size: 30,
-                      ),
+                  Container(
+                    width: 62,
+                    height: 62,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white.withOpacity(0.22)),
+                    ),
+                    child: const Icon(
+                      CupertinoIcons.bag_fill,
+                      color: Colors.white,
+                      size: 31,
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -698,20 +655,20 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Р вЂ”Р В°Р С”Р В°Р В·РЎвЂ№',
+                          'Предзаказы',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 30,
                             height: 1,
                             fontWeight: FontWeight.w900,
-                            letterSpacing: -0.9,
+                            letterSpacing: -0.8,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           activeCount > 0
-                              ? '$activeCount Р В°Р С”РЎвЂљР С‘Р Р†Р Р…РЎвЂ№РЎвЂ¦ Р В·Р В°Р С”Р В°Р В·Р С•Р Р† РЎРѓР ВµР в„–РЎвЂЎР В°РЎРѓ'
-                              : 'Р С’Р С”РЎвЂљР С‘Р Р†Р Р…РЎвЂ№РЎвЂ¦ Р В·Р В°Р С”Р В°Р В·Р С•Р Р† РЎРѓР ВµР в„–РЎвЂЎР В°РЎРѓ Р Р…Р ВµРЎвЂљ',
+                              ? '$activeCount активных заказов сейчас'
+                              : 'Активных заказов сейчас нет',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.88),
                             fontSize: 14,
@@ -726,20 +683,16 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
               const SizedBox(height: 18),
               Row(
                 children: [
-                  _heroMetric(
-                    'Р Р…Р С•Р Р†РЎвЂ№Р Вµ',
-                    _newCount,
-                    CupertinoIcons.bell_fill,
-                  ),
+                  _heroMetric('новые', _newCount, CupertinoIcons.bell_fill),
                   const SizedBox(width: 9),
                   _heroMetric(
-                    'Р Р† РЎР‚Р В°Р В±Р С•РЎвЂљР Вµ',
+                    'в работе',
                     _inWorkCount,
                     CupertinoIcons.flame_fill,
                   ),
                   const SizedBox(width: 9),
                   _heroMetric(
-                    'Р С–Р С•РЎвЂљР С•Р Р†РЎвЂ№',
+                    'готовы',
                     _readyCount,
                     CupertinoIcons.checkmark_seal_fill,
                   ),
@@ -752,18 +705,18 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     );
   }
 
-  Widget _sectionTitle(String title, String subtitle) {
+  Widget _sectionHeader(String title, String count) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 14, 2, 11),
+      padding: const EdgeInsets.fromLTRB(2, 18, 2, 11),
       child: Row(
         children: [
           Container(
-            width: 8,
+            width: 7,
             height: 28,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(99),
               gradient: const LinearGradient(
-                colors: [kPreorderMint, kPreorderDeep],
+                colors: [_mintLight, _mint, _deep],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -773,13 +726,11 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
           Expanded(
             child: Text(
               title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                color: kPreorderInk,
+                color: _ink,
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
-                letterSpacing: -0.55,
+                letterSpacing: -0.5,
               ),
             ),
           ),
@@ -788,12 +739,12 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: kPreorderStroke),
+              border: Border.all(color: _stroke),
             ),
             child: Text(
-              subtitle,
+              count,
               style: const TextStyle(
-                color: kPreorderSoft,
+                color: _soft,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w900,
               ),
@@ -801,6 +752,115 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _infoLine({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(17),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 7),
+          Text(
+            '$label: ',
+            style: const TextStyle(
+              color: _soft,
+              fontSize: 12.2,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value.isEmpty ? '—' : value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _ink,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _pill({
+    required IconData icon,
+    required String text,
+    required Color color,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(19),
+        border: Border.all(color: color.withOpacity(0.20)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _paymentLine(_PreorderItem item) {
+    final isCard = item.paymentMethod == 'card';
+    final isCash = item.paymentMethod == 'cash';
+
+    final color = isCard
+        ? _blue
+        : isCash
+        ? _green
+        : _soft;
+
+    return _pill(icon: item.paymentIcon, text: item.paymentLabel, color: color);
+  }
+
+  Widget _accrualLine(_PreorderItem item) {
+    final amount = item.amountTotal;
+    final bonus = item.bonusAccrued;
+
+    final parts = <String>[];
+    if (amount != null && amount > 0) {
+      parts.add('Чек ${_formatMoney(amount)} ₽');
+    }
+    if (bonus != null && bonus > 0) {
+      parts.add('начислено ${_formatMoney(bonus)} баллов');
+    }
+
+    if (parts.isEmpty) return const SizedBox.shrink();
+
+    return _pill(
+      icon: CupertinoIcons.sparkles,
+      text: parts.join(' • '),
+      color: _green,
     );
   }
 
@@ -823,7 +883,6 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
             disabledBackgroundColor: color.withOpacity(0.34),
             disabledForegroundColor: Colors.white.withOpacity(0.72),
             elevation: 0,
-            shadowColor: color.withOpacity(0.22),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
             ),
@@ -837,127 +896,6 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     );
   }
 
-  Widget _timeLine({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.075),
-        borderRadius: BorderRadius.circular(17),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 7),
-          Text(
-            '$label: ',
-            style: const TextStyle(
-              color: kPreorderSoft,
-              fontSize: 12.2,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value.isEmpty ? '' : value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: kPreorderInk,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _paymentLine(_PreorderItem item) {
-    final isCard = item.paymentMethod == 'card';
-    final isCash = item.paymentMethod == 'cash';
-
-    final color = isCard
-        ? kPreorderBlue
-        : isCash
-        ? kPreorderGreen
-        : kPreorderSoft;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(19),
-        border: Border.all(color: color.withOpacity(0.20)),
-      ),
-      child: Row(
-        children: [
-          Icon(item.paymentIcon, size: 18, color: color),
-          const SizedBox(width: 8),
-          Text(
-            item.paymentLabel,
-            style: TextStyle(
-              color: color,
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _accrualLine(_PreorderItem item) {
-    final amount = item.amountTotal;
-    final bonus = item.bonusAccrued;
-
-    final parts = <String>[];
-    if (amount != null && amount > 0) {
-      parts.add('Р В§Р ВµР С” ${_formatMoney(amount)} РІвЂљР…');
-    }
-    if (bonus != null && bonus > 0) {
-      parts.add(
-        'Р Р…Р В°РЎвЂЎР С‘РЎРѓР В»Р ВµР Р…Р С• ${_formatMoney(bonus)} Р В±Р В°Р В»Р В»Р С•Р Р†',
-      );
-    }
-
-    if (parts.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-      decoration: BoxDecoration(
-        color: kPreorderGreen.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(19),
-        border: Border.all(color: kPreorderGreen.withOpacity(0.22)),
-      ),
-      child: Row(
-        children: [
-          const Icon(CupertinoIcons.sparkles, size: 18, color: kPreorderGreen),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              parts.join('  '),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: kPreorderGreen,
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _orderCard(_PreorderItem item, int index) {
     final statusColor = _statusColor(item.status);
     final isActive =
@@ -965,323 +903,292 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
         item.status == 'in_work' ||
         item.status == 'ready';
 
-    Widget card = TweenAnimationBuilder<double>(
-      duration: Duration(milliseconds: 420 + (index.clamp(0, 6) * 70)),
-      tween: Tween(begin: 0, end: 1),
-      curve: Curves.easeOutCubic,
-      builder: (context, t, child) {
-        return Opacity(
-          opacity: t,
-          child: Transform.translate(
-            offset: Offset(0, 18 * (1 - t)),
-            child: child,
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: kPreorderCard,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(
-            color: isActive ? statusColor.withOpacity(0.34) : kPreorderStroke,
-            width: isActive ? 1.5 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: (isActive ? statusColor : Colors.black).withOpacity(
-                isActive ? 0.14 : 0.045,
-              ),
-              blurRadius: isActive ? 30 : 18,
-              offset: const Offset(0, 14),
+    return _fadeIn(
+      delay: index.clamp(0, 6) * 70,
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 180),
+        scale: isActive ? 1.0 : 0.995,
+        child: Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(
+              color: isActive ? statusColor.withOpacity(0.30) : _stroke,
+              width: isActive ? 1.5 : 1,
             ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              right: -24,
-              top: -28,
-              child: Container(
-                width: 92,
-                height: 92,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: statusColor.withOpacity(0.07),
+            boxShadow: [
+              BoxShadow(
+                color: (isActive ? statusColor : Colors.black).withOpacity(
+                  isActive ? 0.12 : 0.045,
                 ),
+                blurRadius: isActive ? 30 : 18,
+                offset: const Offset(0, 14),
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(19),
-                        gradient: LinearGradient(
-                          colors: [statusColor, statusColor.withOpacity(0.64)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: statusColor.withOpacity(0.22),
-                            blurRadius: 16,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        _statusIcon(item.status),
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 11),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.clientName.isEmpty
-                                ? 'Р С™Р В»Р С‘Р ВµР Р…РЎвЂљ'
-                                : 'Р вЂ”Р В°Р С”Р В°Р В·Р В°Р В»: ${item.clientName}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: kPreorderInk,
-                              fontSize: 16.5,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            item.clientPhone.isEmpty
-                                ? 'Р СћР ВµР В»Р ВµРЎвЂћР С•Р Р… Р Р…Р Вµ РЎС“Р С”Р В°Р В·Р В°Р Р…'
-                                : item.clientPhone,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: kPreorderSoft,
-                              fontSize: 12.7,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.13),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: statusColor.withOpacity(0.14),
-                        ),
-                      ),
-                      child: Text(
-                        _statusText(item.status),
-                        style: TextStyle(
-                          color: statusColor,
-                          fontSize: 11.4,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  item.orderText.trim().isEmpty
-                      ? 'Р вЂ”Р В°Р С”Р В°Р В· Р В±Р ВµР В· Р С•Р С—Р С‘РЎРѓР В°Р Р…Р С‘РЎРЏ'
-                      : item.orderText.trim(),
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: kPreorderInk,
-                    fontSize: 15.2,
-                    height: 1.36,
-                    fontWeight: FontWeight.w800,
+            ],
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -24,
+                top: -28,
+                child: Container(
+                  width: 92,
+                  height: 92,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: statusColor.withOpacity(0.07),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _timeLine(
-                        icon: CupertinoIcons.arrow_down_circle_fill,
-                        label: 'Р СџР С•РЎРѓРЎвЂљРЎС“Р С—Р С‘Р В»',
-                        value: item.createdLabel,
-                        color: kPreorderBlue,
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      AnimatedBuilder(
+                        animation: _motion,
+                        builder: (context, child) {
+                          final scale = item.status == 'new'
+                              ? 1.0 + (_motion.value * 0.035)
+                              : 1.0;
+                          return Transform.scale(scale: scale, child: child);
+                        },
+                        child: Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(19),
+                            gradient: LinearGradient(
+                              colors: [
+                                statusColor,
+                                statusColor.withOpacity(0.65),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          child: Icon(
+                            _statusIcon(item.status),
+                            color: Colors.white,
+                            size: 23,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _timeLine(
-                        icon: CupertinoIcons.clock_fill,
-                        label: 'Р вЂ”Р В°Р В±РЎР‚Р В°РЎвЂљРЎРЉ',
-                        value: item.pickupLabel,
-                        color: kPreorderOrange,
+                      const SizedBox(width: 11),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.clientName.isEmpty
+                                  ? 'Клиент'
+                                  : 'Заказал: ${item.clientName}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: _ink,
+                                fontSize: 16.5,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              item.clientPhone.isEmpty
+                                  ? 'Телефон не указан'
+                                  : item.clientPhone,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: _soft,
+                                fontSize: 12.7,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.13),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: statusColor.withOpacity(0.14),
+                          ),
+                        ),
+                        child: Text(
+                          _statusText(item.status),
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 11.4,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    item.orderText.trim().isEmpty
+                        ? 'Заказ без описания'
+                        : item.orderText.trim(),
+                    maxLines: 5,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: _ink,
+                      fontSize: 15.2,
+                      height: 1.36,
+                      fontWeight: FontWeight.w800,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                _paymentLine(item),
-                if (item.amountTotal != null || item.bonusAccrued != null) ...[
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _infoLine(
+                          icon: CupertinoIcons.arrow_down_circle_fill,
+                          label: 'Поступил',
+                          value: item.createdLabel,
+                          color: _blue,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _infoLine(
+                          icon: CupertinoIcons.clock_fill,
+                          label: 'Забрать',
+                          value: item.pickupLabel,
+                          color: _orange,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
-                  _accrualLine(item),
+                  _paymentLine(item),
+                  if (item.amountTotal != null ||
+                      item.bonusAccrued != null) ...[
+                    const SizedBox(height: 8),
+                    _accrualLine(item),
+                  ],
+                  const SizedBox(height: 12),
+                  if (item.status == 'new')
+                    Row(
+                      children: [
+                        _actionButton(
+                          text: 'В работе',
+                          color: _blue,
+                          icon: CupertinoIcons.flame_fill,
+                          onTap: () => _setStatus(item, 'in_work'),
+                        ),
+                        const SizedBox(width: 8),
+                        _actionButton(
+                          text: 'Отменить',
+                          color: _red,
+                          icon: CupertinoIcons.xmark_circle_fill,
+                          onTap: () => _setStatus(item, 'cancelled'),
+                        ),
+                      ],
+                    )
+                  else if (item.status == 'in_work')
+                    Row(
+                      children: [
+                        _actionButton(
+                          text: 'Готов',
+                          color: _green,
+                          icon: CupertinoIcons.checkmark_seal_fill,
+                          onTap: () => _setStatus(item, 'ready'),
+                        ),
+                        const SizedBox(width: 8),
+                        _actionButton(
+                          text: 'Отменить',
+                          color: _red,
+                          icon: CupertinoIcons.xmark_circle_fill,
+                          onTap: () => _setStatus(item, 'cancelled'),
+                        ),
+                      ],
+                    )
+                  else if (item.status == 'ready')
+                    Row(
+                      children: [
+                        _actionButton(
+                          text: 'Выдан',
+                          color: _deep,
+                          icon: CupertinoIcons.archivebox_fill,
+                          onTap: () => _completePreorder(item),
+                        ),
+                        const SizedBox(width: 8),
+                        _actionButton(
+                          text: 'Отменить',
+                          color: _red,
+                          icon: CupertinoIcons.xmark_circle_fill,
+                          onTap: () => _setStatus(item, 'cancelled'),
+                        ),
+                      ],
+                    ),
                 ],
-                const SizedBox(height: 12),
-                if (item.status == 'new') ...[
-                  Row(
-                    children: [
-                      _actionButton(
-                        text: 'Р вЂ™ РЎР‚Р В°Р В±Р С•РЎвЂљР Вµ',
-                        color: kPreorderBlue,
-                        icon: CupertinoIcons.flame_fill,
-                        onTap: () => _setStatus(item, 'in_work'),
-                      ),
-                      const SizedBox(width: 8),
-                      _actionButton(
-                        text: 'Р С›РЎвЂљР СР ВµР Р…Р С‘РЎвЂљРЎРЉ',
-                        color: kPreorderRed,
-                        icon: CupertinoIcons.xmark_circle_fill,
-                        onTap: () => _setStatus(item, 'cancelled'),
-                      ),
-                    ],
-                  ),
-                ] else if (item.status == 'in_work') ...[
-                  Row(
-                    children: [
-                      _actionButton(
-                        text: 'Р вЂњР С•РЎвЂљР С•Р Р†',
-                        color: kPreorderGreen,
-                        icon: CupertinoIcons.checkmark_seal_fill,
-                        onTap: () => _setStatus(item, 'ready'),
-                      ),
-                      const SizedBox(width: 8),
-                      _actionButton(
-                        text: 'Р С›РЎвЂљР СР ВµР Р…Р С‘РЎвЂљРЎРЉ',
-                        color: kPreorderRed,
-                        icon: CupertinoIcons.xmark_circle_fill,
-                        onTap: () => _setStatus(item, 'cancelled'),
-                      ),
-                    ],
-                  ),
-                ] else if (item.status == 'ready') ...[
-                  Row(
-                    children: [
-                      _actionButton(
-                        text: 'Р вЂ™РЎвЂ№Р Т‘Р В°Р Р…',
-                        color: kPreorderDeep,
-                        icon: CupertinoIcons.archivebox_fill,
-                        onTap: () => _completePreorder(item),
-                      ),
-                      const SizedBox(width: 8),
-                      _actionButton(
-                        text: 'Р С›РЎвЂљР СР ВµР Р…Р С‘РЎвЂљРЎРЉ',
-                        color: kPreorderRed,
-                        icon: CupertinoIcons.xmark_circle_fill,
-                        onTap: () => _setStatus(item, 'cancelled'),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
-
-    if (!isActive) return card;
-
-    return AnimatedBuilder(
-      animation: _pulseController,
-      builder: (context, child) {
-        final scale = 1.0 + (_pulseController.value * 0.010);
-        return Transform.scale(scale: scale, child: child);
-      },
-      child: card,
-    );
   }
 
-  Widget _doneCompactRow(_PreorderItem item) {
+  Widget _doneRow(_PreorderItem item) {
     final statusColor = _statusColor(item.status);
 
-    return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 360),
-      tween: Tween(begin: 0, end: 1),
-      curve: Curves.easeOutCubic,
-      builder: (context, t, child) {
-        return Opacity(
-          opacity: t,
-          child: Transform.translate(
-            offset: Offset(0, 10 * (1 - t)),
-            child: child,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.90),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _stroke),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(_statusIcon(item.status), color: statusColor, size: 18),
           ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 9),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.86),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: kPreorderStroke),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.10),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(
-                _statusIcon(item.status),
-                color: statusColor,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                item.doneCompactTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: kPreorderInk,
-                  fontSize: 13.2,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              item.createdLabel,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              item.doneCompactTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                color: kPreorderSoft,
-                fontSize: 12,
+                color: _ink,
+                fontSize: 13.2,
                 fontWeight: FontWeight.w800,
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            item.createdLabel,
+            style: const TextStyle(
+              color: _soft,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _ordersGrid(List<_PreorderItem> items) {
+  Widget _ordersList(List<_PreorderItem> items) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= 760;
@@ -1305,7 +1212,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
             crossAxisCount: 2,
             crossAxisSpacing: 14,
             mainAxisSpacing: 14,
-            childAspectRatio: 1.22,
+            childAspectRatio: 1.18,
           ),
           itemBuilder: (context, index) => _orderCard(items[index], index),
         );
@@ -1314,28 +1221,16 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
   }
 
   Widget _emptyState() {
-    return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 520),
-      tween: Tween(begin: 0, end: 1),
-      curve: Curves.easeOutCubic,
-      builder: (context, t, child) {
-        return Opacity(
-          opacity: t,
-          child: Transform.translate(
-            offset: Offset(0, 18 * (1 - t)),
-            child: child,
-          ),
-        );
-      },
+    return _fadeIn(
       child: Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(26),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: kPreorderStroke),
+          border: Border.all(color: _stroke),
           boxShadow: [
             BoxShadow(
-              color: kPreorderDeep.withOpacity(0.05),
+              color: _deep.withOpacity(0.05),
               blurRadius: 24,
               offset: const Offset(0, 14),
             ),
@@ -1344,46 +1239,38 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
         child: Column(
           children: [
             Container(
-              width: 72,
-              height: 72,
+              width: 74,
+              height: 74,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [kPreorderMintLight, kPreorderMint, kPreorderDeep],
+                  colors: [_mintLight, _mint, _deep],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: kPreorderMint.withOpacity(0.24),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
               ),
               child: const Icon(
                 CupertinoIcons.bag_badge_plus,
                 color: Colors.white,
-                size: 31,
+                size: 32,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             const Text(
-              'Р С’Р С”РЎвЂљР С‘Р Р†Р Р…РЎвЂ№РЎвЂ¦ Р С—РЎР‚Р ВµР Т‘Р В·Р В°Р С”Р В°Р В·Р С•Р Р† Р Р…Р ВµРЎвЂљ',
+              'Активных предзаказов нет',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: kPreorderInk,
+                color: _ink,
                 fontSize: 19,
                 fontWeight: FontWeight.w900,
-                letterSpacing: -0.25,
               ),
             ),
             const SizedBox(height: 7),
             const Text(
-              'Р С™Р С•Р С–Р Т‘Р В° Р С”Р В»Р С‘Р ВµР Р…РЎвЂљ Р С•РЎвЂљР С—РЎР‚Р В°Р Р†Р С‘РЎвЂљ Р В·Р В°Р С”Р В°Р В·, Р С•Р Р… Р С—Р С•РЎРЏР Р†Р С‘РЎвЂљРЎРѓРЎРЏ Р В·Р Т‘Р ВµРЎРѓРЎРЉ. Р СџР С•РЎвЂљРЎРЏР Р…Р С‘РЎвЂљР Вµ РЎРЊР С”РЎР‚Р В°Р Р… Р Р†Р Р…Р С‘Р В·, РЎвЂЎРЎвЂљР С•Р В±РЎвЂ№ Р С•Р В±Р Р…Р С•Р Р†Р С‘РЎвЂљРЎРЉ РЎРѓР С—Р С‘РЎРѓР С•Р С”.',
+              'Когда клиент отправит заказ, он появится здесь. Потяните экран вниз, чтобы обновить список.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: kPreorderSoft,
+                color: _soft,
                 fontSize: 13.5,
                 height: 1.35,
                 fontWeight: FontWeight.w700,
@@ -1400,17 +1287,17 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
 
     return Container(
       padding: const EdgeInsets.all(14),
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(top: 14),
       decoration: BoxDecoration(
-        color: kPreorderRed.withOpacity(0.10),
+        color: _red.withOpacity(0.10),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: kPreorderRed.withOpacity(0.18)),
+        border: Border.all(color: _red.withOpacity(0.18)),
       ),
       child: Row(
         children: [
           const Icon(
             CupertinoIcons.exclamationmark_triangle_fill,
-            color: kPreorderRed,
+            color: _red,
             size: 19,
           ),
           const SizedBox(width: 9),
@@ -1418,7 +1305,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
             child: Text(
               _error!,
               style: const TextStyle(
-                color: kPreorderRed,
+                color: _red,
                 fontWeight: FontWeight.w800,
                 height: 1.25,
               ),
@@ -1435,14 +1322,14 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     final doneItems = _doneItems.take(10).toList();
 
     return Scaffold(
-      backgroundColor: kPreorderBg,
+      backgroundColor: _bg,
       appBar: AppBar(
-        backgroundColor: kPreorderBg,
+        backgroundColor: _bg,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: kPreorderInk,
+        foregroundColor: _ink,
         title: const Text(
-          'Р СџРЎР‚Р ВµР Т‘Р В·Р В°Р С”Р В°Р В·РЎвЂ№',
+          'Предзаказы',
           style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -0.35),
         ),
         actions: [
@@ -1457,27 +1344,20 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
             ? const Center(child: CupertinoActivityIndicator(radius: 16))
             : RefreshIndicator(
                 onRefresh: _load,
-                color: kPreorderMint,
+                color: _mint,
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(18, 8, 18, 32),
                   children: [
-                    _headerCard(),
+                    _fadeIn(child: _heroCard()),
                     _errorBanner(),
-                    _sectionTitle(
-                      'Р С’Р С”РЎвЂљР С‘Р Р†Р Р…РЎвЂ№Р Вµ',
-                      '${activeItems.length} Р В·Р В°Р С”Р В°Р В·Р С•Р Р†',
-                    ),
+                    _sectionHeader('Активные', '${activeItems.length} заказов'),
                     if (activeItems.isEmpty)
                       _emptyState()
                     else
-                      _ordersGrid(activeItems),
+                      _ordersList(activeItems),
                     if (doneItems.isNotEmpty) ...[
-                      const SizedBox(height: 18),
-                      _sectionTitle(
-                        'Р СњР ВµР Т‘Р В°Р Р†Р Р…Р С‘Р Вµ',
-                        '${doneItems.length}',
-                      ),
-                      ...doneItems.map(_doneCompactRow),
+                      _sectionHeader('Недавние', '${doneItems.length}'),
+                      ...doneItems.map(_doneRow),
                     ],
                   ],
                 ),
@@ -1566,32 +1446,28 @@ class _PreorderItem {
 
   String get doneCompactTitle {
     final order = orderText.trim().isEmpty
-        ? 'Р вЂ”Р В°Р С”Р В°Р В· Р В±Р ВµР В· Р С•Р С—Р С‘РЎРѓР В°Р Р…Р С‘РЎРЏ'
+        ? 'Заказ без описания'
         : orderText.trim();
     final name = clientName.trim();
 
     if (status == 'expired') {
-      if (name.isEmpty) {
-        return 'Р СџРЎР‚Р С•Р С—РЎС“РЎвЂ°Р ВµР Р…: $order';
-      }
-      return 'Р СџРЎР‚Р С•Р С—РЎС“РЎвЂ°Р ВµР Р…: $name  $order';
+      if (name.isEmpty) return 'Пропущен: $order';
+      return 'Пропущен: $name  $order';
     }
 
-    if (name.isEmpty) {
-      return order;
-    }
+    if (name.isEmpty) return order;
 
-    return 'Р вЂ”Р В°Р С”Р В°Р В·Р В°Р В»: $name  $order';
+    return 'Заказал: $name  $order';
   }
 
   String get paymentLabel {
     switch (paymentMethod) {
       case 'card':
-        return 'Р С›Р С—Р В»Р В°РЎвЂљР В° Р С”Р В°РЎР‚РЎвЂљР С•Р в„–';
+        return 'Оплата картой';
       case 'cash':
-        return 'Р СњР В°Р В»Р С‘РЎвЂЎР Р…РЎвЂ№Р СР С‘';
+        return 'Наличными';
       default:
-        return 'Р С›Р С—Р В»Р В°РЎвЂљР В° Р Р…Р Вµ РЎС“Р С”Р В°Р В·Р В°Р Р…Р В°';
+        return 'Оплата не указана';
     }
   }
 
@@ -1612,14 +1488,11 @@ class _PreorderItem {
     final exact = _formatTime(pickupAt);
     if (exact != '') return exact;
 
-    if (pickupType == 'asap')
-      return 'Р С”Р В°Р С” Р СР С•Р В¶Р Р…Р С• РЎРѓР С”Р С•РЎР‚Р ВµР Вµ';
-    if (pickupType == 'at_time')
-      return 'Р С” Р Р†РЎвЂ№Р В±РЎР‚Р В°Р Р…Р Р…Р С•Р СРЎС“ Р Р†РЎР‚Р ВµР СР ВµР Р…Р С‘';
+    if (pickupType == 'asap') return 'как можно скорее';
+    if (pickupType == 'at_time') return 'к выбранному времени';
 
     final minutes = pickupMinutes ?? 0;
-    if (minutes <= 0)
-      return 'Р С”Р В°Р С” Р СР С•Р В¶Р Р…Р С• РЎРѓР С”Р С•РЎР‚Р ВµР Вµ';
-    return 'РЎвЂЎР ВµРЎР‚Р ВµР В· $minutes Р СР С‘Р Р….';
+    if (minutes <= 0) return 'как можно скорее';
+    return 'через $minutes мин.';
   }
 }
