@@ -18,6 +18,7 @@ import 'staff_chat_screen.dart';
 import 'staff_client_search_screen.dart';
 import 'staff_invite_client_screen.dart';
 import 'staff_preorders_screen.dart';
+import 'staff_appointments_screen.dart';
 import 'staff_establishment_history_screen.dart';
 import 'staff_establishments_screen.dart';
 import 'staff_work_schedule_screen.dart';
@@ -200,19 +201,13 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           begin: const Offset(0.06, 0.03),
           end: Offset.zero,
         ).animate(curved);
-        final scale = Tween<double>(
-          begin: 0.965,
-          end: 1.0,
-        ).animate(curved);
+        final scale = Tween<double>(begin: 0.965, end: 1.0).animate(curved);
 
         return FadeTransition(
           opacity: fade,
           child: SlideTransition(
             position: slide,
-            child: ScaleTransition(
-              scale: scale,
-              child: child,
-            ),
+            child: ScaleTransition(scale: scale, child: child),
           ),
         );
       },
@@ -292,7 +287,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       final chatResponse = responses[0];
       final annResponse = responses[1];
       final pinnedResponse = responses[2];
-      final ownerRequestsResponse = _isOwner && responses.length > 3 ? responses[3] : null;
+      final ownerRequestsResponse = _isOwner && responses.length > 3
+          ? responses[3]
+          : null;
 
       if (chatResponse.statusCode != 200) {
         throw Exception(
@@ -310,7 +307,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         );
       }
 
-      if (ownerRequestsResponse != null && ownerRequestsResponse.statusCode != 200) {
+      if (ownerRequestsResponse != null &&
+          ownerRequestsResponse.statusCode != 200) {
         throw Exception(
           'owner requests failed: ${ownerRequestsResponse.statusCode} body=${ownerRequestsResponse.body}',
         );
@@ -319,8 +317,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       final chatDecoded = jsonDecode(chatResponse.body);
       final annDecoded = jsonDecode(annResponse.body);
       final pinnedDecoded = jsonDecode(pinnedResponse.body);
-      final ownerRequestsDecoded =
-          ownerRequestsResponse == null ? null : jsonDecode(ownerRequestsResponse.body);
+      final ownerRequestsDecoded = ownerRequestsResponse == null
+          ? null
+          : jsonDecode(ownerRequestsResponse.body);
 
       List<dynamic> chatItems;
       if (chatDecoded is List) {
@@ -354,9 +353,11 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
 
       final pinned = pinnedItems
           .whereType<Map>()
-          .map((e) => _PinnedAnnouncement.fromJson(
-                Map<String, dynamic>.from(e as Map),
-              ))
+          .map(
+            (e) => _PinnedAnnouncement.fromJson(
+              Map<String, dynamic>.from(e as Map),
+            ),
+          )
           .toList();
 
       int ownerPendingRequestsCount = 0;
@@ -429,9 +430,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'establishment_id': widget.establishmentId,
-        }),
+        body: jsonEncode({'establishment_id': widget.establishmentId}),
       );
 
       if (response.statusCode != 200) {
@@ -476,9 +475,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
 
   void _openEstablishmentPicker() {
     Navigator.of(context).pushReplacement(
-      _buildAnimatedRoute(
-        const StaffEstablishmentsScreen(forceChooser: true),
-      ),
+      _buildAnimatedRoute(const StaffEstablishmentsScreen(forceChooser: true)),
     );
   }
 
@@ -506,12 +503,12 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           ),
         )
         .then((_) {
-      if (!mounted) return;
-      setState(() {
-        _chatCount = 0;
-      });
-      _loadDashboard();
-    });
+          if (!mounted) return;
+          setState(() {
+            _chatCount = 0;
+          });
+          _loadDashboard();
+        });
   }
 
   void _openAnnouncements() {
@@ -528,9 +525,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           ),
         )
         .then((_) {
-      if (!mounted) return;
-      _loadDashboard();
-    });
+          if (!mounted) return;
+          _loadDashboard();
+        });
   }
 
   void _openHistory() {
@@ -574,10 +571,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         .then((_) => _loadDashboard());
   }
 
-  Widget _stagger({
-    required int index,
-    required Widget child,
-  }) {
+  Widget _stagger({required int index, required Widget child}) {
     final start = (index * 0.08).clamp(0.0, 0.82);
     final end = (start + 0.24).clamp(0.0, 1.0);
 
@@ -595,10 +589,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           opacity: t,
           child: Transform.translate(
             offset: Offset(0, 24 * (1 - t)),
-            child: Transform.scale(
-              scale: 0.985 + (0.015 * t),
-              child: child,
-            ),
+            child: Transform.scale(scale: 0.985 + (0.015 * t), child: child),
           ),
         );
       },
@@ -754,7 +745,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
             ])
               Positioned(
                 left: item.left + math.sin((t + item.size) * math.pi * 2) * 2,
-                top: item.top + math.cos((t + item.left / 100) * math.pi * 2) * 3,
+                top:
+                    item.top +
+                    math.cos((t + item.left / 100) * math.pi * 2) * 3,
                 child: IgnorePointer(
                   child: Container(
                     width: item.size,
@@ -834,9 +827,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
               const SizedBox(
                 width: 52,
                 height: 52,
-                child: Center(
-                  child: StaffLogoBadge(size: 46),
-                ),
+                child: Center(child: StaffLogoBadge(size: 46)),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -891,7 +882,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                 onTap: () async {
                   await auth_storage.AuthStorage.clearAll();
                   if (!context.mounted) return;
-                  Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+                  Navigator.of(
+                    context,
+                  ).pushNamedAndRemoveUntil('/', (route) => false);
                 },
               ),
             ],
@@ -909,10 +902,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
         gradient: const LinearGradient(
-          colors: [
-            Color(0x1FFFFFFF),
-            Color(0x14FFFFFF),
-          ],
+          colors: [Color(0x1FFFFFFF), Color(0x14FFFFFF)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -998,10 +988,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
         gradient: const LinearGradient(
-          colors: [
-            Color(0x1FFFFFFF),
-            Color(0x14FFFFFF),
-          ],
+          colors: [Color(0x1FFFFFFF), Color(0x14FFFFFF)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -1134,19 +1121,13 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
             begin: const Offset(0.10, 0.0),
             end: Offset.zero,
           ).animate(fade);
-          final scale = Tween<double>(
-            begin: 0.955,
-            end: 1.0,
-          ).animate(fade);
+          final scale = Tween<double>(begin: 0.955, end: 1.0).animate(fade);
 
           return FadeTransition(
             opacity: fade,
             child: SlideTransition(
               position: slide,
-              child: ScaleTransition(
-                scale: scale,
-                child: child,
-              ),
+              child: ScaleTransition(scale: scale, child: child),
             ),
           );
         },
@@ -1154,7 +1135,6 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       ),
     );
   }
-
 
   void _openInviteClient() {
     Navigator.of(context)
@@ -1180,10 +1160,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              kHomeCardStrong,
-              kHomeCard,
-            ],
+            colors: [kHomeCardStrong, kHomeCard],
           ),
           border: Border.all(color: kHomeStroke),
           boxShadow: [
@@ -1265,9 +1242,198 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     );
   }
 
+  void _openAppointments() {
+    Navigator.of(context)
+        .push(
+          _buildAnimatedRoute(
+            StaffAppointmentsScreen(
+              establishmentId: widget.establishmentId,
+              establishmentName: widget.establishmentName,
+            ),
+          ),
+        )
+        .then((_) => _loadDashboard());
+  }
 
+  String _appointmentDateApi(DateTime date) {
+    final y = date.year.toString().padLeft(4, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    final d = date.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
 
+  Future<int> _loadAppointmentActiveCount() async {
+    try {
+      final token = await _token();
 
+      final response = await http.get(
+        Uri.parse(
+          '${AppConfig.baseUrl}/api/v1/staff/appointments?establishment_id=${widget.establishmentId}&date=${_appointmentDateApi(DateTime.now())}',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        return 0;
+      }
+
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final items = (decoded['items'] as List?) ?? const [];
+
+      var active = 0;
+
+      for (final raw in items) {
+        if (raw is! Map) continue;
+
+        final status = (raw['status'] ?? '').toString();
+
+        if (status != 'cancelled' &&
+            status != 'no_show' &&
+            status != 'completed') {
+          active += 1;
+        }
+      }
+
+      return active;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  Widget _buildAppointmentsCard() {
+    return FutureBuilder<int>(
+      future: _loadAppointmentActiveCount(),
+      builder: (context, snapshot) {
+        final active = snapshot.data ?? 0;
+        final hasActive = active > 0;
+
+        return GestureDetector(
+          onTap: _openAppointments,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(32),
+              gradient: LinearGradient(
+                colors: hasActive
+                    ? const [Color(0xFF246BFF), Color(0xFF0BAEBB)]
+                    : const [Color(0xFFFFFFFF), Color(0xFFF4FBFC)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(
+                color: hasActive
+                    ? Colors.white.withOpacity(0.30)
+                    : const Color(0xFFD8E9EE),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      (hasActive
+                              ? const Color(0xFF246BFF)
+                              : const Color(0xFF064B64))
+                          .withOpacity(hasActive ? 0.22 : 0.10),
+                  blurRadius: hasActive ? 34 : 24,
+                  offset: const Offset(0, 16),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: hasActive
+                        ? Colors.white.withOpacity(0.22)
+                        : const Color(0xFF246BFF).withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: hasActive
+                          ? Colors.white.withOpacity(0.24)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  child: Icon(
+                    hasActive
+                        ? CupertinoIcons.calendar_badge_plus
+                        : CupertinoIcons.calendar,
+                    color: hasActive ? Colors.white : const Color(0xFF246BFF),
+                    size: 31,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hasActive ? 'Записи на сегодня' : 'Записи',
+                        style: TextStyle(
+                          color: hasActive
+                              ? Colors.white
+                              : const Color(0xFF0A2B47),
+                          fontSize: 20.5,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.35,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        hasActive
+                            ? '$active активных записей'
+                            : 'Календарь и офлайн-запись клиента',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: hasActive
+                              ? Colors.white.withOpacity(0.88)
+                              : const Color(0xFF557186),
+                          fontSize: 13.5,
+                          height: 1.25,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                if (hasActive)
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.22),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: Colors.white.withOpacity(0.26)),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$active',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  const Icon(
+                    CupertinoIcons.chevron_right,
+                    color: Color(0xFF557186),
+                    size: 22,
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   void _openPreorders() {
     Navigator.of(context)
@@ -1332,8 +1498,12 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
             : const [Color(0xFFFFFFFF), Color(0xE8FFFFFF)];
 
         final titleColor = hasActive ? Colors.white : kHomeInk;
-        final subtitleColor = hasActive ? Colors.white.withOpacity(0.88) : kHomeInkSoft;
-        final iconBg = hasActive ? Colors.white.withOpacity(0.22) : kHomeAccent.withOpacity(0.14);
+        final subtitleColor = hasActive
+            ? Colors.white.withOpacity(0.88)
+            : kHomeInkSoft;
+        final iconBg = hasActive
+            ? Colors.white.withOpacity(0.22)
+            : kHomeAccent.withOpacity(0.14);
         final iconColor = hasActive ? Colors.white : kHomeAccent;
 
         Widget card = GestureDetector(
@@ -1354,7 +1524,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
               ),
               boxShadow: [
                 BoxShadow(
-                  color: (hasActive ? kHomeAccentRed : kHomeShadow).withOpacity(hasActive ? 0.42 : 0.14),
+                  color: (hasActive ? kHomeAccentRed : kHomeShadow).withOpacity(
+                    hasActive ? 0.42 : 0.14,
+                  ),
                   blurRadius: hasActive ? 42 : 24,
                   offset: const Offset(0, 18),
                 ),
@@ -1366,14 +1538,14 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                   animation: _ambientController,
                   builder: (context, child) {
                     if (!hasActive) return child!;
-                    final wave = math.sin(_ambientController.value * math.pi * 2);
-                    final jump = math.sin(_ambientController.value * math.pi * 8) * 2.8;
+                    final wave = math.sin(
+                      _ambientController.value * math.pi * 2,
+                    );
+                    final jump =
+                        math.sin(_ambientController.value * math.pi * 8) * 2.8;
                     return Transform.translate(
                       offset: Offset(0, jump),
-                      child: Transform.rotate(
-                        angle: wave * 0.10,
-                        child: child,
-                      ),
+                      child: Transform.rotate(angle: wave * 0.10, child: child),
                     );
                   },
                   child: Container(
@@ -1383,11 +1555,15 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                       borderRadius: BorderRadius.circular(24),
                       color: iconBg,
                       border: Border.all(
-                        color: hasActive ? Colors.white.withOpacity(0.28) : Colors.transparent,
+                        color: hasActive
+                            ? Colors.white.withOpacity(0.28)
+                            : Colors.transparent,
                       ),
                     ),
                     child: Icon(
-                      hasActive ? CupertinoIcons.bell_fill : CupertinoIcons.bag_fill,
+                      hasActive
+                          ? CupertinoIcons.bell_fill
+                          : CupertinoIcons.bag_fill,
                       color: iconColor,
                       size: 31,
                     ),
@@ -1409,7 +1585,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        hasActive ? '$active активных' : 'Заказы клиентов к выбранному времени',
+                        hasActive
+                            ? '$active активных'
+                            : 'Заказы клиентов к выбранному времени',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1459,18 +1637,17 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
         return AnimatedBuilder(
           animation: _ambientController,
           builder: (context, child) {
-            final pulse = (math.sin(_ambientController.value * math.pi * 2) + 1) / 2;
+            final pulse =
+                (math.sin(_ambientController.value * math.pi * 2) + 1) / 2;
             final scale = 1.0 + pulse * 0.030;
-            return Transform.scale(
-              scale: scale,
-              child: child,
-            );
+            return Transform.scale(scale: scale, child: child);
           },
           child: card,
         );
       },
     );
   }
+
   Widget _buildSearchHeroCard() {
     return _Pressable(
       onTap: _openClientSearch,
@@ -1609,9 +1786,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(22),
                           color: Colors.white.withOpacity(0.94),
-                          border: Border.all(
-                            color: const Color(0xFFE7EEF0),
-                          ),
+                          border: Border.all(color: const Color(0xFFE7EEF0)),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.03),
@@ -1823,8 +1998,12 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
               icon: hasPendingRequests
                   ? Icons.notification_important_rounded
                   : Icons.fact_check_rounded,
-              mainColor: hasPendingRequests ? const Color(0xFFFF8A00) : const Color(0xFF10B981),
-              secondaryColor: hasPendingRequests ? const Color(0xFFFFC107) : const Color(0xFF34D399),
+              mainColor: hasPendingRequests
+                  ? const Color(0xFFFF8A00)
+                  : const Color(0xFF10B981),
+              secondaryColor: hasPendingRequests
+                  ? const Color(0xFFFFC107)
+                  : const Color(0xFF34D399),
               size: 68,
               iconSize: 30,
             ),
@@ -1847,7 +2026,10 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                       ),
                       if (hasPendingRequests)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(999),
                             gradient: const LinearGradient(
@@ -1855,7 +2037,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFFF8A00).withOpacity(0.30),
+                                color: const Color(
+                                  0xFFFF8A00,
+                                ).withOpacity(0.30),
                                 blurRadius: 14,
                                 offset: const Offset(0, 8),
                               ),
@@ -2008,6 +2192,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                           const SizedBox(height: 16),
                           staggered(_buildPreordersCard()),
                           const SizedBox(height: 14),
+                          staggered(_buildAppointmentsCard()),
+                          const SizedBox(height: 14),
                           staggered(_buildTopModulesRow()),
                           const SizedBox(height: 16),
                           if (_error != null) ...[
@@ -2048,7 +2234,6 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     );
   }
 }
-
 
 class _HomeParticle {
   final double left;
@@ -2181,10 +2366,7 @@ class _TopIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
-  const _TopIconButton({
-    required this.icon,
-    required this.onTap,
-  });
+  const _TopIconButton({required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -2210,11 +2392,7 @@ class _TopIconButton extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 21,
-            ),
+            child: Icon(icon, color: Colors.white, size: 21),
           ),
         ),
       ),
@@ -2282,9 +2460,7 @@ class _MiniActionPill extends StatelessWidget {
       height: 34,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        gradient: const LinearGradient(
-          colors: [kHomeAccent, kHomeAccentSoft],
-        ),
+        gradient: const LinearGradient(colors: [kHomeAccent, kHomeAccentSoft]),
         boxShadow: [
           BoxShadow(
             color: kHomeAccent.withOpacity(0.25),
@@ -2396,11 +2572,7 @@ class _HeroDecorIcon extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(
-                accentIcon,
-                size: 13,
-                color: Colors.white,
-              ),
+              child: Icon(accentIcon, size: 13, color: Colors.white),
             ),
           ),
           Positioned.fill(
@@ -2425,11 +2597,7 @@ class _HeroDecorIcon extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Icon(
-                  icon,
-                  size: 32,
-                  color: kHomeInk,
-                ),
+                child: Icon(icon, size: 32, color: kHomeInk),
               ),
             ),
           ),
@@ -2527,11 +2695,7 @@ class _FloatingGlyph extends StatelessWidget {
                 end: Alignment.bottomRight,
               ),
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: iconSize,
-            ),
+            child: Icon(icon, color: Colors.white, size: iconSize),
           ),
           Positioned(
             top: size * 0.11,
@@ -2584,8 +2748,9 @@ class _ModuleCard extends StatelessWidget {
                 _FloatingGlyph(
                   icon: icon,
                   mainColor: glowColor,
-                  secondaryColor:
-                      glowColor == kHomeBlue ? kHomeMintTop : kHomeViolet,
+                  secondaryColor: glowColor == kHomeBlue
+                      ? kHomeMintTop
+                      : kHomeViolet,
                   size: 82,
                   iconSize: 34,
                 ),
@@ -2790,4 +2955,3 @@ class _PressableState extends State<_Pressable>
     );
   }
 }
-
