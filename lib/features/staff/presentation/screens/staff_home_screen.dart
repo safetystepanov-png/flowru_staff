@@ -1242,6 +1242,75 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     );
   }
 
+  Future<Map<String, dynamic>> _loadClientActionSettings() async {
+    try {
+      final token = await _token();
+
+      final response = await http.get(
+        Uri.parse(
+          '${AppConfig.baseUrl}/api/v1/staff/client-action-settings?establishment_id=${widget.establishmentId}',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        return {'enabled': false, 'feature_type': 'order'};
+      }
+
+      final decoded = jsonDecode(response.body);
+
+      if (decoded is! Map) {
+        return {'enabled': false, 'feature_type': 'order'};
+      }
+
+      return Map<String, dynamic>.from(decoded as Map);
+    } catch (_) {
+      return {'enabled': false, 'feature_type': 'order'};
+    }
+  }
+
+  Widget _buildClientActionCard() {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _loadClientActionSettings(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildPreordersCard();
+        }
+
+        if (snapshot.hasError) {
+          return _buildPreordersCard();
+        }
+
+        final settings = snapshot.data ?? const <String, dynamic>{};
+
+        final enabledRaw = settings['enabled'];
+        final enabled =
+            enabledRaw == true ||
+            enabledRaw == 1 ||
+            enabledRaw.toString().toLowerCase() == 'true' ||
+            enabledRaw.toString().toLowerCase() == 't';
+
+        final featureType = (settings['feature_type'] ?? 'order')
+            .toString()
+            .trim()
+            .toLowerCase();
+
+        if (!enabled) {
+          return const SizedBox.shrink();
+        }
+
+        if (featureType == 'appointment') {
+          return _buildAppointmentsCard();
+        }
+
+        return _buildPreordersCard();
+      },
+    );
+  }
+
   void _openAppointments() {
     Navigator.of(context)
         .push(
@@ -2190,9 +2259,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                           const SizedBox(height: 18),
                           staggered(_buildInviteClientCard()),
                           const SizedBox(height: 16),
-                          staggered(_buildPreordersCard()),
-                          const SizedBox(height: 14),
-                          staggered(_buildAppointmentsCard()),
+                          staggered(_buildClientActionCard()),
                           const SizedBox(height: 14),
                           staggered(_buildTopModulesRow()),
                           const SizedBox(height: 16),

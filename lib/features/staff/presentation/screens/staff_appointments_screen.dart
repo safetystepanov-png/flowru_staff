@@ -40,6 +40,9 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
   bool _loading = true;
   bool _updating = false;
   String? _error;
+  bool _softLoading = false;
+  Map<String, int> _dateCounts = <String, int>{};
+  String _selectedSpecialist = 'all';
 
   DateTime _selectedDate = DateTime.now();
   List<_AppointmentItem> _items = [];
@@ -152,9 +155,13 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
     return response;
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool soft = false}) async {
     setState(() {
-      _loading = true;
+      if (soft) {
+        _softLoading = true;
+      } else {
+        _loading = true;
+      }
       _error = null;
     });
 
@@ -227,7 +234,10 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
               });
 
         _loading = false;
+        _softLoading = false;
       });
+
+      await _loadDateCounts();
     } catch (e) {
       if (!mounted) return;
 
@@ -508,84 +518,424 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
     );
   }
 
-  Widget _hero() {
-    final active = _items
-        .where((item) => item.status != 'cancelled' && item.status != 'no_show')
-        .length;
+  bool _isVisibleDayAppointment(_AppointmentItem item) {
+    return item.status != 'cancelled' &&
+        item.status != 'no_show' &&
+        item.status != 'cancelled_by_client';
+  }
 
-    return _surface(
-      color: Colors.white.withOpacity(0.72),
-      radius: 32,
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          Container(
-            width: 66,
-            height: 66,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: const LinearGradient(
-                colors: [_deep, _mint],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+  int get _dayCount => _items.where(_isVisibleDayAppointment).length;
+
+  bool _isActiveAppointment(_AppointmentItem item) {
+    return item.status == 'new' || item.status == 'confirmed';
+  }
+
+  int get _activeCount => _items.where(_isActiveAppointment).length;
+
+  int get _newCount => _items.where((item) => item.status == 'new').length;
+
+  int get _confirmedCount =>
+      _items.where((item) => item.status == 'confirmed').length;
+
+  String _weekdayShort(DateTime date) {
+    const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    return days[date.weekday - 1];
+  }
+
+  String _dayMonth(DateTime date) {
+    final d = date.day.toString().padLeft(2, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    return '$d.$m';
+  }
+
+  DateTime _dayAt(DateTime date, int hour, int minute) {
+    return DateTime(date.year, date.month, date.day, hour, minute);
+  }
+
+  String _timeRangeLabel(DateTime? start, int durationMinutes) {
+    if (start == null) return 'Время не указано';
+
+    final end = start.add(Duration(minutes: durationMinutes));
+    final sh = start.hour.toString().padLeft(2, '0');
+    final sm = start.minute.toString().padLeft(2, '0');
+    final eh = end.hour.toString().padLeft(2, '0');
+    final em = end.minute.toString().padLeft(2, '0');
+
+    return '$sh:$sm - $eh:$em';
+  }
+
+  String _nextFreeWindowText() {
+    final minDuration = _services.isEmpty
+        ? 30
+        : _services
+              .map((service) => service.durationMinutes)
+              .where((minutes) => minutes > 0)
+              .fold<int>(9999, (prev, value) => value < prev ? value : prev);
+
+    final dayStart = _dayAt(_selectedDate, 10, 0);
+    final dayEnd = _dayAt(_selectedDate, 20, 0);
+
+    final busy =
+        _items
+            .where(_isActiveAppointment)
+            .where((item) => item.appointmentAt != null)
+            .map((item) {
+              final start = item.appointmentAt!;
+              final end = start.add(Duration(minutes: item.durationMinutes));
+              return MapEntry(start, end);
+            })
+            .toList()
+          ..sort((a, b) => a.key.compareTo(b.key));
+
+    DateTime cursor = dayStart;
+
+    for (final interval in busy) {
+      final busyStart = interval.key;
+      final busyEnd = interval.value;
+
+      if (busyEnd.isBefore(dayStart) || busyEnd.isAtSameMomentAs(dayStart)) {
+        continue;
+      }
+
+      if (busyStart.isAfter(dayEnd) || busyStart.isAtSameMomentAs(dayEnd)) {
+        break;
+      }
+
+      final freeEnd = busyStart.isBefore(dayEnd) ? busyStart : dayEnd;
+      final freeMinutes = freeEnd.difference(cursor).inMinutes;
+
+      if (freeMinutes >= minDuration) {
+        return 'Ближайшее свободное окно: ${_timeRangeLabel(cursor, freeMinutes)}';
+      }
+
+      if (busyEnd.isAfter(cursor)) {
+        cursor = busyEnd;
+      }
+    }
+
+    final tailMinutes = dayEnd.difference(cursor).inMinutes;
+    if (tailMinutes >= minDuration) {
+      return 'Ближайшее свободное окно: ${_timeRangeLabel(cursor, tailMinutes)}';
+    }
+
+    return 'Свободных окон под текущие услуги на этот день нет';
+  }
+
+  Widget _summaryPill({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.10),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withOpacity(0.16)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(height: 9),
+            Text(
+              value,
+              style: const TextStyle(
+                color: _ink,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.45,
               ),
             ),
-            child: const Icon(
-              CupertinoIcons.calendar,
-              color: Colors.white,
-              size: 32,
+            const SizedBox(height: 2),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _soft,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+              ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _loadDateCounts() async {
+    try {
+      final token = await _token();
+      final result = <String, int>{};
+
+      for (final date in _dateTabs()) {
+        final dateKey = _dateApi(date);
+        final response = await http.get(
+          Uri.parse(
+            '${AppConfig.baseUrl}/api/v1/staff/appointments?establishment_id=${widget.establishmentId}&date=$dateKey',
           ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.establishmentName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: _ink,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.4,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  active > 0
-                      ? '$active активных записей на день'
-                      : 'На выбранный день активных записей нет',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: _soft,
-                    fontSize: 13.2,
-                    height: 1.25,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        );
+
+        if (response.statusCode != 200) {
+          continue;
+        }
+
+        final decoded = jsonDecode(response.body);
+        if (decoded is! Map) {
+          continue;
+        }
+
+        final rawItems = (decoded['items'] as List?) ?? const [];
+        final count = rawItems.where((raw) {
+          if (raw is! Map) return false;
+          final status = (raw['status'] ?? '').toString();
+          return status != 'cancelled' &&
+              status != 'no_show' &&
+              status != 'cancelled_by_client';
+        }).length;
+
+        if (count > 0) {
+          result[dateKey] = count;
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _dateCounts = result;
+      });
+    } catch (_) {
+      // Счётчики  вспомогательная часть экрана. Если не загрузились,
+      // сам календарь и список записей должны продолжать работать.
+    }
+  }
+
+  List<_AppointmentItem> get _visibleItems {
+    if (_selectedSpecialist == 'all') {
+      return _items;
+    }
+
+    // Задел под мастеров: пока backend не отдаёт master_id,
+    // все существующие записи считаем "без назначенного специалиста".
+    if (_selectedSpecialist == 'unassigned') {
+      return _items;
+    }
+
+    return _items;
+  }
+
+  Widget _specialistFilter() {
+    return SizedBox(
+      height: 46,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        children: [
+          _specialistChip(
+            label: 'Все специалисты',
+            value: 'all',
+            icon: CupertinoIcons.person_2_fill,
+          ),
+          const SizedBox(width: 9),
+          _specialistChip(
+            label: 'Не назначен',
+            value: 'unassigned',
+            icon: CupertinoIcons.person_crop_circle_badge_exclam,
           ),
         ],
       ),
     );
   }
 
-  Widget _dateSelector() {
-    final dates = _dateTabs();
+  Widget _specialistChip({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    final selected = _selectedSpecialist == value;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      clipBehavior: Clip.none,
-      child: Row(
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedSpecialist = value;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? _deep : Colors.white.withOpacity(0.74),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: selected ? _deep : _stroke),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: _deep.withOpacity(0.16),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: selected ? Colors.white : _soft),
+            const SizedBox(width: 7),
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.white : _ink,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _hero() {
+    return _surface(
+      color: Colors.white.withOpacity(0.78),
+      radius: 34,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (int i = 0; i < dates.length; i++) ...[
-            _dateChip(dates[i]),
-            if (i != dates.length - 1) const SizedBox(width: 9),
+          Row(
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [_blue, _mint],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _blue.withOpacity(0.20),
+                      blurRadius: 24,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  CupertinoIcons.calendar_today,
+                  color: Colors.white,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _dateLabel(_selectedDate),
+                      style: const TextStyle(
+                        color: _ink,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.65,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      '${_weekdayShort(_selectedDate)}, ${_dayMonth(_selectedDate)}  рабочее окно 10:00 - 20:00',
+                      style: const TextStyle(
+                        color: _soft,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              _summaryPill(
+                label: 'записей',
+                value: '$_dayCount',
+                icon: CupertinoIcons.person_2_fill,
+                color: _deep,
+              ),
+              const SizedBox(width: 10),
+              _summaryPill(
+                label: 'новых',
+                value: '$_newCount',
+                icon: CupertinoIcons.bell_fill,
+                color: _orange,
+              ),
+              const SizedBox(width: 10),
+              _summaryPill(
+                label: 'подтв.',
+                value: '$_confirmedCount',
+                icon: CupertinoIcons.check_mark_circled_solid,
+                color: _blue,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            decoration: BoxDecoration(
+              color: _mint.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: _mint.withOpacity(0.18)),
+            ),
+            child: Row(
+              children: [
+                const Icon(CupertinoIcons.clock, color: _deep, size: 19),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    _nextFreeWindowText(),
+                    style: const TextStyle(
+                      color: _ink,
+                      fontSize: 13,
+                      height: 1.25,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_services.isEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+              decoration: BoxDecoration(
+                color: _orange.withOpacity(0.11),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: _orange.withOpacity(0.18)),
+              ),
+              child: const Text(
+                'Услуги записи ещё не добавлены. Добавьте услуги в админке, чтобы сотрудники могли записывать клиентов офлайн.',
+                style: TextStyle(
+                  color: _ink,
+                  fontSize: 12.8,
+                  height: 1.28,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
           ],
         ],
       ),
@@ -594,88 +944,178 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
 
   Widget _dateChip(DateTime date) {
     final selected = _dateApi(date) == _dateApi(_selectedDate);
+    final count = _dateCounts[_dateApi(date)] ?? 0;
 
     return GestureDetector(
       onTap: () {
         setState(() {
-          _selectedDate = date;
+          _selectedDate = DateTime(date.year, date.month, date.day);
         });
-        _load();
+        _load(soft: true);
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        decoration: BoxDecoration(
-          gradient: selected
-              ? const LinearGradient(colors: [_deep, _mint])
-              : null,
-          color: selected ? null : Colors.white.withOpacity(0.78),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: selected ? Colors.white.withOpacity(0.40) : _stroke,
-          ),
-        ),
-        child: Text(
-          _dateLabel(date),
-          style: TextStyle(
-            color: selected ? Colors.white : _ink,
-            fontSize: 13.5,
-            fontWeight: FontWeight.w900,
-          ),
+      child: SizedBox(
+        width: 58,
+        height: 76,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                margin: const EdgeInsets.only(right: 6, top: 4, bottom: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 11,
+                ),
+                decoration: BoxDecoration(
+                  gradient: selected
+                      ? const LinearGradient(
+                          colors: [_deep, _mint],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
+                  color: selected ? null : Colors.white.withOpacity(0.72),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: selected ? Colors.white.withOpacity(0.32) : _stroke,
+                  ),
+                  boxShadow: selected
+                      ? [
+                          BoxShadow(
+                            color: _deep.withOpacity(0.18),
+                            blurRadius: 22,
+                            offset: const Offset(0, 10),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _weekdayShort(date),
+                      style: TextStyle(
+                        color: selected
+                            ? Colors.white.withOpacity(0.82)
+                            : _soft,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      date.day.toString(),
+                      style: TextStyle(
+                        color: selected ? Colors.white : _ink,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (count > 0)
+              Positioned(
+                top: -1,
+                right: 1,
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minWidth: 22,
+                    minHeight: 22,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _orange,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _orange.withOpacity(0.34),
+                        blurRadius: 12,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      count > 99 ? '99+' : '$count',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w900,
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _errorBox() {
-    final text = _error?.trim() ?? '';
-    if (text.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: _red.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _red.withOpacity(0.20)),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: _red,
-          fontSize: 13,
-          fontWeight: FontWeight.w800,
-        ),
+  Widget _dateSelector() {
+    return SizedBox(
+      height: 76,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(2, 2, 2, 8),
+        children: [for (final date in _dateTabs()) _dateChip(date)],
       ),
     );
   }
 
   Widget _appointmentsList() {
-    if (_items.isEmpty) {
+    final visibleItems = _visibleItems.where(_isVisibleDayAppointment).toList();
+
+    if (visibleItems.isEmpty) {
       return _surface(
-        radius: 30,
-        color: Colors.white.withOpacity(0.80),
-        child: const Column(
+        radius: 32,
+        color: Colors.white.withOpacity(0.82),
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+        child: Column(
           children: [
-            Icon(CupertinoIcons.calendar_badge_plus, size: 44, color: _soft),
-            SizedBox(height: 12),
-            Text(
-              'Записей пока нет',
-              style: TextStyle(
-                color: _ink,
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
+            Container(
+              width: 62,
+              height: 62,
+              decoration: BoxDecoration(
+                color: _mint.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: const Icon(
+                CupertinoIcons.calendar_badge_plus,
+                size: 34,
+                color: _deep,
               ),
             ),
-            SizedBox(height: 6),
-            Text(
-              'Клиенты смогут записываться онлайн, а сотрудники  добавлять офлайн-записи вручную.',
+            const SizedBox(height: 14),
+            const Text(
+              'На этот день записей нет',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _ink,
+                fontSize: 19,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.35,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Онлайн-записи появятся здесь автоматически. Офлайн-запись можно добавить вручную, если клиент записался в салоне.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: _soft,
                 fontSize: 13,
-                height: 1.3,
-                fontWeight: FontWeight.w700,
+                height: 1.35,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ],
@@ -684,10 +1124,37 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
     }
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (int i = 0; i < _items.length; i++) ...[
-          _appointmentCard(_items[i]),
-          if (i != _items.length - 1) const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Записи дня',
+                  style: TextStyle(
+                    color: _ink,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.45,
+                  ),
+                ),
+              ),
+              Text(
+                '${visibleItems.length}',
+                style: const TextStyle(
+                  color: _soft,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
+        for (int i = 0; i < visibleItems.length; i++) ...[
+          _appointmentCard(visibleItems[i]),
+          if (i != visibleItems.length - 1) const SizedBox(height: 12),
         ],
       ],
     );
@@ -698,9 +1165,14 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
     final serviceTitle = item.serviceTitle.isEmpty
         ? 'Услуга'
         : item.serviceTitle;
+    final clientName = item.clientName.trim().isEmpty
+        ? 'Клиент без имени'
+        : item.clientName;
+    final phone = item.clientPhone.trim();
+    final comment = item.comment.trim();
 
     return _surface(
-      radius: 28,
+      radius: 30,
       color: Colors.white.withOpacity(0.88),
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -709,36 +1181,34 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
           Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 58,
+                height: 58,
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: color.withOpacity(0.18)),
                 ),
-                child: Icon(
-                  CupertinoIcons.calendar_today,
-                  color: color,
-                  size: 24,
-                ),
+                child: Icon(CupertinoIcons.clock_fill, color: color, size: 25),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 13),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      serviceTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      _timeRangeLabel(item.appointmentAt, item.durationMinutes),
                       style: const TextStyle(
                         color: _ink,
-                        fontSize: 16.5,
+                        fontSize: 21,
                         fontWeight: FontWeight.w900,
+                        letterSpacing: -0.55,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${_timeLabel(item.appointmentAt)}  ${item.durationMinutes} мин',
+                      '$serviceTitle  ${item.durationMinutes} мин',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: _soft,
                         fontSize: 13,
@@ -750,12 +1220,13 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
+                  horizontal: 11,
                   vertical: 7,
                 ),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: color.withOpacity(0.18)),
                 ),
                 child: Text(
                   _statusText(item.status),
@@ -768,42 +1239,55 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            item.clientName.isEmpty ? 'Клиент без имени' : item.clientName,
-            style: const TextStyle(
-              color: _ink,
-              fontSize: 15,
-              fontWeight: FontWeight.w900,
+          const SizedBox(height: 15),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: _bg.withOpacity(0.88),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: _stroke.withOpacity(0.9)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _infoLine(CupertinoIcons.person_fill, clientName),
+                if (phone.isNotEmpty) ...[
+                  const SizedBox(height: 9),
+                  _infoLine(CupertinoIcons.phone_fill, phone),
+                ],
+                if (comment.isNotEmpty) ...[
+                  const SizedBox(height: 9),
+                  _infoLine(CupertinoIcons.chat_bubble_text_fill, comment),
+                ],
+              ],
             ),
           ),
-          if (item.clientPhone.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              item.clientPhone,
-              style: const TextStyle(
-                color: _soft,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-          if (item.comment.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(
-              item.comment,
-              style: const TextStyle(
-                color: _soft,
-                fontSize: 13,
-                height: 1.25,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
           const SizedBox(height: 14),
           _statusActions(item),
         ],
       ),
+    );
+  }
+
+  Widget _infoLine(IconData icon, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: _soft, size: 16),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: _ink,
+              fontSize: 13.5,
+              height: 1.25,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -876,6 +1360,40 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _errorBox() {
+    if (_error == null || _error!.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return _surface(
+      radius: 24,
+      color: _red.withOpacity(0.10),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            CupertinoIcons.exclamationmark_triangle_fill,
+            color: _red,
+            size: 22,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _error!,
+              style: const TextStyle(
+                color: _ink,
+                fontSize: 13,
+                height: 1.30,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -968,6 +1486,41 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
                         if (_error != null) const SizedBox(height: 14),
                         _addOfflineButton(),
                         const SizedBox(height: 16),
+                        if (_softLoading) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _mint.withOpacity(0.10),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: _mint.withOpacity(0.16),
+                              ),
+                            ),
+                            child: const Row(
+                              children: [
+                                SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CupertinoActivityIndicator(),
+                                ),
+                                SizedBox(width: 9),
+                                Text(
+                                  'Обновляем день',
+                                  style: TextStyle(
+                                    color: _soft,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         _appointmentsList(),
                       ],
                     ),
