@@ -42,7 +42,10 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
   String? _error;
   bool _softLoading = false;
   Map<String, int> _dateCounts = <String, int>{};
-  String _selectedSpecialist = 'all';
+
+  int? _selectedStaffId;
+  bool _showUnassignedOnly = false;
+  List<_AppointmentStaff> _staffMembers = [];
 
   DateTime _selectedDate = DateTime.now();
   List<_AppointmentItem> _items = [];
@@ -181,9 +184,15 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
         );
       }
 
+      final staffResponse = await _getWithRefresh(
+        Uri.parse(
+          '${AppConfig.baseUrl}/api/v1/staff/appointment-staff?establishment_id=${widget.establishmentId}&include_inactive=false&date=${_dateApi(_selectedDate)}',
+        ),
+      );
+
       final appointmentsResponse = await _getWithRefresh(
         Uri.parse(
-          '${AppConfig.baseUrl}/api/v1/staff/appointments?establishment_id=${widget.establishmentId}&date=${_dateApi(_selectedDate)}',
+          '${AppConfig.baseUrl}/api/v1/staff/appointments?establishment_id=${widget.establishmentId}&date=${_dateApi(_selectedDate)}${_selectedStaffQuery}',
         ),
       );
 
@@ -198,10 +207,20 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
 
       final servicesDecoded =
           jsonDecode(servicesResponse.body) as Map<String, dynamic>;
+
+      Map<String, dynamic> staffDecoded = <String, dynamic>{};
+      if (staffResponse.statusCode == 200) {
+        final decodedStaff = jsonDecode(staffResponse.body);
+        if (decodedStaff is Map) {
+          staffDecoded = Map<String, dynamic>.from(decodedStaff as Map);
+        }
+      }
+
       final appointmentsDecoded =
           jsonDecode(appointmentsResponse.body) as Map<String, dynamic>;
 
       final rawServices = (servicesDecoded['items'] as List?) ?? const [];
+      final rawStaff = (staffDecoded['items'] as List?) ?? const [];
       final rawItems = (appointmentsDecoded['items'] as List?) ?? const [];
 
       if (!mounted) return;
@@ -214,6 +233,15 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
               ),
             )
             .where((service) => service.id > 0)
+            .toList();
+
+        _staffMembers = rawStaff
+            .map(
+              (e) => _AppointmentStaff.fromJson(
+                (e as Map).cast<String, dynamic>(),
+              ),
+            )
+            .where((staff) => staff.id > 0)
             .toList();
 
         _items =
@@ -347,6 +375,7 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
         body: {
           'establishment_id': widget.establishmentId,
           'service_id': draft.service.id,
+          'staff_id': _selectedStaffId,
           'client_name': draft.clientName,
           'client_phone': draft.clientPhone,
           'appointment_at': draft.appointmentAt.toIso8601String(),
@@ -452,6 +481,226 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
       default:
         return _soft;
     }
+  }
+
+  String get _selectedStaffQuery {
+    if (_selectedStaffId == null) return '';
+    return '&staff_id=$_selectedStaffId';
+  }
+
+  String get _selectedStaffLabel {
+    if (_showUnassignedOnly) return 'Без специалиста';
+    if (_selectedStaffId == null) return 'Все специалисты';
+
+    for (final staff in _staffMembers) {
+      if (staff.id == _selectedStaffId) {
+        return staff.name.trim().isEmpty ? 'Специалист' : staff.name.trim();
+      }
+    }
+
+    return 'Специалист';
+  }
+
+  int _staffAppointmentsCount(int? staffId) {
+    return _items.where((item) {
+      if (!_isVisibleDayAppointment(item)) return false;
+      if (staffId == null) return true;
+      return item.staffId == staffId;
+    }).length;
+  }
+
+  Future<void> _openStaffFilterSheet() async {
+    final result = await showModalBottomSheet<int?>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final bottom = MediaQuery.of(context).viewInsets.bottom;
+
+        Widget item({
+          required String title,
+          required String subtitle,
+          required bool selected,
+          required VoidCallback onTap,
+          int? count,
+        }) {
+          return GestureDetector(
+            onTap: onTap,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: selected ? _mint.withOpacity(0.12) : Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: selected ? _mint : _stroke,
+                  width: selected ? 1.6 : 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: selected ? _mint : _bg,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      selected
+                          ? CupertinoIcons.checkmark_alt
+                          : CupertinoIcons.person_crop_circle,
+                      color: selected ? Colors.white : _deep,
+                      size: 21,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: _ink,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: _soft,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (count != null && count > 0) ...[
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _orange.withOpacity(0.14),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '$count',
+                        style: const TextStyle(
+                          color: _orange,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        }
+
+        return Padding(
+          padding: EdgeInsets.fromLTRB(14, 0, 14, bottom + 14),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7FBFC),
+              borderRadius: BorderRadius.circular(32),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x26062E36),
+                  blurRadius: 30,
+                  offset: Offset(0, 16),
+                ),
+              ],
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: _stroke,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: const [
+                      Expanded(
+                        child: Text(
+                          'Специалист',
+                          style: TextStyle(
+                            color: _ink,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  item(
+                    title: 'Все специалисты',
+                    subtitle: 'Показывать все записи дня',
+                    selected: _selectedStaffId == null && !_showUnassignedOnly,
+                    count: _staffAppointmentsCount(null),
+                    onTap: () => Navigator.of(context).pop(null),
+                  ),
+                  item(
+                    title: 'Без специалиста',
+                    subtitle: 'Записи, где мастер ещё не назначен',
+                    selected: _showUnassignedOnly,
+                    onTap: () => Navigator.of(context).pop(-1),
+                  ),
+                  ..._staffMembers.map((staff) {
+                    return item(
+                      title: staff.name,
+                      subtitle: staff.phone.trim().isEmpty
+                          ? 'Активный специалист'
+                          : staff.phone.trim(),
+                      selected:
+                          !_showUnassignedOnly && _selectedStaffId == staff.id,
+                      count: staff.appointmentsCount,
+                      onTap: () => Navigator.of(context).pop(staff.id),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      if (result == -1) {
+        _selectedStaffId = null;
+        _showUnassignedOnly = true;
+      } else {
+        _selectedStaffId = result;
+        _showUnassignedOnly = false;
+      }
+    });
+
+    await _load(soft: true);
   }
 
   List<DateTime> _dateTabs() {
@@ -675,7 +924,7 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
         final dateKey = _dateApi(date);
         final response = await http.get(
           Uri.parse(
-            '${AppConfig.baseUrl}/api/v1/staff/appointments?establishment_id=${widget.establishmentId}&date=$dateKey',
+            '${AppConfig.baseUrl}/api/v1/staff/appointments?establishment_id=${widget.establishmentId}&date=$dateKey${_selectedStaffQuery}',
           ),
           headers: {
             'Authorization': 'Bearer $token',
@@ -717,84 +966,92 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
   }
 
   List<_AppointmentItem> get _visibleItems {
-    if (_selectedSpecialist == 'all') {
-      return _items;
+    if (_showUnassignedOnly) {
+      return _items.where((item) => item.staffId == null).toList();
     }
 
-    // Задел под мастеров: пока backend не отдаёт master_id,
-    // все существующие записи считаем "без назначенного специалиста".
-    if (_selectedSpecialist == 'unassigned') {
-      return _items;
+    if (_selectedStaffId != null) {
+      return _items.where((item) => item.staffId == _selectedStaffId).toList();
     }
 
     return _items;
   }
 
   Widget _specialistFilter() {
-    return SizedBox(
-      height: 46,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        children: [
-          _specialistChip(
-            label: 'Все специалисты',
-            value: 'all',
-            icon: CupertinoIcons.person_2_fill,
-          ),
-          const SizedBox(width: 9),
-          _specialistChip(
-            label: 'Не назначен',
-            value: 'unassigned',
-            icon: CupertinoIcons.person_crop_circle_badge_exclam,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _specialistChip({
-    required String label,
-    required String value,
-    required IconData icon,
-  }) {
-    final selected = _selectedSpecialist == value;
+    final hasSelection = _selectedStaffId != null || _showUnassignedOnly;
 
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedSpecialist = value;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      onTap: _openStaffFilterSheet,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: selected ? _deep : Colors.white.withOpacity(0.74),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: selected ? _deep : _stroke),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: _deep.withOpacity(0.16),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ]
-              : null,
+          color: Colors.white.withOpacity(0.82),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: hasSelection ? _mint.withOpacity(0.65) : _stroke,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x12062E36),
+              blurRadius: 18,
+              offset: Offset(0, 8),
+            ),
+          ],
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: selected ? Colors.white : _soft),
-            const SizedBox(width: 7),
-            Text(
-              label,
-              style: TextStyle(
-                color: selected ? Colors.white : _ink,
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [_mint, _deep],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
               ),
+              child: const Icon(
+                CupertinoIcons.person_crop_circle,
+                color: Colors.white,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _selectedStaffLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: _ink,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    _staffMembers.isEmpty
+                        ? 'Специалисты ещё не настроены'
+                        : 'Нажмите, чтобы сменить фильтр',
+                    style: const TextStyle(
+                      color: _soft,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Icon(
+              CupertinoIcons.chevron_down,
+              color: hasSelection ? _mint : _soft,
+              size: 18,
             ),
           ],
         ),
@@ -1170,6 +1427,10 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
         : item.clientName;
     final phone = item.clientPhone.trim();
     final comment = item.comment.trim();
+    final staffName = item.staffName.trim();
+    final serviceMeta = staffName.isEmpty
+        ? '$serviceTitle  ${item.durationMinutes} мин'
+        : '$serviceTitle  ${item.durationMinutes} мин  $staffName';
 
     return _surface(
       radius: 30,
@@ -1206,7 +1467,7 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '$serviceTitle  ${item.durationMinutes} мин',
+                      serviceMeta,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -1481,6 +1742,8 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
                         _hero(),
                         const SizedBox(height: 14),
                         _dateSelector(),
+                        const SizedBox(height: 14),
+                        _specialistFilter(),
                         const SizedBox(height: 14),
                         _errorBox(),
                         if (_error != null) const SizedBox(height: 14),
@@ -1845,6 +2108,39 @@ class _OfflineAppointmentDraft {
   });
 }
 
+class _AppointmentStaff {
+  final int id;
+  final String name;
+  final String phone;
+  final bool isActive;
+  final int sortOrder;
+  final int appointmentsCount;
+
+  const _AppointmentStaff({
+    required this.id,
+    required this.name,
+    required this.phone,
+    required this.isActive,
+    required this.sortOrder,
+    required this.appointmentsCount,
+  });
+
+  factory _AppointmentStaff.fromJson(Map<String, dynamic> json) {
+    return _AppointmentStaff(
+      id: _parseInt(json['id']) ?? 0,
+      name: (json['name'] ?? 'Специалист').toString(),
+      phone: (json['phone'] ?? '').toString(),
+      isActive:
+          json['is_active'] == true ||
+          json['is_active'] == 1 ||
+          json['is_active'].toString().toLowerCase() == 'true' ||
+          json['is_active'].toString().toLowerCase() == 't',
+      sortOrder: _parseInt(json['sort_order']) ?? 100,
+      appointmentsCount: _parseInt(json['appointments_count']) ?? 0,
+    );
+  }
+}
+
 class _AppointmentService {
   final int id;
   final String title;
@@ -1872,6 +2168,8 @@ class _AppointmentItem {
   final int id;
   final int establishmentId;
   final int serviceId;
+  final int? staffId;
+  final String staffName;
   final String serviceTitle;
   final String clientName;
   final String clientPhone;
@@ -1884,6 +2182,8 @@ class _AppointmentItem {
     required this.id,
     required this.establishmentId,
     required this.serviceId,
+    required this.staffId,
+    required this.staffName,
     required this.serviceTitle,
     required this.clientName,
     required this.clientPhone,
@@ -1898,6 +2198,8 @@ class _AppointmentItem {
       id: _parseInt(json['id']) ?? 0,
       establishmentId: _parseInt(json['establishment_id']) ?? 0,
       serviceId: _parseInt(json['service_id']) ?? 0,
+      staffId: _parseInt(json['staff_id']),
+      staffName: (json['staff_name'] ?? '').toString(),
       serviceTitle:
           (json['service_title'] ?? json['service_name'] ?? json['title'] ?? '')
               .toString(),
