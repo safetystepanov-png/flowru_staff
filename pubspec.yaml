@@ -2,7 +2,7 @@
 description: "Flowru Business"
 publish_to: 'none'
 
-version: 1.0.7+50
+version: 1.0.8+51
 
 environment:
   sdk: ^3.11.4

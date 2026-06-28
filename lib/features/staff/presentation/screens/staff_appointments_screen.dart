@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../auth/data/auth_storage.dart';
@@ -298,8 +299,174 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
     return 'Не удалось выполнить действие';
   }
 
+  Future<double?> _askCompletionAmount(_AppointmentItem item) async {
+    final controller = TextEditingController(
+      text: item.amountTotal != null && item.amountTotal! > 0
+          ? _moneyText(item.amountTotal!)
+          : '',
+    );
+
+    final result = await showModalBottomSheet<double>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 14,
+            right: 14,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 14,
+            top: 14,
+          ),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.14),
+                  blurRadius: 34,
+                  offset: const Offset(0, 16),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: _green.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: const Icon(Icons.payments_rounded, color: _green),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Завершить запись',
+                            style: TextStyle(
+                              color: _ink,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Введите сумму чека для начисления бонусов',
+                            style: TextStyle(
+                              color: _soft,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
+                  ],
+                  decoration: InputDecoration(
+                    labelText: 'Сумма чека',
+                    hintText: 'Например, 500',
+                    suffixText: '₽',
+                    filled: true,
+                    fillColor: const Color(0xFFF5F8FA),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onSubmitted: (_) {
+                    final raw = controller.text.trim().replaceAll(',', '.');
+                    final value = double.tryParse(raw) ?? 0;
+                    if (value > 0) Navigator.of(sheetContext).pop(value);
+                  },
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(sheetContext).pop(),
+                        child: const Text('Отмена'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _green,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        onPressed: () {
+                          final raw = controller.text.trim().replaceAll(
+                            ',',
+                            '.',
+                          );
+                          final value = double.tryParse(raw) ?? 0;
+                          if (value <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Введите сумму чека больше 0'),
+                              ),
+                            );
+                            return;
+                          }
+                          Navigator.of(sheetContext).pop(value);
+                        },
+                        child: const Text(
+                          'Завершить',
+                          style: TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    controller.dispose();
+    return result;
+  }
+
   Future<void> _changeStatus(_AppointmentItem item, String status) async {
     if (_updating) return;
+
+    double? amountTotal;
+    if (status == 'completed') {
+      amountTotal = await _askCompletionAmount(item);
+      if (amountTotal == null || amountTotal <= 0) {
+        return;
+      }
+    }
 
     setState(() {
       _updating = true;
@@ -307,11 +474,20 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
     });
 
     try {
+      final body = <String, dynamic>{
+        'establishment_id': widget.establishmentId,
+        'status': status,
+      };
+
+      if (status == 'completed') {
+        body['amount_total'] = amountTotal;
+      }
+
       final response = await _patchWithRefresh(
         Uri.parse(
           '${AppConfig.baseUrl}/api/v1/staff/appointments/${item.id}/status',
         ),
-        body: {'establishment_id': widget.establishmentId, 'status': status},
+        body: body,
       );
 
       if (response.statusCode != 200) {
@@ -320,7 +496,31 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
         );
       }
 
+      int? bonusAccrued;
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map) {
+          final rawBonus =
+              decoded['bonus_accrued'] ??
+              (decoded['accrual'] is Map
+                  ? (decoded['accrual'] as Map)['added_points']
+                  : null);
+          bonusAccrued = _parseInt(rawBonus);
+        }
+      } catch (_) {}
+
       await _load();
+
+      if (!mounted) return;
+
+      if (status == 'completed') {
+        final msg = bonusAccrued != null && bonusAccrued > 0
+            ? 'Запись завершена. Начислено ${_bonusText(bonusAccrued)} бонусов'
+            : 'Запись завершена';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msg)));
+      }
     } catch (e) {
       if (!mounted) return;
 
@@ -328,11 +528,11 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
         _error = e.toString().replaceFirst('Exception: ', '').trim();
       });
     } finally {
-      if (mounted) {
-        setState(() {
-          _updating = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        _updating = false;
+      });
     }
   }
 
@@ -340,27 +540,25 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
     if (_services.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Сначала добавьте услуги записи в админке.'),
+          content: Text('Сначала добавьте услуги записи в админке'),
         ),
       );
       return;
     }
 
-    final result = await showModalBottomSheet<_OfflineAppointmentDraft>(
+    final draft = await showModalBottomSheet<_OfflineAppointmentDraft>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) {
-        return _OfflineAppointmentSheet(
-          services: _services,
-          initialDate: _selectedDate,
-        );
-      },
+      builder: (_) => _OfflineAppointmentSheet(
+        services: _services,
+        initialDate: _selectedDate,
+      ),
     );
 
-    if (result == null) return;
+    if (draft == null) return;
 
-    await _createOfflineAppointment(result);
+    await _createOfflineAppointment(draft);
   }
 
   Future<void> _createOfflineAppointment(_OfflineAppointmentDraft draft) async {
@@ -448,6 +646,22 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
     final hh = local.hour.toString().padLeft(2, '0');
     final mm = local.minute.toString().padLeft(2, '0');
     return '$hh:$mm';
+  }
+
+  String _moneyText(num value) {
+    final rounded = value.roundToDouble();
+    if ((value - rounded).abs() < 0.01) {
+      return rounded.toInt().toString();
+    }
+    return value.toStringAsFixed(2).replaceAll('.', ',');
+  }
+
+  String _bonusText(num value) {
+    final rounded = value.roundToDouble();
+    if ((value - rounded).abs() < 0.01) {
+      return rounded.toInt().toString();
+    }
+    return value.toStringAsFixed(2).replaceAll('.', ',');
   }
 
   String _statusText(String status) {
@@ -918,40 +1132,44 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
   Future<void> _loadDateCounts() async {
     try {
       final token = await _token();
+      final tabs = _dateTabs();
+      if (tabs.isEmpty) return;
+
+      final dateFrom = _dateApi(tabs.first);
+      final dateTo = _dateApi(tabs.last);
+
+      final response = await http.get(
+        Uri.parse(
+          '${AppConfig.baseUrl}/api/v1/staff/appointments-counts?establishment_id=${widget.establishmentId}&date_from=$dateFrom&date_to=$dateTo${_selectedStaffQuery}',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        return;
+      }
+
+      final decoded = jsonDecode(response.body);
       final result = <String, int>{};
 
-      for (final date in _dateTabs()) {
-        final dateKey = _dateApi(date);
-        final response = await http.get(
-          Uri.parse(
-            '${AppConfig.baseUrl}/api/v1/staff/appointments?establishment_id=${widget.establishmentId}&date=$dateKey${_selectedStaffQuery}',
-          ),
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Accept': 'application/json',
-          },
-        );
-
-        if (response.statusCode != 200) {
-          continue;
+      if (decoded is Map && decoded['counts'] is Map) {
+        final counts = Map<String, dynamic>.from(decoded['counts'] as Map);
+        for (final entry in counts.entries) {
+          final value = entry.value;
+          result[entry.key] = value is int
+              ? value
+              : int.tryParse(value.toString()) ?? 0;
         }
-
-        final decoded = jsonDecode(response.body);
-        if (decoded is! Map) {
-          continue;
-        }
-
-        final rawItems = (decoded['items'] as List?) ?? const [];
-        final count = rawItems.where((raw) {
-          if (raw is! Map) return false;
-          final status = (raw['status'] ?? '').toString();
-          return status != 'cancelled' &&
-              status != 'no_show' &&
-              status != 'cancelled_by_client';
-        }).length;
-
-        if (count > 0) {
-          result[dateKey] = count;
+      } else if (decoded is Map && decoded['items'] is List) {
+        for (final raw in decoded['items'] as List) {
+          if (raw is! Map) continue;
+          final item = Map<String, dynamic>.from(raw as Map);
+          final key = item['date']?.toString() ?? '';
+          if (key.isEmpty) continue;
+          result[key] = int.tryParse((item['count'] ?? 0).toString()) ?? 0;
         }
       }
 
@@ -960,8 +1178,7 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
         _dateCounts = result;
       });
     } catch (_) {
-      // Счётчики  вспомогательная часть экрана. Если не загрузились,
-      // сам календарь и список записей должны продолжать работать.
+      // Счётчики дат не должны ломать экран записи.
     }
   }
 
@@ -2177,6 +2394,10 @@ class _AppointmentItem {
   final String comment;
   final int durationMinutes;
   final DateTime? appointmentAt;
+  final double? amountTotal;
+  final double? bonusAccrued;
+  final int? loyaltyOperationId;
+  final String accrualError;
 
   const _AppointmentItem({
     required this.id,
@@ -2191,6 +2412,10 @@ class _AppointmentItem {
     required this.comment,
     required this.durationMinutes,
     required this.appointmentAt,
+    required this.amountTotal,
+    required this.bonusAccrued,
+    required this.loyaltyOperationId,
+    required this.accrualError,
   });
 
   factory _AppointmentItem.fromJson(Map<String, dynamic> json) {
@@ -2209,6 +2434,10 @@ class _AppointmentItem {
       comment: (json['comment'] ?? '').toString(),
       durationMinutes: _parseInt(json['duration_minutes']) ?? 60,
       appointmentAt: _parseDateTime(json['appointment_at']),
+      amountTotal: _parseDouble(json['amount_total']),
+      bonusAccrued: _parseDouble(json['bonus_accrued']),
+      loyaltyOperationId: _parseInt(json['loyalty_operation_id']),
+      accrualError: (json['accrual_error'] ?? '').toString(),
     );
   }
 }
