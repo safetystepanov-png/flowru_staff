@@ -12,7 +12,7 @@ class ChatCubit extends Cubit<ChatState> {
   String? currentUserId;
 
   ChatCubit({required this.repository, required this.establishmentId})
-      : super(ChatState.initial());
+    : super(ChatState.initial());
 
   // Загрузка первой страницы сообщений (или обновление)
   Future<void> loadMessages({bool silent = false, String? userId}) async {
@@ -20,15 +20,22 @@ class ChatCubit extends Cubit<ChatState> {
     if (!silent) emit(state.copyWith(status: ChatStatus.loading));
     try {
       // Загружаем первую страницу, limit = 30
-      final msgs = await repository.getMessages(establishmentId, page: 1, limit: 30);
-      emit(state.copyWith(
-        status: ChatStatus.success,
-        messages: msgs,
-        error: null,
-        currentPage: 1,
-        hasMore: msgs.length >= 30, // если пришло 30 сообщений, возможно есть ещё
-        isLoadingMore: false,
-      ));
+      final msgs = await repository.getMessages(
+        establishmentId,
+        page: 1,
+        limit: 30,
+      );
+      emit(
+        state.copyWith(
+          status: ChatStatus.success,
+          messages: msgs,
+          error: null,
+          currentPage: 1,
+          hasMore:
+              msgs.length >= 30, // если пришло 30 сообщений, возможно есть ещё
+          isLoadingMore: false,
+        ),
+      );
     } catch (e) {
       emit(state.copyWith(status: ChatStatus.failure, error: e.toString()));
     }
@@ -52,18 +59,17 @@ class ChatCubit extends Cubit<ChatState> {
 
       final allMessages = [...state.messages, ...newMessages];
 
-      emit(state.copyWith(
-        messages: allMessages,
-        currentPage: nextPage,
-        hasMore: newMessages.length >= 30,
-        isLoadingMore: false,
-        error: null,
-      ));
+      emit(
+        state.copyWith(
+          messages: allMessages,
+          currentPage: nextPage,
+          hasMore: newMessages.length >= 30,
+          isLoadingMore: false,
+          error: null,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        isLoadingMore: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoadingMore: false, error: e.toString()));
     }
   }
 
@@ -97,11 +103,17 @@ class ChatCubit extends Cubit<ChatState> {
     emit(state.copyWith(messages: newMessages, replyingToMessageId: null));
 
     try {
-      await repository.sendTextMessage(establishmentId, text, replyToId: replyToId);
+      await repository.sendTextMessage(
+        establishmentId,
+        text,
+        replyToId: replyToId,
+      );
       // После успешной отправки перезагружаем чат, чтобы получить реальное сообщение с сервера
       await loadMessages(silent: true);
     } catch (e) {
-      final withoutOptimistic = state.messages.where((m) => m.id != optimisticId).toList();
+      final withoutOptimistic = state.messages
+          .where((m) => m.id != optimisticId)
+          .toList();
       emit(state.copyWith(messages: withoutOptimistic, error: e.toString()));
     }
   }

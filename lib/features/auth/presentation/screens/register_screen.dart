@@ -72,15 +72,10 @@ class _RegisterScreenState extends State<RegisterScreen>
       curve: Curves.easeOutCubic,
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.055),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _introController,
-        curve: Curves.easeOutCubic,
-      ),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.055), end: Offset.zero).animate(
+          CurvedAnimation(parent: _introController, curve: Curves.easeOutCubic),
+        );
 
     _introController.forward();
   }
@@ -115,10 +110,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       ),
       filled: true,
       fillColor: Colors.white.withOpacity(0.92),
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 18,
-        vertical: 18,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
         borderSide: const BorderSide(color: Color(0xFFE7EEF0)),
@@ -129,24 +121,15 @@ class _RegisterScreenState extends State<RegisterScreen>
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(
-          color: kRegisterViolet,
-          width: 1.4,
-        ),
+        borderSide: const BorderSide(color: kRegisterViolet, width: 1.4),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(
-          color: Color(0xFFE85B63),
-          width: 1.2,
-        ),
+        borderSide: const BorderSide(color: Color(0xFFE85B63), width: 1.2),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(
-          color: Color(0xFFE85B63),
-          width: 1.4,
-        ),
+        borderSide: const BorderSide(color: Color(0xFFE85B63), width: 1.4),
       ),
     );
   }
@@ -329,10 +312,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   Widget _topBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 7,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
         gradient: const LinearGradient(
@@ -395,11 +375,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               ],
             ),
           ),
-          Image.asset(
-            'assets/images/flowru_logo.png',
-            width: 54,
-            height: 54,
-          ),
+          Image.asset('assets/images/flowru_logo.png', width: 54, height: 54),
         ],
       ),
     );
@@ -433,10 +409,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(34),
               gradient: LinearGradient(
-                colors: [
-                  kRegisterCardStrong,
-                  kRegisterCard,
-                ],
+                colors: [kRegisterCardStrong, kRegisterCard],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -519,10 +492,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                     const SizedBox(height: 14),
                     TextField(
                       controller: _fullNameController,
-                      decoration: _inputDecoration(
-                        'Имя',
-                        hint: 'Иван',
-                      ),
+                      decoration: _inputDecoration('Имя', hint: 'Иван'),
                     ),
                     const SizedBox(height: 14),
                     TextField(
@@ -552,7 +522,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                         suffixIcon: IconButton(
                           onPressed: () {
                             setState(
-                              () => _showPasswordConfirm = !_showPasswordConfirm,
+                              () =>
+                                  _showPasswordConfirm = !_showPasswordConfirm,
                             );
                           },
                           icon: Icon(
@@ -647,9 +618,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         foregroundColor: Colors.white,
         title: const Text(
           'Первый вход',
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w900),
         ),
         systemOverlayStyle: SystemUiOverlayStyle.light,
       ),

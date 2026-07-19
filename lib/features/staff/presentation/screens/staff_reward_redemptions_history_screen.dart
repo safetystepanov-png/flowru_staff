@@ -1,4 +1,4 @@
-﻿import 'package:flutter/cupertino.dart';
+import 'package:flutter/cupertino.dart';
 
 class StaffRewardRedemptionsHistoryScreen extends StatelessWidget {
   final int establishmentId;
@@ -20,9 +20,7 @@ class StaffRewardRedemptionsHistoryScreen extends StatelessWidget {
       navigationBar: CupertinoNavigationBar(
         middle: Text('История наград отключена'),
       ),
-      child: Center(
-        child: Text('Раздел наград временно отключен'),
-      ),
+      child: Center(child: Text('Раздел наград временно отключен')),
     );
   }
 }

@@ -202,10 +202,7 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
         .then((_) => _load());
   }
 
-  Widget _stagger({
-    required int index,
-    required Widget child,
-  }) {
+  Widget _stagger({required int index, required Widget child}) {
     final start = (index * 0.08).clamp(0.0, 0.82);
     final end = (start + 0.24).clamp(0.0, 1.0);
 
@@ -223,10 +220,7 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
           opacity: t,
           child: Transform.translate(
             offset: Offset(0, 24 * (1 - t)),
-            child: Transform.scale(
-              scale: 0.985 + (0.015 * t),
-              child: child,
-            ),
+            child: Transform.scale(scale: 0.985 + (0.015 * t), child: child),
           ),
         );
       },
@@ -351,10 +345,7 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
     );
   }
 
-  Widget _topIconButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
+  Widget _topIconButton({required IconData icon, required VoidCallback onTap}) {
     return _Pressable(
       onTap: onTap,
       borderRadius: 18,
@@ -377,11 +368,7 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
                 ),
               ],
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 21,
-            ),
+            child: Icon(icon, color: Colors.white, size: 21),
           ),
         ),
       ),
@@ -394,10 +381,7 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
         gradient: const LinearGradient(
-          colors: [
-            Color(0x1FFFFFFF),
-            Color(0x14FFFFFF),
-          ],
+          colors: [Color(0x1FFFFFFF), Color(0x14FFFFFF)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -644,10 +628,7 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
       children: item.selectedDays
           .map(
             (day) => Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 11,
-                vertical: 8,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(999),
                 color: kOwnerReqBlue.withOpacity(0.10),
@@ -671,8 +652,8 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
     final isSwap = item.isSwap;
     final details = isSwap
         ? (item.reason?.trim().isNotEmpty == true
-            ? item.reason!.trim()
-            : 'Без комментария')
+              ? item.reason!.trim()
+              : 'Без комментария')
         : null;
 
     return _Pressable(
@@ -709,8 +690,10 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(999),
                     color: Colors.white.withOpacity(0.86),
@@ -821,9 +804,7 @@ class _OwnerRequestsScreenState extends State<OwnerRequestsScreen>
                     ),
                     child: const Text(
                       'Отклонить',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w900),
                     ),
                   ),
                 ),
@@ -1094,10 +1075,7 @@ class _GlassCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(radius),
             gradient: const LinearGradient(
-              colors: [
-                Color(0xE8FFFFFF),
-                Color(0xCCFFFFFF),
-              ],
+              colors: [Color(0xE8FFFFFF), Color(0xCCFFFFFF)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -1321,11 +1299,7 @@ class _FloatingGlyph extends StatelessWidget {
                 end: Alignment.bottomRight,
               ),
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: iconSize,
-            ),
+            child: Icon(icon, color: Colors.white, size: iconSize),
           ),
           Positioned(
             top: size * 0.11,

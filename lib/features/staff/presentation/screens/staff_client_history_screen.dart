@@ -10,7 +10,6 @@ import 'package:http/http.dart' as http;
 import '../../../auth/data/auth_storage.dart';
 import '../../../../core/config/app_config.dart';
 
-
 String flowruStaffNormalizeOperationType(String type) {
   final value = type.trim().toLowerCase();
 
@@ -51,7 +50,6 @@ String flowruStaffNormalizeOperationType(String type) {
       return type.trim();
   }
 }
-
 
 const Color kClientHistoryMintTop = Color(0xFF0CB7B3);
 const Color kClientHistoryMintMid = Color(0xFF08A9AB);
@@ -191,10 +189,7 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
     }
   }
 
-  Widget _stagger({
-    required int index,
-    required Widget child,
-  }) {
+  Widget _stagger({required int index, required Widget child}) {
     final start = (index * 0.08).clamp(0.0, 0.82);
     final end = (start + 0.24).clamp(0.0, 1.0);
 
@@ -367,11 +362,9 @@ class _StaffClientHistoryScreenState extends State<StaffClientHistoryScreen>
     }
   }
 
-  
-String _typeLabel(String type) {
+  String _typeLabel(String type) {
     return flowruStaffNormalizeOperationType(type);
   }
-
 
   String _formatDate(String value) {
     if (value.isEmpty) return '';
@@ -433,10 +426,7 @@ String _typeLabel(String type) {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _HistoryGlyph(
-            icon: _typeIcon(item.operationType),
-            color: color,
-          ),
+          _HistoryGlyph(icon: _typeIcon(item.operationType), color: color),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -497,10 +487,7 @@ String _typeLabel(String type) {
         elevation: 0,
         title: const Text(
           'История клиента',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         systemOverlayStyle: SystemUiOverlayStyle.light,
@@ -536,7 +523,8 @@ String _typeLabel(String type) {
                             _stagger(
                               index: 0,
                               child: _stateCard(
-                                icon: CupertinoIcons.exclamationmark_circle_fill,
+                                icon:
+                                    CupertinoIcons.exclamationmark_circle_fill,
                                 title: 'Ошибка',
                                 subtitle: _error!,
                               ),
@@ -593,10 +581,7 @@ class _GlassCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(radius),
             gradient: LinearGradient(
-              colors: [
-                kClientHistoryCardStrong,
-                kClientHistoryCard,
-              ],
+              colors: [kClientHistoryCardStrong, kClientHistoryCard],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -620,10 +605,7 @@ class _HistoryGlyph extends StatelessWidget {
   final IconData icon;
   final Color color;
 
-  const _HistoryGlyph({
-    required this.icon,
-    required this.color,
-  });
+  const _HistoryGlyph({required this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -639,10 +621,7 @@ class _HistoryGlyph extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: [
-                  color.withOpacity(0.22),
-                  color.withOpacity(0.10),
-                ],
+                colors: [color.withOpacity(0.22), color.withOpacity(0.10)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -662,11 +641,7 @@ class _HistoryGlyph extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 22,
-            ),
+            child: Icon(icon, color: color, size: 22),
           ),
         ],
       ),
@@ -677,9 +652,7 @@ class _HistoryGlyph extends StatelessWidget {
 class _EmptyOrb extends StatelessWidget {
   final IconData icon;
 
-  const _EmptyOrb({
-    required this.icon,
-  });
+  const _EmptyOrb({required this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -711,11 +684,7 @@ class _EmptyOrb extends StatelessWidget {
               shape: BoxShape.circle,
               color: Colors.white.withOpacity(0.92),
             ),
-            child: Icon(
-              icon,
-              color: kClientHistoryInkSoft,
-              size: 28,
-            ),
+            child: Icon(icon, color: kClientHistoryInkSoft, size: 28),
           ),
         ],
       ),
@@ -747,8 +716,9 @@ class _HistoryItem {
 
     return _HistoryItem(
       id: json['id']?.toString() ?? '',
-      operationType:
-          flowruStaffNormalizeOperationType(json['operation_type']?.toString() ?? json['type']?.toString() ?? ''),
+      operationType: flowruStaffNormalizeOperationType(
+        json['operation_type']?.toString() ?? json['type']?.toString() ?? '',
+      ),
       amount: parseNum(json['amount']),
       comment: json['comment']?.toString() ?? '',
       createdAt: json['created_at']?.toString() ?? '',

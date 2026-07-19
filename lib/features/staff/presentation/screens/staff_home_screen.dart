@@ -18,6 +18,7 @@ import 'staff_chat_screen.dart';
 import 'staff_client_search_screen.dart';
 import 'staff_invite_client_screen.dart';
 import 'staff_preorders_screen.dart';
+import 'staff_subscription_sale_screen.dart';
 import 'staff_appointments_screen.dart';
 import 'staff_establishment_history_screen.dart';
 import 'staff_establishments_screen.dart';
@@ -1717,6 +1718,127 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
     );
   }
 
+  void _openSubscriptionSale() {
+    Navigator.of(context)
+        .push<bool>(
+          _buildAnimatedRoute(
+            StaffSubscriptionSaleScreen(
+              establishmentId: widget.establishmentId,
+              establishmentName: widget.establishmentName,
+            ),
+          ),
+        )
+        .then((changed) {
+          if (!mounted) return;
+
+          if (changed == true) {
+            _loadDashboard();
+          }
+        });
+  }
+
+  Widget _buildSubscriptionSaleCard() {
+    return _Pressable(
+      onTap: _openSubscriptionSale,
+      borderRadius: 32,
+      child: AnimatedBuilder(
+        animation: _ambientController,
+        builder: (context, child) {
+          final pulse =
+              (math.sin(_ambientController.value * math.pi * 2) + 1) / 2;
+
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(32),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF7048FF),
+                  Color(0xFFFF4F91),
+                  Color(0xFFFFA51E),
+                ],
+              ),
+              border: Border.all(color: Colors.white54, width: 1.2),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(
+                    0xFF7048FF,
+                  ).withOpacity(0.24 + pulse * 0.10),
+                  blurRadius: 28 + pulse * 8,
+                  offset: const Offset(0, 16),
+                ),
+              ],
+            ),
+            child: child,
+          );
+        },
+        child: Row(
+          children: [
+            Container(
+              width: 62,
+              height: 62,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(23),
+                color: Colors.white.withOpacity(0.20),
+                border: Border.all(color: Colors.white.withOpacity(0.28)),
+              ),
+              child: const Icon(
+                CupertinoIcons.ticket_fill,
+                color: Colors.white,
+                size: 31,
+              ),
+            ),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Продажа абонемента',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.4,
+                    ),
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    'Отсканируйте QR клиента и '
+                    'оформите новый абонемент за минуту',
+                    style: TextStyle(
+                      color: Color(0xE8FFFFFF),
+                      fontSize: 13.5,
+                      height: 1.35,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              width: 42,
+              height: 42,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white24,
+              ),
+              child: const Icon(
+                CupertinoIcons.chevron_right,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSearchHeroCard() {
     return _Pressable(
       onTap: _openClientSearch,
@@ -2256,6 +2378,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                           staggered(_buildHeroCarousel()),
                           const SizedBox(height: 14),
                           staggered(_buildSearchHeroCard()),
+                          const SizedBox(height: 14),
+                          staggered(_buildSubscriptionSaleCard()),
                           const SizedBox(height: 18),
                           staggered(_buildInviteClientCard()),
                           const SizedBox(height: 16),

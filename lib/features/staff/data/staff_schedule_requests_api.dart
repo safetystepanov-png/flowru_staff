@@ -98,10 +98,12 @@ class StaffScheduleRequestsApi {
   }) {
     final matches = items
         .map(MyScheduleRequestItem.fromJson)
-        .where((request) =>
-            request.establishmentId == establishmentId &&
-            request.year == year &&
-            request.month == month)
+        .where(
+          (request) =>
+              request.establishmentId == establishmentId &&
+              request.year == year &&
+              request.month == month,
+        )
         .toList();
 
     if (matches.isEmpty) return null;
@@ -132,10 +134,7 @@ class StaffScheduleRequestsApi {
 
     final response = await http.get(
       uri,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Accept': 'application/json',
-      },
+      headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -294,8 +293,7 @@ class StaffScheduleRequestsApi {
       body: jsonEncode({
         'establishment_id': establishmentId,
         'shift_date': shiftDate,
-        if (reason != null && reason.trim().isNotEmpty)
-          'reason': reason.trim(),
+        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
       }),
     );
 

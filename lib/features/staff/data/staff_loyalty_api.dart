@@ -48,17 +48,14 @@ class StaffLoyaltyConfig {
       pointsEnabledInDiscountMode:
           json['points_enabled_in_discount_mode'] as bool? ?? false,
       cashbackPercent: (json['cashback_percent'] as num?)?.toInt() ?? 0,
-      cashbackLevels:
-          ((json['cashback_levels'] as List?) ?? const [])
-              .map((e) => Map<String, dynamic>.from(e as Map))
-              .toList(),
-      levels:
-          ((json['levels'] as List?) ?? const [])
-              .map((e) => Map<String, dynamic>.from(e as Map))
-              .toList(),
+      cashbackLevels: ((json['cashback_levels'] as List?) ?? const [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList(),
+      levels: ((json['levels'] as List?) ?? const [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList(),
       clientVisits: (json['client_visits'] as num?)?.toInt() ?? 0,
-      clientTotalSpent:
-          (json['client_total_spent'] as num?)?.toDouble() ?? 0.0,
+      clientTotalSpent: (json['client_total_spent'] as num?)?.toDouble() ?? 0.0,
       clientBalance: (json['client_balance'] as num?)?.toInt() ?? 0,
     );
   }

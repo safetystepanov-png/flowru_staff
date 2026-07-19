@@ -202,7 +202,9 @@ class _StaffClientRewardsScreenState extends State<StaffClientRewardsScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const _EmptyOrb(icon: CupertinoIcons.check_mark_circled_solid),
+                    const _EmptyOrb(
+                      icon: CupertinoIcons.check_mark_circled_solid,
+                    ),
                     const SizedBox(height: 14),
                     const Text(
                       'Готово',
@@ -214,7 +216,8 @@ class _StaffClientRewardsScreenState extends State<StaffClientRewardsScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      decoded['message']?.toString() ?? 'Награда успешно выдана',
+                      decoded['message']?.toString() ??
+                          'Награда успешно выдана',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 14,
@@ -277,10 +280,7 @@ class _StaffClientRewardsScreenState extends State<StaffClientRewardsScreen>
     }
   }
 
-  Widget _stagger({
-    required int index,
-    required Widget child,
-  }) {
+  Widget _stagger({required int index, required Widget child}) {
     final start = (index * 0.08).clamp(0.0, 0.82);
     final end = (start + 0.24).clamp(0.0, 1.0);
 
@@ -624,10 +624,7 @@ class _StaffClientRewardsScreenState extends State<StaffClientRewardsScreen>
         elevation: 0,
         title: const Text(
           'Награды',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         systemOverlayStyle: SystemUiOverlayStyle.light,
@@ -663,7 +660,8 @@ class _StaffClientRewardsScreenState extends State<StaffClientRewardsScreen>
                             _stagger(
                               index: 1,
                               child: _stateCard(
-                                icon: CupertinoIcons.exclamationmark_circle_fill,
+                                icon:
+                                    CupertinoIcons.exclamationmark_circle_fill,
                                 title: 'Ошибка',
                                 subtitle: _error!,
                               ),
@@ -674,7 +672,8 @@ class _StaffClientRewardsScreenState extends State<StaffClientRewardsScreen>
                               child: _stateCard(
                                 icon: CupertinoIcons.gift_fill,
                                 title: 'Наград пока нет',
-                                subtitle: 'В этом заведении ещё не добавлены награды',
+                                subtitle:
+                                    'В этом заведении ещё не добавлены награды',
                               ),
                             )
                           else
@@ -720,10 +719,7 @@ class _GlassCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(radius),
             gradient: LinearGradient(
-              colors: [
-                kRewardsCardStrong,
-                kRewardsCard,
-              ],
+              colors: [kRewardsCardStrong, kRewardsCard],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -807,11 +803,7 @@ class _FloatingGlyph extends StatelessWidget {
                 end: Alignment.bottomRight,
               ),
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: iconSize,
-            ),
+            child: Icon(icon, color: Colors.white, size: iconSize),
           ),
           Positioned(
             top: size * 0.11,
@@ -835,10 +827,7 @@ class _MiniGlyph extends StatelessWidget {
   final IconData icon;
   final Color color;
 
-  const _MiniGlyph({
-    required this.icon,
-    required this.color,
-  });
+  const _MiniGlyph({required this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -850,11 +839,7 @@ class _MiniGlyph extends StatelessWidget {
           shape: BoxShape.circle,
           color: color.withOpacity(0.14),
         ),
-        child: Icon(
-          icon,
-          color: color,
-          size: 20,
-        ),
+        child: Icon(icon, color: color, size: 20),
       ),
     );
   }
@@ -863,9 +848,7 @@ class _MiniGlyph extends StatelessWidget {
 class _EmptyOrb extends StatelessWidget {
   final IconData icon;
 
-  const _EmptyOrb({
-    required this.icon,
-  });
+  const _EmptyOrb({required this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -897,11 +880,7 @@ class _EmptyOrb extends StatelessWidget {
               shape: BoxShape.circle,
               color: Colors.white.withOpacity(0.92),
             ),
-            child: Icon(
-              icon,
-              color: kRewardsInkSoft,
-              size: 28,
-            ),
+            child: Icon(icon, color: kRewardsInkSoft, size: 28),
           ),
         ],
       ),
@@ -931,13 +910,9 @@ class _RewardItem {
 
     return _RewardItem(
       id: json['id']?.toString() ?? json['reward_id']?.toString() ?? '',
-      title: json['title']?.toString() ??
-          json['name']?.toString() ??
-          'Награда',
+      title: json['title']?.toString() ?? json['name']?.toString() ?? 'Награда',
       description: json['description']?.toString() ?? '',
-      cost: parseNum(
-        json['cost'] ?? json['price'] ?? json['points_cost'],
-      ),
+      cost: parseNum(json['cost'] ?? json['price'] ?? json['points_cost']),
     );
   }
 

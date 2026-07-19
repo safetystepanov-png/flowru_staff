@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -36,7 +36,6 @@ const Color kAnnSuccessSoft = Color(0xFF4ADE80);
 const Color kAnnWarn = Color(0xFFF97316);
 const Color kAnnWarnSoft = Color(0xFFFB923C);
 
-
 String flowruCleanText(String value) {
   var s = value;
 
@@ -66,7 +65,20 @@ String flowruCleanText(String value) {
   });
 
   final brokenMarkers = [
-    'Рђ', 'Рџ', 'Рќ', 'РЎ', 'Рћ', 'Р—', 'СЃ', 'С‚', 'СЂ', '╨', '╤', 'Ð', 'Ñ', 'вЂ'
+    'Рђ',
+    'Рџ',
+    'Рќ',
+    'РЎ',
+    'Рћ',
+    'Р—',
+    'СЃ',
+    'С‚',
+    'СЂ',
+    '╨',
+    '╤',
+    'Ð',
+    'Ñ',
+    'вЂ',
   ];
 
   final stillBroken = brokenMarkers.any((m) => s.contains(m));
@@ -74,8 +86,10 @@ String flowruCleanText(String value) {
 
   // Для коротких жёлтых бейджей лучше не показывать мусор.
   if (s.length <= 24) {
-    if (s.toLowerCase().contains('schedule') || s.contains('Граф')) return 'График';
-    if (s.toLowerCase().contains('announcement') || s.contains('Об')) return 'Объявление';
+    if (s.toLowerCase().contains('schedule') || s.contains('Граф'))
+      return 'График';
+    if (s.toLowerCase().contains('announcement') || s.contains('Об'))
+      return 'Объявление';
     if (s.toLowerCase().contains('pinned')) return 'Закреплено';
     if (s.toLowerCase().contains('ack')) return 'Ознакомлен';
     return 'Статус';
@@ -83,7 +97,6 @@ String flowruCleanText(String value) {
 
   return s;
 }
-
 
 class StaffAnnouncementsScreen extends StatefulWidget {
   final int establishmentId;
@@ -374,7 +387,9 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                         icon: CupertinoIcons.calendar,
                                         onTap: () async {
                                           final now = DateTime.now();
-                                          DateTime selected = expiresAt ?? now.add(const Duration(days: 7));
+                                          DateTime selected =
+                                              expiresAt ??
+                                              now.add(const Duration(days: 7));
 
                                           await showCupertinoModalPopup<void>(
                                             context: context,
@@ -383,26 +398,43 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                                 height: 330,
                                                 decoration: const BoxDecoration(
                                                   color: Colors.white,
-                                                  borderRadius: BorderRadius.vertical(
-                                                    top: Radius.circular(26),
-                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.vertical(
+                                                        top: Radius.circular(
+                                                          26,
+                                                        ),
+                                                      ),
                                                 ),
                                                 child: SafeArea(
                                                   top: false,
                                                   child: Column(
                                                     children: [
                                                       Padding(
-                                                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+                                                        padding:
+                                                            const EdgeInsets.fromLTRB(
+                                                              16,
+                                                              10,
+                                                              16,
+                                                              6,
+                                                            ),
                                                         child: Row(
                                                           children: [
                                                             CupertinoButton(
-                                                              padding: EdgeInsets.zero,
-                                                              onPressed: () => Navigator.of(pickerContext).pop(),
+                                                              padding:
+                                                                  EdgeInsets
+                                                                      .zero,
+                                                              onPressed: () =>
+                                                                  Navigator.of(
+                                                                    pickerContext,
+                                                                  ).pop(),
                                                               child: const Text(
                                                                 'Отмена',
                                                                 style: TextStyle(
-                                                                  color: kAnnInkSoft,
-                                                                  fontWeight: FontWeight.w800,
+                                                                  color:
+                                                                      kAnnInkSoft,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w800,
                                                                 ),
                                                               ),
                                                             ),
@@ -412,31 +444,45 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                                               style: TextStyle(
                                                                 color: kAnnInk,
                                                                 fontSize: 16,
-                                                                fontWeight: FontWeight.w900,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w900,
                                                               ),
                                                             ),
                                                             const Spacer(),
                                                             CupertinoButton(
-                                                              padding: EdgeInsets.zero,
+                                                              padding:
+                                                                  EdgeInsets
+                                                                      .zero,
                                                               onPressed: () {
                                                                 setLocalState(() {
-                                                                  expiresEnabled = true;
-                                                                  expiresAt = DateTime(
-                                                                    selected.year,
-                                                                    selected.month,
-                                                                    selected.day,
-                                                                    23,
-                                                                    59,
-                                                                    59,
-                                                                  );
+                                                                  expiresEnabled =
+                                                                      true;
+                                                                  expiresAt =
+                                                                      DateTime(
+                                                                        selected
+                                                                            .year,
+                                                                        selected
+                                                                            .month,
+                                                                        selected
+                                                                            .day,
+                                                                        23,
+                                                                        59,
+                                                                        59,
+                                                                      );
                                                                 });
-                                                                Navigator.of(pickerContext).pop();
+                                                                Navigator.of(
+                                                                  pickerContext,
+                                                                ).pop();
                                                               },
                                                               child: const Text(
                                                                 'Готово',
                                                                 style: TextStyle(
-                                                                  color: kAnnAccent,
-                                                                  fontWeight: FontWeight.w900,
+                                                                  color:
+                                                                      kAnnAccent,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w900,
                                                                 ),
                                                               ),
                                                             ),
@@ -446,13 +492,26 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                                       const Divider(height: 1),
                                                       Expanded(
                                                         child: CupertinoDatePicker(
-                                                          mode: CupertinoDatePickerMode.date,
-                                                          initialDateTime: selected,
-                                                          minimumDate: DateTime(now.year, now.month, now.day),
-                                                          maximumDate: now.add(const Duration(days: 365 * 3)),
-                                                          onDateTimeChanged: (value) {
-                                                            selected = value;
-                                                          },
+                                                          mode:
+                                                              CupertinoDatePickerMode
+                                                                  .date,
+                                                          initialDateTime:
+                                                              selected,
+                                                          minimumDate: DateTime(
+                                                            now.year,
+                                                            now.month,
+                                                            now.day,
+                                                          ),
+                                                          maximumDate: now.add(
+                                                            const Duration(
+                                                              days: 365 * 3,
+                                                            ),
+                                                          ),
+                                                          onDateTimeChanged:
+                                                              (value) {
+                                                                selected =
+                                                                    value;
+                                                              },
                                                         ),
                                                       ),
                                                     ],
@@ -503,10 +562,10 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                     onPressed: _saving
                                         ? null
                                         : () async {
-                                            final title =
-                                                titleController.text.trim();
-                                            final body =
-                                                bodyController.text.trim();
+                                            final title = titleController.text
+                                                .trim();
+                                            final body = bodyController.text
+                                                .trim();
 
                                             if (title.isEmpty || body.isEmpty) {
                                               return;
@@ -517,7 +576,9 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                               title: title,
                                               body: body,
                                               pinned: pinned,
-                                              expiresAt: expiresEnabled ? expiresAt : null,
+                                              expiresAt: expiresEnabled
+                                                  ? expiresAt
+                                                  : null,
                                             );
                                           },
                                     style: ElevatedButton.styleFrom(
@@ -568,10 +629,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
       ),
       filled: true,
       fillColor: Colors.white.withOpacity(0.92),
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 18,
-        vertical: 18,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
         borderSide: const BorderSide(color: Color(0xFFE7EEF0)),
@@ -582,10 +640,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(
-          color: kAnnAccent,
-          width: 1.4,
-        ),
+        borderSide: const BorderSide(color: kAnnAccent, width: 1.4),
       ),
     );
   }
@@ -654,9 +709,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'establishment_id': widget.establishmentId,
-        }),
+        body: jsonEncode({'establishment_id': widget.establishmentId}),
       );
 
       if (response.statusCode != 200 && response.statusCode != 201) {
@@ -733,7 +786,9 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
     }
   }
 
-  Future<_AnnouncementAudienceData?> _loadAudience(String announcementId) async {
+  Future<_AnnouncementAudienceData?> _loadAudience(
+    String announcementId,
+  ) async {
     try {
       final token = await _token();
 
@@ -790,11 +845,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
       ),
       child: Row(
         children: [
-          const Icon(
-            CupertinoIcons.person_2_fill,
-            size: 18,
-            color: kAnnInk,
-          ),
+          const Icon(CupertinoIcons.person_2_fill, size: 18, color: kAnnInk),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -927,15 +978,10 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
 
   Widget _buildPinnedBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 6,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        gradient: const LinearGradient(
-          colors: [kAnnAccent, kAnnAccentSoft],
-        ),
+        gradient: const LinearGradient(colors: [kAnnAccent, kAnnAccentSoft]),
         boxShadow: [
           BoxShadow(
             color: kAnnAccent.withOpacity(0.22),
@@ -1080,8 +1126,9 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                         height: 18,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2.2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation(kAnnViolet),
+                                          valueColor: AlwaysStoppedAnimation(
+                                            kAnnViolet,
+                                          ),
                                         ),
                                       ),
                                       SizedBox(width: 12),
@@ -1108,10 +1155,12 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                   ),
                                 ),
                                 const SizedBox(height: 10),
-                                if ((audienceData?.acknowledgedUsers.length ?? 0) >
+                                if ((audienceData?.acknowledgedUsers.length ??
+                                        0) >
                                     0)
-                                  ...audienceData!.acknowledgedUsers
-                                      .map(_ackUserTile)
+                                  ...audienceData!.acknowledgedUsers.map(
+                                    _ackUserTile,
+                                  )
                                 else if (item.ackUsers.isNotEmpty)
                                   ...item.ackUsers.map(_ackUserTile)
                                 else
@@ -1121,8 +1170,9 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(18),
                                       color: Colors.white.withOpacity(0.90),
-                                      border:
-                                          Border.all(color: const Color(0xFFE7EEF0)),
+                                      border: Border.all(
+                                        color: const Color(0xFFE7EEF0),
+                                      ),
                                     ),
                                     child: const Text(
                                       'Пока никто не ознакомился.',
@@ -1144,9 +1194,11 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                   ),
                                 ),
                                 const SizedBox(height: 10),
-                                if ((audienceData?.pendingUsers.length ?? 0) > 0)
-                                  ...audienceData!.pendingUsers
-                                      .map(_pendingUserTile)
+                                if ((audienceData?.pendingUsers.length ?? 0) >
+                                    0)
+                                  ...audienceData!.pendingUsers.map(
+                                    _pendingUserTile,
+                                  )
                                 else
                                   Container(
                                     width: double.infinity,
@@ -1154,8 +1206,9 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(18),
                                       color: Colors.white.withOpacity(0.90),
-                                      border:
-                                          Border.all(color: const Color(0xFFE7EEF0)),
+                                      border: Border.all(
+                                        color: const Color(0xFFE7EEF0),
+                                      ),
                                     ),
                                     child: const Text(
                                       'Все сотрудники уже ознакомились.',
@@ -1184,8 +1237,9 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                           color: kAnnAccent.withOpacity(0.24),
                                         ),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(18),
+                                          borderRadius: BorderRadius.circular(
+                                            18,
+                                          ),
                                         ),
                                       ),
                                       child: const Text(
@@ -1220,8 +1274,9 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                             vertical: 16,
                                           ),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(18),
+                                            borderRadius: BorderRadius.circular(
+                                              18,
+                                            ),
                                           ),
                                         ),
                                         child: _deleteLoading
@@ -1230,9 +1285,9 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                                 height: 18,
                                                 child:
                                                     CircularProgressIndicator(
-                                                  strokeWidth: 2.2,
-                                                  color: Colors.white,
-                                                ),
+                                                      strokeWidth: 2.2,
+                                                      color: Colors.white,
+                                                    ),
                                               )
                                             : const Text(
                                                 'Удалить',
@@ -1252,21 +1307,16 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                   borderRadius: BorderRadius.circular(20),
                                   gradient: LinearGradient(
                                     colors: acknowledged
-                                        ? const [
-                                            kAnnSuccess,
-                                            kAnnSuccessSoft,
-                                          ]
-                                        : const [
-                                            kAnnAccent,
-                                            kAnnAccentSoft,
-                                          ],
+                                        ? const [kAnnSuccess, kAnnSuccessSoft]
+                                        : const [kAnnAccent, kAnnAccentSoft],
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: (acknowledged
-                                              ? kAnnSuccess
-                                              : kAnnAccent)
-                                          .withOpacity(0.24),
+                                      color:
+                                          (acknowledged
+                                                  ? kAnnSuccess
+                                                  : kAnnAccent)
+                                              .withOpacity(0.24),
                                       blurRadius: 14,
                                       offset: const Offset(0, 8),
                                     ),
@@ -1281,26 +1331,31 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                           });
 
                                           try {
-                                            await _acknowledgeAnnouncement(item);
+                                            await _acknowledgeAnnouncement(
+                                              item,
+                                            );
 
                                             setLocalState(() {
                                               acknowledged = true;
                                             });
 
                                             if (!mounted) return;
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
                                               const SnackBar(
-                                                content:
-                                                    Text('Ознакомление отмечено'),
+                                                content: Text(
+                                                  'Ознакомление отмечено',
+                                                ),
                                                 behavior:
                                                     SnackBarBehavior.floating,
                                               ),
                                             );
                                           } catch (_) {
                                             if (!mounted) return;
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
                                               const SnackBar(
                                                 content: Text(
                                                   'Не удалось отметить ознакомление',
@@ -1320,8 +1375,10 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.transparent,
                                     shadowColor: Colors.transparent,
-                                    minimumSize:
-                                        const Size(double.infinity, 60),
+                                    minimumSize: const Size(
+                                      double.infinity,
+                                      60,
+                                    ),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 18,
                                       vertical: 18,
@@ -1384,10 +1441,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
     );
   }
 
-  Widget _stagger({
-    required int index,
-    required Widget child,
-  }) {
+  Widget _stagger({required int index, required Widget child}) {
     final start = (index * 0.08).clamp(0.0, 0.82);
     final end = (start + 0.24).clamp(0.0, 1.0);
 
@@ -1534,9 +1588,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        gradient: const LinearGradient(
-          colors: [kAnnAccent, kAnnAccentSoft],
-        ),
+        gradient: const LinearGradient(colors: [kAnnAccent, kAnnAccentSoft]),
         boxShadow: [
           BoxShadow(
             color: kAnnAccent.withOpacity(0.24),
@@ -1705,10 +1757,7 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
         elevation: 0,
         title: const Text(
           'Объявления',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         systemOverlayStyle: SystemUiOverlayStyle.light,
@@ -1743,7 +1792,8 @@ class _StaffAnnouncementsScreenState extends State<StaffAnnouncementsScreen>
                             _stagger(
                               index: 0,
                               child: _stateCard(
-                                icon: CupertinoIcons.exclamationmark_circle_fill,
+                                icon:
+                                    CupertinoIcons.exclamationmark_circle_fill,
                                 title: 'Ошибка',
                                 subtitle: _error!,
                               ),
@@ -1802,10 +1852,7 @@ class _GlassCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(radius),
             gradient: LinearGradient(
-              colors: [
-                kAnnCardStrong,
-                kAnnCard,
-              ],
+              colors: [kAnnCardStrong, kAnnCard],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -1828,9 +1875,7 @@ class _GlassCard extends StatelessWidget {
 class _EmptyOrb extends StatelessWidget {
   final IconData icon;
 
-  const _EmptyOrb({
-    required this.icon,
-  });
+  const _EmptyOrb({required this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -1862,11 +1907,7 @@ class _EmptyOrb extends StatelessWidget {
               shape: BoxShape.circle,
               color: Colors.white.withOpacity(0.92),
             ),
-            child: Icon(
-              icon,
-              color: kAnnInkSoft,
-              size: 28,
-            ),
+            child: Icon(icon, color: kAnnInkSoft, size: 28),
           ),
         ],
       ),
@@ -1946,7 +1987,8 @@ class _AnnouncementAckUser {
 
   factory _AnnouncementAckUser.fromJson(Map<String, dynamic> json) {
     return _AnnouncementAckUser(
-      name: json['name']?.toString() ??
+      name:
+          json['name']?.toString() ??
           json['user_name']?.toString() ??
           json['full_name']?.toString() ??
           'Сотрудник',
@@ -1973,13 +2015,12 @@ class _AnnouncementAckUser {
 class _AnnouncementPendingUser {
   final String name;
 
-  const _AnnouncementPendingUser({
-    required this.name,
-  });
+  const _AnnouncementPendingUser({required this.name});
 
   factory _AnnouncementPendingUser.fromJson(Map<String, dynamic> json) {
     return _AnnouncementPendingUser(
-      name: json['name']?.toString() ??
+      name:
+          json['name']?.toString() ??
           json['user_name']?.toString() ??
           json['full_name']?.toString() ??
           'Сотрудник',
@@ -2080,11 +2121,7 @@ class _ExpiryChoiceButton extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                size: 18,
-                color: selected ? kAnnAccent : kAnnInkSoft,
-              ),
+              Icon(icon, size: 18, color: selected ? kAnnAccent : kAnnInkSoft),
               const SizedBox(width: 7),
               Flexible(
                 child: Text(
@@ -2142,8 +2179,8 @@ class _AnnouncementItem {
     final rawUsers = (json['ack_users'] is List)
         ? json['ack_users'] as List<dynamic>
         : (json['acknowledged_users'] is List)
-            ? json['acknowledged_users'] as List<dynamic>
-            : const <dynamic>[];
+        ? json['acknowledged_users'] as List<dynamic>
+        : const <dynamic>[];
 
     return _AnnouncementItem(
       id: json['announcement_id']?.toString() ?? json['id']?.toString() ?? '',
@@ -2162,9 +2199,11 @@ class _AnnouncementItem {
       canDelete: parseBool(json['can_delete']),
       ackUsers: rawUsers
           .whereType<Map>()
-          .map((e) => _AnnouncementAckUser.fromJson(
-                Map<String, dynamic>.from(e as Map),
-              ))
+          .map(
+            (e) => _AnnouncementAckUser.fromJson(
+              Map<String, dynamic>.from(e as Map),
+            ),
+          )
           .toList(),
     );
   }
@@ -2195,7 +2234,5 @@ class _AnnouncementItem {
   }
 }
 // STAFF_ANNOUNCEMENT_EXPIRES_UI_20260524
-
-
 
 // STAFF_ANNOUNCEMENT_CUPERTINO_DATE_PICKER_20260524

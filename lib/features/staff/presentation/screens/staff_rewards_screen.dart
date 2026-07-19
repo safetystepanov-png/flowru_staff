@@ -1,4 +1,4 @@
-﻿import 'package:flutter/cupertino.dart';
+import 'package:flutter/cupertino.dart';
 
 class StaffRewardsScreen extends StatelessWidget {
   final int establishmentId;
@@ -17,12 +17,8 @@ class StaffRewardsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: Text('Награды отключены'),
-      ),
-      child: Center(
-        child: Text('Раздел наград временно отключен'),
-      ),
+      navigationBar: CupertinoNavigationBar(middle: Text('Награды отключены')),
+      child: Center(child: Text('Раздел наград временно отключен')),
     );
   }
 }

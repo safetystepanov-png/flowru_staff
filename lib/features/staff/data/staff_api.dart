@@ -46,9 +46,7 @@ class StaffApi {
   Future<List<StaffEstablishmentItem>> getEstablishments() async {
     final accessToken = await _token();
 
-    final uri = Uri.parse(
-      '${AppConfig.baseUrl}/api/v1/staff/establishments',
-    );
+    final uri = Uri.parse('${AppConfig.baseUrl}/api/v1/staff/establishments');
 
     final response = await http.get(
       uri,
@@ -68,7 +66,10 @@ class StaffApi {
     final List items = (data['items'] as List?) ?? [];
 
     return items
-        .map((item) => StaffEstablishmentItem.fromJson(item as Map<String, dynamic>))
+        .map(
+          (item) =>
+              StaffEstablishmentItem.fromJson(item as Map<String, dynamic>),
+        )
         .toList();
   }
 }

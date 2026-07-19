@@ -27,7 +27,9 @@ class ReactionItem {
     return ReactionItem(
       emoji: json['emoji']?.toString() ?? '👍',
       count: parseInt(json['count']),
-      reactedByMe: parseBool(json['reacted_by_me'] ?? json['is_mine'] ?? json['selected']),
+      reactedByMe: parseBool(
+        json['reacted_by_me'] ?? json['is_mine'] ?? json['selected'],
+      ),
     );
   }
 

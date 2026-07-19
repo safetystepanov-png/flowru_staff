@@ -140,9 +140,8 @@ class StaffHistoryApi {
 
     return items
         .map(
-          (item) => StaffClientHistoryItem.fromJson(
-            item as Map<String, dynamic>,
-          ),
+          (item) =>
+              StaffClientHistoryItem.fromJson(item as Map<String, dynamic>),
         )
         .toList();
   }

@@ -1,4 +1,4 @@
-﻿import 'staff_loyalty_api.dart';
+import 'staff_loyalty_api.dart';
 
 class StaffAccrualPreview {
   final int added;
@@ -72,11 +72,7 @@ class StaffLoyaltyCalculator {
     List<Map<String, dynamic>> levels,
   ) {
     if (levels.isEmpty) {
-      return {
-        'name': '',
-        'purchases_required': 0,
-        'discount_percent': 0.0,
-      };
+      return {'name': '', 'purchases_required': 0, 'discount_percent': 0.0};
     }
 
     final sorted = [...levels]
@@ -152,7 +148,8 @@ class StaffLoyaltyCalculator {
       );
       appliedPercent = percent;
       added = ((amount / 100.0) * percent).round();
-      label = 'РљСЌС€Р±СЌРє ${percent.toStringAsFixed(percent % 1 == 0 ? 0 : 1)}%';
+      label =
+          'РљСЌС€Р±СЌРє ${percent.toStringAsFixed(percent % 1 == 0 ? 0 : 1)}%';
       return StaffAccrualPreview(
         added: added,
         label: label,

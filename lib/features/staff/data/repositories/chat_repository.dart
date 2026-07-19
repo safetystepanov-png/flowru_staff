@@ -7,10 +7,12 @@ import '../../../auth/data/auth_storage.dart';
 import '../models/chat_message.dart';
 
 class ChatRepository {
-  final Dio _dio = Dio(BaseOptions(
-    baseUrl: AppConfig.baseUrl,
-    headers: {'Accept': 'application/json'},
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      baseUrl: AppConfig.baseUrl,
+      headers: {'Accept': 'application/json'},
+    ),
+  );
 
   Future<Map<String, String>> _authHeaders() async {
     final token = await AuthStorage.getAccessToken();
@@ -18,24 +20,34 @@ class ChatRepository {
     return {'Authorization': 'Bearer $token'};
   }
 
-    Future<List<ChatMessage>> getMessages(int establishmentId, {int page = 1, int limit = 30}) async {
+  Future<List<ChatMessage>> getMessages(
+    int establishmentId, {
+    int page = 1,
+    int limit = 30,
+  }) async {
     final headers = await _authHeaders();
     final response = await _dio.get(
-        '/api/v1/staff/chat/messages',
-        queryParameters: {
+      '/api/v1/staff/chat/messages',
+      queryParameters: {
         'establishment_id': establishmentId,
         'page': page,
         'limit': limit,
-        },
-        options: Options(headers: headers),
+      },
+      options: Options(headers: headers),
     );
     if (response.statusCode != 200) throw Exception('Failed to load messages');
     final data = response.data;
     final List list = (data is List) ? data : (data['items'] as List);
-    return list.map((j) => ChatMessage.fromJson(j as Map<String, dynamic>)).toList();
-    }
+    return list
+        .map((j) => ChatMessage.fromJson(j as Map<String, dynamic>))
+        .toList();
+  }
 
-  Future<void> sendTextMessage(int establishmentId, String text, {String? replyToId}) async {
+  Future<void> sendTextMessage(
+    int establishmentId,
+    String text, {
+    String? replyToId,
+  }) async {
     final headers = await _authHeaders();
     await _dio.post(
       '/api/v1/staff/chat/messages',
@@ -48,19 +60,31 @@ class ChatRepository {
     );
   }
 
-    Future<void> sendImageMessage(int establishmentId, Uint8List bytes, String filename,
-        {String? text, String? replyToId}) async {
+  Future<void> sendImageMessage(
+    int establishmentId,
+    Uint8List bytes,
+    String filename, {
+    String? text,
+    String? replyToId,
+  }) async {
     final headers = await _authHeaders();
     final formData = FormData.fromMap({
-        'establishment_id': establishmentId,
-        if (text != null && text.isNotEmpty) 'message_text': text,
-        if (replyToId != null) 'reply_to_message_id': replyToId,
-        'file': MultipartFile.fromBytes(bytes,
-            filename: filename, contentType: MediaType('image', 'jpeg'))
+      'establishment_id': establishmentId,
+      if (text != null && text.isNotEmpty) 'message_text': text,
+      if (replyToId != null) 'reply_to_message_id': replyToId,
+      'file': MultipartFile.fromBytes(
+        bytes,
+        filename: filename,
+        contentType: MediaType('image', 'jpeg'),
+      ),
     });
-    await _dio.post('/api/v1/staff/chat/messages/upload-image',
-        data: formData, options: Options(headers: headers));
-    }
+    await _dio.post(
+      '/api/v1/staff/chat/messages/upload-image',
+      data: formData,
+      options: Options(headers: headers),
+    );
+  }
+
   // Остальные методы (изображения, файлы, голосовые, редактирование, удаление, реакции, закреп) добавим на следующем этапе.
   // Сейчас для базовой проверки хватит getMessages и sendTextMessage.
 }

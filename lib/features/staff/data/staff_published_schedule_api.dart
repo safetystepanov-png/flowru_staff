@@ -31,25 +31,28 @@ class PublishedSchedulePerson {
 
   factory PublishedSchedulePerson.fromJson(Map<String, dynamic> json) {
     return PublishedSchedulePerson(
-      employeeUserId: (json['employee_user_id'] ??
-              json['user_id'] ??
-              json['staff_user_id'] ??
-              json['employee_id'] ??
-              '')
-          .toString(),
-      employeeName: (json['employee_name'] ??
-              json['name'] ??
-              json['employee'] ??
-              json['full_name'] ??
-              'Сотрудник')
-          .toString(),
-      employeeRole: (json['employee_role'] ??
-              json['role'] ??
-              json['position'] ??
-              json['staff_role'])
+      employeeUserId:
+          (json['employee_user_id'] ??
+                  json['user_id'] ??
+                  json['staff_user_id'] ??
+                  json['employee_id'] ??
+                  '')
+              .toString(),
+      employeeName:
+          (json['employee_name'] ??
+                  json['name'] ??
+                  json['employee'] ??
+                  json['full_name'] ??
+                  'Сотрудник')
+              .toString(),
+      employeeRole:
+          (json['employee_role'] ??
+                  json['role'] ??
+                  json['position'] ??
+                  json['staff_role'])
+              ?.toString(),
+      employeeLabel: (json['employee_label'] ?? json['label'] ?? json['badge'])
           ?.toString(),
-      employeeLabel:
-          (json['employee_label'] ?? json['label'] ?? json['badge'])?.toString(),
       isMine: _parseBool(
         json['is_mine'] ?? json['mine'] ?? json['is_current_user'],
       ),
@@ -61,10 +64,7 @@ class PublishedScheduleDay {
   final DateTime date;
   final List<PublishedSchedulePerson> items;
 
-  const PublishedScheduleDay({
-    required this.date,
-    required this.items,
-  });
+  const PublishedScheduleDay({required this.date, required this.items});
 
   static List<Map<String, dynamic>> _extractMapList(dynamic raw) {
     if (raw is! List) return <Map<String, dynamic>>[];
@@ -76,11 +76,12 @@ class PublishedScheduleDay {
   }
 
   factory PublishedScheduleDay.fromJson(Map<String, dynamic> json) {
-    final rawDate =
-        (json['date'] ?? json['shift_date'] ?? json['day'] ?? '').toString();
+    final rawDate = (json['date'] ?? json['shift_date'] ?? json['day'] ?? '')
+        .toString();
     final parsed = DateTime.tryParse(rawDate);
 
-    final rawItems = json['items'] ??
+    final rawItems =
+        json['items'] ??
         json['employees'] ??
         json['assignments'] ??
         json['staff'] ??
@@ -90,9 +91,9 @@ class PublishedScheduleDay {
       date: parsed == null
           ? DateTime.now()
           : DateTime(parsed.year, parsed.month, parsed.day),
-      items: _extractMapList(rawItems)
-          .map(PublishedSchedulePerson.fromJson)
-          .toList(),
+      items: _extractMapList(
+        rawItems,
+      ).map(PublishedSchedulePerson.fromJson).toList(),
     );
   }
 }
@@ -142,22 +143,30 @@ class PublishedScheduleMonth {
   }
 
   factory PublishedScheduleMonth.fromJson(Map<String, dynamic> json) {
-    final root = _asMap(
+    final root =
+        _asMap(
           json['data'] ?? json['month'] ?? json['schedule'] ?? json['result'],
         ) ??
         json;
 
     final rawDays =
-        root['days'] ?? root['items'] ?? root['calendar'] ?? root['schedule_days'];
+        root['days'] ??
+        root['items'] ??
+        root['calendar'] ??
+        root['schedule_days'];
 
     return PublishedScheduleMonth(
-      establishmentId:
-          _parseInt(root['establishment_id'] ?? root['establishmentId']),
+      establishmentId: _parseInt(
+        root['establishment_id'] ?? root['establishmentId'],
+      ),
       year: _parseInt(root['year']),
       month: _parseInt(root['month']),
-      published:
-          _parseBool(root['published'] ?? root['is_published'] ?? root['ready']),
-      days: _extractMapList(rawDays).map(PublishedScheduleDay.fromJson).toList(),
+      published: _parseBool(
+        root['published'] ?? root['is_published'] ?? root['ready'],
+      ),
+      days: _extractMapList(
+        rawDays,
+      ).map(PublishedScheduleDay.fromJson).toList(),
     );
   }
 }
@@ -186,10 +195,7 @@ class StaffPublishedScheduleApi {
 
     final response = await http.get(
       uri,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Accept': 'application/json',
-      },
+      headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );
 
     debugPrint('SCHEDULE MONTH URL: $uri');

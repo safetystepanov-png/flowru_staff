@@ -1,4 +1,3 @@
-
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -125,7 +124,12 @@ class StaffUnifiedBackground extends StatelessWidget {
         Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [kHomeMintTop, kHomeMintMid, kHomeMintBottom, kHomeMintDeep],
+              colors: [
+                kHomeMintTop,
+                kHomeMintMid,
+                kHomeMintBottom,
+                kHomeMintDeep,
+              ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               stops: [0, .4, .78, 1],
@@ -159,7 +163,11 @@ class StaffUnifiedBackground extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(size),
-          gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
+          gradient: LinearGradient(
+            colors: colors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
         ),
       ),
     );
@@ -200,7 +208,9 @@ class StaffGlassCard extends StatelessWidget {
             border: Border.all(color: kHomeStroke),
             boxShadow: [
               BoxShadow(
-                color: (glow ?? kHomeShadow).withOpacity(glow == null ? 0.10 : 0.18),
+                color: (glow ?? kHomeShadow).withOpacity(
+                  glow == null ? 0.10 : 0.18,
+                ),
                 blurRadius: 24,
                 offset: const Offset(0, 14),
               ),
@@ -216,16 +226,35 @@ class StaffGlassCard extends StatelessWidget {
 class StaffSectionHeader extends StatelessWidget {
   final String title;
   final String subtitle;
-  const StaffSectionHeader({super.key, required this.title, required this.subtitle});
+  const StaffSectionHeader({
+    super.key,
+    required this.title,
+    required this.subtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+            letterSpacing: -0.5,
+          ),
+        ),
         const SizedBox(height: 5),
-        Text(subtitle, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white.withOpacity(0.82))),
+        Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: Colors.white.withOpacity(0.82),
+          ),
+        ),
       ],
     );
   }
@@ -259,7 +288,7 @@ class StaffPillButton extends StatelessWidget {
             color: c.first.withOpacity(0.24),
             blurRadius: 18,
             offset: const Offset(0, 8),
-          )
+          ),
         ],
       ),
       child: ElevatedButton(
@@ -268,10 +297,19 @@ class StaffPillButton extends StatelessWidget {
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
         ),
         child: loading
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.3, color: Colors.white))
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.3,
+                  color: Colors.white,
+                ),
+              )
             : Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -279,7 +317,14 @@ class StaffPillButton extends StatelessWidget {
                     Icon(icon, color: Colors.white, size: 20),
                     const SizedBox(width: 8),
                   ],
-                  Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15.5)),
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15.5,
+                    ),
+                  ),
                 ],
               ),
       ),
@@ -291,7 +336,12 @@ class StaffInfoChip extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
-  const StaffInfoChip({super.key, required this.label, required this.value, this.color = kHomeBlue});
+  const StaffInfoChip({
+    super.key,
+    required this.label,
+    required this.value,
+    this.color = kHomeBlue,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -305,9 +355,23 @@ class StaffInfoChip extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: kHomeInkSoft, fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: kHomeInkSoft,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w900, color: kHomeInk, fontSize: 14)),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              color: kHomeInk,
+              fontSize: 14,
+            ),
+          ),
         ],
       ),
     );
@@ -319,7 +383,13 @@ class StaffStateCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final Color glow;
-  const StaffStateCard({super.key, required this.icon, required this.title, required this.subtitle, this.glow = kHomeBlue});
+  const StaffStateCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.glow = kHomeBlue,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -327,11 +397,34 @@ class StaffStateCard extends StatelessWidget {
       glow: glow,
       child: Column(
         children: [
-          StaffFloatingGlyph(icon: icon, mainColor: glow, secondaryColor: glow == kHomeBlue ? kHomeMintTop : kHomeViolet, size: 82, iconSize: 34),
+          StaffFloatingGlyph(
+            icon: icon,
+            mainColor: glow,
+            secondaryColor: glow == kHomeBlue ? kHomeMintTop : kHomeViolet,
+            size: 82,
+            iconSize: 34,
+          ),
           const SizedBox(height: 14),
-          Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: kHomeInk)),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: kHomeInk,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, height: 1.4, color: kHomeInkSoft, fontWeight: FontWeight.w700)),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              color: kHomeInkSoft,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -366,7 +459,12 @@ class StaffFloatingGlyph extends StatelessWidget {
             height: size,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(colors: [mainColor.withOpacity(0.22), secondaryColor.withOpacity(0.16)]),
+              gradient: LinearGradient(
+                colors: [
+                  mainColor.withOpacity(0.22),
+                  secondaryColor.withOpacity(0.16),
+                ],
+              ),
             ),
           ),
           Container(
@@ -375,7 +473,13 @@ class StaffFloatingGlyph extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.white.withOpacity(.88),
-              boxShadow: [BoxShadow(color: mainColor.withOpacity(.20), blurRadius: 16, offset: const Offset(0, 8))],
+              boxShadow: [
+                BoxShadow(
+                  color: mainColor.withOpacity(.20),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
           ),
           Container(
@@ -390,7 +494,14 @@ class StaffFloatingGlyph extends StatelessWidget {
           Positioned(
             top: size * .12,
             right: size * .13,
-            child: Container(width: size * .14, height: size * .14, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(.92))),
+            child: Container(
+              width: size * .14,
+              height: size * .14,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(.92),
+              ),
+            ),
           ),
         ],
       ),
@@ -437,10 +548,16 @@ class StaffTextFieldCard extends StatelessWidget {
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: hint,
-          hintStyle: const TextStyle(color: kHomeInkSoft, fontWeight: FontWeight.w700),
+          hintStyle: const TextStyle(
+            color: kHomeInkSoft,
+            fontWeight: FontWeight.w700,
+          ),
           prefixIcon: prefix,
           suffixIcon: suffix,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 18,
+            vertical: 18,
+          ),
         ),
       ),
     );

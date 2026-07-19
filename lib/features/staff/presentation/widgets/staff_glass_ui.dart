@@ -20,10 +20,7 @@ const String kFlowruLogoAsset = 'assets/images/flowru_logo.png';
 class StaffScreenBackground extends StatelessWidget {
   final Widget child;
 
-  const StaffScreenBackground({
-    super.key,
-    required this.child,
-  });
+  const StaffScreenBackground({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -42,10 +39,7 @@ class StaffScreenBackground extends StatelessWidget {
           child: Container(
             width: s,
             height: s,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color,
-            ),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: color),
           ),
         ),
       );
@@ -67,12 +61,7 @@ class StaffScreenBackground extends StatelessWidget {
             top: -30,
             left: size.width - 120,
           ),
-          orb(
-            s: 160,
-            color: kStaffBlue.withOpacity(0.08),
-            top: 190,
-            left: -30,
-          ),
+          orb(s: 160, color: kStaffBlue.withOpacity(0.08), top: 190, left: -30),
           orb(
             s: 140,
             color: kStaffPurple.withOpacity(0.07),
@@ -129,9 +118,7 @@ class _StaffSoftPanelState extends State<StaffSoftPanel> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(widget.radius),
             color: Colors.white.withOpacity(0.76),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.92),
-            ),
+            border: Border.all(color: Colors.white.withOpacity(0.92)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.035),
@@ -182,11 +169,7 @@ class StaffGradientIcon extends StatelessWidget {
   final IconData icon;
   final double size;
 
-  const StaffGradientIcon({
-    super.key,
-    required this.icon,
-    this.size = 22,
-  });
+  const StaffGradientIcon({super.key, required this.icon, this.size = 22});
 
   @override
   Widget build(BuildContext context) {
@@ -208,11 +191,7 @@ class StaffGradientIcon extends StatelessWidget {
           ),
         ],
       ),
-      child: Icon(
-        icon,
-        color: Colors.white,
-        size: size,
-      ),
+      child: Icon(icon, color: Colors.white, size: size),
     );
   }
 }
@@ -220,10 +199,7 @@ class StaffGradientIcon extends StatelessWidget {
 class StaffLogoBadge extends StatelessWidget {
   final double size;
 
-  const StaffLogoBadge({
-    super.key,
-    this.size = 58,
-  });
+  const StaffLogoBadge({super.key, this.size = 58});
 
   @override
   Widget build(BuildContext context) {

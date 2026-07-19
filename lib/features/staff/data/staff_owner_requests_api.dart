@@ -61,19 +61,20 @@ class OwnerRequestItem {
   }
 
   factory OwnerRequestItem.fromScheduleJson(Map<String, dynamic> json) {
-    final employeeName = json['employee_name']?.toString().trim().isNotEmpty ==
-            true
+    final employeeName =
+        json['employee_name']?.toString().trim().isNotEmpty == true
         ? json['employee_name']!.toString().trim()
         : 'Сотрудник';
 
     final employeeLabel = json['employee_label']?.toString();
     final year = (json['year'] as num?)?.toInt();
     final month = (json['month'] as num?)?.toInt();
-    final days = ((json['selected_days'] as List?) ?? const [])
-        .map((e) => int.tryParse(e.toString()) ?? 0)
-        .where((e) => e > 0)
-        .toList()
-      ..sort();
+    final days =
+        ((json['selected_days'] as List?) ?? const [])
+            .map((e) => int.tryParse(e.toString()) ?? 0)
+            .where((e) => e > 0)
+            .toList()
+          ..sort();
 
     final monthLabel = _monthRu(month);
     final subtitle = year != null && monthLabel.isNotEmpty
@@ -101,8 +102,8 @@ class OwnerRequestItem {
   }
 
   factory OwnerRequestItem.fromSwapJson(Map<String, dynamic> json) {
-    final employeeName = json['requester_name']?.toString().trim().isNotEmpty ==
-            true
+    final employeeName =
+        json['requester_name']?.toString().trim().isNotEmpty == true
         ? json['requester_name']!.toString().trim()
         : 'Сотрудник';
 
@@ -192,9 +193,7 @@ class OwnerRequestItem {
 class OwnerRequestsBundle {
   final List<OwnerRequestItem> items;
 
-  const OwnerRequestsBundle({
-    required this.items,
-  });
+  const OwnerRequestsBundle({required this.items});
 
   int get scheduleCount => items.where((e) => e.isSchedule).length;
   int get swapCount => items.where((e) => e.isSwap).length;
@@ -222,10 +221,7 @@ class StaffOwnerRequestsApi {
 
     final response = await http.get(
       uri,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Accept': 'application/json',
-      },
+      headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );
 
     if (response.statusCode != 200) {
@@ -295,9 +291,7 @@ class StaffOwnerRequestsApi {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({
-        'establishment_id': establishmentId,
-      }),
+      body: jsonEncode({'establishment_id': establishmentId}),
     );
 
     if (response.statusCode != 200) {

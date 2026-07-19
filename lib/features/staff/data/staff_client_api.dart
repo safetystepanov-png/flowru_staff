@@ -118,9 +118,8 @@ class StaffClientApi {
 
     return items
         .map(
-          (item) => StaffClientSearchItem.fromJson(
-            item as Map<String, dynamic>,
-          ),
+          (item) =>
+              StaffClientSearchItem.fromJson(item as Map<String, dynamic>),
         )
         .toList();
   }

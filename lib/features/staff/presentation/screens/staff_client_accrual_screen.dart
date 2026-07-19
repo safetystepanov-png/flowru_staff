@@ -257,10 +257,7 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
     }
   }
 
-  Widget _stagger({
-    required int index,
-    required Widget child,
-  }) {
+  Widget _stagger({required int index, required Widget child}) {
     final start = (index * 0.08).clamp(0.0, 0.82);
     final end = (start + 0.24).clamp(0.0, 1.0);
 
@@ -435,10 +432,7 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [
-                    kAccrualGreen.withOpacity(0.12),
-                    Colors.transparent,
-                  ],
+                  colors: [kAccrualGreen.withOpacity(0.12), Colors.transparent],
                 ),
               ),
             ),
@@ -547,8 +541,9 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
                 ),
                 child: TextField(
                   controller: _amountController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
@@ -663,7 +658,6 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
     );
   }
 
-
   Widget _metricCard({
     required String title,
     required String value,
@@ -676,10 +670,7 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         gradient: LinearGradient(
-          colors: [
-            Colors.white.withOpacity(0.88),
-            glow.withOpacity(0.075),
-          ],
+          colors: [Colors.white.withOpacity(0.88), glow.withOpacity(0.075)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -708,11 +699,7 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
               borderRadius: BorderRadius.circular(14),
               color: glow.withOpacity(0.14),
             ),
-            child: Icon(
-              icon,
-              size: 17,
-              color: glow,
-            ),
+            child: Icon(icon, size: 17, color: glow),
           ),
           const SizedBox(height: 12),
           Text(
@@ -743,7 +730,6 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
       ),
     );
   }
-
 
   Widget _errorCard() {
     if (_error == null) return const SizedBox.shrink();
@@ -827,10 +813,7 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
         elevation: 0,
         title: const Text(
           'Начисление',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         systemOverlayStyle: SystemUiOverlayStyle.light,
@@ -897,10 +880,7 @@ class _GlassCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(radius),
             gradient: LinearGradient(
-              colors: [
-                kAccrualCardStrong,
-                kAccrualCard,
-              ],
+              colors: [kAccrualCardStrong, kAccrualCard],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -924,10 +904,7 @@ class _MiniGlyph extends StatelessWidget {
   final IconData icon;
   final Color color;
 
-  const _MiniGlyph({
-    required this.icon,
-    required this.color,
-  });
+  const _MiniGlyph({required this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -939,11 +916,7 @@ class _MiniGlyph extends StatelessWidget {
           shape: BoxShape.circle,
           color: color.withOpacity(0.14),
         ),
-        child: Icon(
-          icon,
-          color: color,
-          size: 20,
-        ),
+        child: Icon(icon, color: color, size: 20),
       ),
     );
   }
@@ -953,10 +926,7 @@ class _ResultOrb extends StatelessWidget {
   final IconData icon;
   final Color color;
 
-  const _ResultOrb({
-    required this.icon,
-    required this.color,
-  });
+  const _ResultOrb({required this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -972,10 +942,7 @@ class _ResultOrb extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: [
-                  color.withOpacity(0.18),
-                  color.withOpacity(0.08),
-                ],
+                colors: [color.withOpacity(0.18), color.withOpacity(0.08)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -988,11 +955,7 @@ class _ResultOrb extends StatelessWidget {
               shape: BoxShape.circle,
               color: Colors.white.withOpacity(0.94),
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 30,
-            ),
+            child: Icon(icon, color: color, size: 30),
           ),
         ],
       ),
@@ -1044,7 +1007,9 @@ class _LoyaltyConfig {
       pointsPer100Rub: parseInt(json['points_per_100_rub']),
       cashbackPercent: parseNum(json['cashback_percent']),
       cashbackLevels: levelsRaw
-          .map((e) => _CashbackLevel.fromJson((e as Map).cast<String, dynamic>()))
+          .map(
+            (e) => _CashbackLevel.fromJson((e as Map).cast<String, dynamic>()),
+          )
           .toList(),
       clientVisits: parseInt(json['client_visits']),
       clientTotalSpent: parseNum(json['client_total_spent']),

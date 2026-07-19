@@ -104,8 +104,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   final Map<String, bool> _voiceDownloading = <String, bool>{};
   final Map<String, double> _voiceSpeeds = <String, double>{};
   final Map<String, String> _nativeVoiceLocalPaths = <String, String>{};
-  final Map<String, bool> _voiceLoading = <String, bool>{};          // загрузка аудио
-  final Map<String, double> _voicePlaybackRates = <String, double>{}; // скорость
+  final Map<String, bool> _voiceLoading = <String, bool>{}; // загрузка аудио
+  final Map<String, double> _voicePlaybackRates =
+      <String, double>{}; // скорость
   Timer? _voiceProgressTimer;
   String? _playingVoiceMessageId;
 
@@ -121,10 +122,38 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   late final AnimationController _introController;
 
   static const List<String> _emojiPalette = <String>[
-    '👍', '❤️', '🔥', '👏', '😂', '😍', '😮', '😎', '🙏', '✅',
-    '🎉', '💯', '👀', '🤝', '👌', '😢', '😡', '🤔', '🙌', '💥',
-    '🥳', '😴', '👎', '💔', '😅', '😬', '🤩', '😐', '🤯', '💪',
-    '🫶', '🫡',
+    '👍',
+    '❤️',
+    '🔥',
+    '👏',
+    '😂',
+    '😍',
+    '😮',
+    '😎',
+    '🙏',
+    '✅',
+    '🎉',
+    '💯',
+    '👀',
+    '🤝',
+    '👌',
+    '😢',
+    '😡',
+    '🤔',
+    '🙌',
+    '💥',
+    '🥳',
+    '😴',
+    '👎',
+    '💔',
+    '😅',
+    '😬',
+    '🤩',
+    '😐',
+    '🤯',
+    '💪',
+    '🫶',
+    '🫡',
   ];
 
   // BLoC
@@ -165,7 +194,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       _draftText = _messageController.text;
     }
 
-    final shouldShowTyping = _messageController.text.trim().isNotEmpty &&
+    final shouldShowTyping =
+        _messageController.text.trim().isNotEmpty &&
         !_sending &&
         !_isRecordingVoice;
 
@@ -330,7 +360,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       });
     }
   }
-  
+
   void _scrollToBottom({bool jump = false}) {
     if (!_scrollController.hasClients) return;
     final target = _scrollController.position.maxScrollExtent + 180;
@@ -346,7 +376,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   void _onScrollPagination() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
       _chatCubit.loadMoreMessages();
     }
   }
@@ -493,7 +524,12 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
     // Если есть изображение – отправляем через старый метод (пока)
     if (pendingImageBytes != null) {
-      await _sendImageMessage(pendingImageBytes, pendingImageName, text, replyingToMessageId);
+      await _sendImageMessage(
+        pendingImageBytes,
+        pendingImageName,
+        text,
+        replyingToMessageId,
+      );
       return;
     }
 
@@ -530,7 +566,12 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     }
   }
 
-  Future<void> _sendImageMessage(Uint8List bytes, String? filename, String? caption, String? replyToId) async {
+  Future<void> _sendImageMessage(
+    Uint8List bytes,
+    String? filename,
+    String? caption,
+    String? replyToId,
+  ) async {
     final localId = 'local_img_${DateTime.now().millisecondsSinceEpoch}';
     final optimistic = ChatMessage(
       id: localId,
@@ -576,8 +617,12 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       );
       await _chatCubit.loadMessages(silent: true, userId: _currentUserId);
     } catch (e) {
-      final updated = _chatCubit.state.messages.where((m) => m.id != localId).toList();
-      _chatCubit.emit(_chatCubit.state.copyWith(messages: updated, error: e.toString()));
+      final updated = _chatCubit.state.messages
+          .where((m) => m.id != localId)
+          .toList();
+      _chatCubit.emit(
+        _chatCubit.state.copyWith(messages: updated, error: e.toString()),
+      );
     } finally {
       setState(() => _sending = false);
     }
@@ -756,22 +801,25 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     try {
       final token = await _token();
 
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages/audio'),
-      )
-        ..headers['Authorization'] = 'Bearer $token'
-        ..headers['Accept'] = 'application/json'
-        ..fields['establishment_id'] = widget.establishmentId.toString()
-        ..fields['message_text'] = ''
-        ..files.add(
-          await http.MultipartFile.fromPath(
-            'audio',
-            recordedPath,
-            filename: 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a',
-            contentType: MediaType('audio', 'mp4'),
-          ),
-        );
+      final request =
+          http.MultipartRequest(
+              'POST',
+              Uri.parse(
+                '${AppConfig.baseUrl}/api/v1/staff/chat/messages/audio',
+              ),
+            )
+            ..headers['Authorization'] = 'Bearer $token'
+            ..headers['Accept'] = 'application/json'
+            ..fields['establishment_id'] = widget.establishmentId.toString()
+            ..fields['message_text'] = ''
+            ..files.add(
+              await http.MultipartFile.fromPath(
+                'audio',
+                recordedPath,
+                filename: 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a',
+                contentType: MediaType('audio', 'mp4'),
+              ),
+            );
 
       if (replyToMessageId != null) {
         request.fields['reply_to_message_id'] = replyToMessageId;
@@ -788,19 +836,26 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
       setState(() {
         // удалим оптимистичное сообщение
-        final updated = _chatCubit.state.messages.where((m) => m.id != localMessageId).toList();
+        final updated = _chatCubit.state.messages
+            .where((m) => m.id != localMessageId)
+            .toList();
         _chatCubit.emit(_chatCubit.state.copyWith(messages: updated));
       });
 
       await _refreshMessagesSilently(keepScrollOffset: true);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Сообщение удалено'), duration: Duration(seconds: 1)),
+          const SnackBar(
+            content: Text('Сообщение удалено'),
+            duration: Duration(seconds: 1),
+          ),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      final updated = _chatCubit.state.messages.where((m) => m.id != localMessageId).toList();
+      final updated = _chatCubit.state.messages
+          .where((m) => m.id != localMessageId)
+          .toList();
       _chatCubit.emit(_chatCubit.state.copyWith(messages: updated));
       setState(() {
         _replyingToMessageId = replyToMessageId;
@@ -895,7 +950,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     FocusScope.of(context).unfocus();
     _messageFocusNode.unfocus();
     if (message.isLocalOnly) {
-      final updated = _chatCubit.state.messages.where((m) => m.id != message.id).toList();
+      final updated = _chatCubit.state.messages
+          .where((m) => m.id != message.id)
+          .toList();
       _chatCubit.emit(_chatCubit.state.copyWith(messages: updated));
       return;
     }
@@ -930,7 +987,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     FocusScope.of(context).unfocus();
     _messageFocusNode.unfocus();
     if (message.isLocalOnly) {
-      final updated = _chatCubit.state.messages.where((m) => m.id != message.id).toList();
+      final updated = _chatCubit.state.messages
+          .where((m) => m.id != message.id)
+          .toList();
       _chatCubit.emit(_chatCubit.state.copyWith(messages: updated));
       return;
     }
@@ -1064,7 +1123,10 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       builder: (dialogContext) {
         return Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 22,
+            vertical: 24,
+          ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
             child: BackdropFilter(
@@ -1214,9 +1276,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
   List<ChatMessage> _selectedMessages() {
     final messages = _chatCubit.state.messages;
-    return messages
-        .where((m) => _selectedMessageIds.contains(m.id))
-        .toList()
+    return messages.where((m) => _selectedMessageIds.contains(m.id)).toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   }
 
@@ -1236,7 +1296,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   Future<void> _togglePinnedMessageLocal(ChatMessage message) async {
-    final bool shouldPin = !(message.isPinned || _pinnedMessageId == message.id);
+    final bool shouldPin =
+        !(message.isPinned || _pinnedMessageId == message.id);
 
     try {
       final token = await _token();
@@ -1349,21 +1410,22 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
       final token = await _token();
 
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages/file'),
-      )
-        ..headers['Authorization'] = 'Bearer $token'
-        ..headers['Accept'] = 'application/json'
-        ..fields['establishment_id'] = widget.establishmentId.toString()
-        ..fields['message_text'] = ''
-        ..files.add(
-          await http.MultipartFile.fromPath(
-            'file',
-            path,
-            filename: picked.name,
-          ),
-        );
+      final request =
+          http.MultipartRequest(
+              'POST',
+              Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages/file'),
+            )
+            ..headers['Authorization'] = 'Bearer $token'
+            ..headers['Accept'] = 'application/json'
+            ..fields['establishment_id'] = widget.establishmentId.toString()
+            ..fields['message_text'] = ''
+            ..files.add(
+              await http.MultipartFile.fromPath(
+                'file',
+                path,
+                filename: picked.name,
+              ),
+            );
 
       if (replyToMessageId != null) {
         request.fields['reply_to_message_id'] = replyToMessageId;
@@ -1376,7 +1438,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         throw Exception(_extractErrorText(response));
       }
 
-      final updated = _chatCubit.state.messages.where((m) => m.id != localMessageId).toList();
+      final updated = _chatCubit.state.messages
+          .where((m) => m.id != localMessageId)
+          .toList();
       _chatCubit.emit(_chatCubit.state.copyWith(messages: updated));
 
       await _refreshMessagesSilently(keepScrollOffset: true);
@@ -1419,8 +1483,18 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       if (diff == 1) return 'Вчера';
 
       const months = <String>[
-        'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-        'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
+        'января',
+        'февраля',
+        'марта',
+        'апреля',
+        'мая',
+        'июня',
+        'июля',
+        'августа',
+        'сентября',
+        'октября',
+        'ноября',
+        'декабря',
       ];
 
       return '${dt.day} ${months[dt.month - 1]}';
@@ -1456,9 +1530,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'establishment_id': widget.establishmentId,
-        }),
+        body: jsonEncode({'establishment_id': widget.establishmentId}),
       );
 
       if (response.statusCode != 200 && response.statusCode != 201) {
@@ -1478,9 +1550,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'establishment_id': widget.establishmentId,
-        }),
+        body: jsonEncode({'establishment_id': widget.establishmentId}),
       );
 
       if (response.statusCode != 200 && response.statusCode != 201) {
@@ -1705,7 +1775,6 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     );
   }
 
-
   Widget _voiceBubble(bool mine, ChatMessage message) {
     final isPlaying = _playingVoiceMessageId == message.id;
     final isLoading = _voiceLoading[message.id] == true;
@@ -1738,15 +1807,14 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                 end: Alignment.bottomRight,
               ),
         border: Border.all(
-          color: mine
-              ? Colors.white.withOpacity(0.3)
-              : const Color(0xFFE7EEF0),
+          color: mine ? Colors.white.withOpacity(0.3) : const Color(0xFFE7EEF0),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: (mine ? const Color(0xFF6366F1) : Colors.black)
-                .withOpacity(mine ? 0.25 : 0.08),
+            color: (mine ? const Color(0xFF6366F1) : Colors.black).withOpacity(
+              mine ? 0.25 : 0.08,
+            ),
             blurRadius: mine ? 20 : 12,
             offset: Offset(0, mine ? 8 : 4),
           ),
@@ -1759,7 +1827,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
             children: [
               // ----- КНОПКА PLAY / PAUSE с жёлтым индикатором загрузки -----
               GestureDetector(
-                onTap: isLoading ? null : () => _toggleInlineVoicePlayback(message),
+                onTap: isLoading
+                    ? null
+                    : () => _toggleInlineVoicePlayback(message),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: 48,
@@ -1775,7 +1845,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                           ),
                     boxShadow: [
                       BoxShadow(
-                        color: (mine ? Colors.white : kChatBlue).withOpacity(0.4),
+                        color: (mine ? Colors.white : kChatBlue).withOpacity(
+                          0.4,
+                        ),
                         blurRadius: 12,
                         spreadRadius: 2,
                       ),
@@ -1787,13 +1859,17 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                           height: 24,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(kChatAccent), // ЖЁЛТЫЙ
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              kChatAccent,
+                            ), // ЖЁЛТЫЙ
                           ),
                         )
                       : AnimatedSwitcher(
                           duration: const Duration(milliseconds: 200),
                           child: Icon(
-                            isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                            isPlaying
+                                ? Icons.pause_rounded
+                                : Icons.play_arrow_rounded,
                             key: ValueKey(isPlaying ? 'pause' : 'play'),
                             color: mine ? kChatBlue : Colors.white,
                             size: 22,
@@ -1808,12 +1884,17 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                 child: Column(
                   children: [
                     GestureDetector(
-                      onTapDown: (details) => _seekVoiceMessageFromTap(message, details),
+                      onTapDown: (details) =>
+                          _seekVoiceMessageFromTap(message, details),
                       onHorizontalDragUpdate: (details) {
                         final box = context.findRenderObject();
                         if (box is RenderBox) {
-                          final localPos = box.globalToLocal(details.globalPosition);
-                          final dragDetails = TapDownDetails(localPosition: localPos);
+                          final localPos = box.globalToLocal(
+                            details.globalPosition,
+                          );
+                          final dragDetails = TapDownDetails(
+                            localPosition: localPos,
+                          );
                           _seekVoiceMessageFromTap(message, dragDetails);
                         }
                       },
@@ -1822,17 +1903,27 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                         child: LayoutBuilder(
                           builder: (context, constraints) {
                             final barCount = 40;
-                            final barWidth = (constraints.maxWidth / barCount) - 1.5;
-                            final waveHeights = _voiceWaveHeights(message, count: barCount);
+                            final barWidth =
+                                (constraints.maxWidth / barCount) - 1.5;
+                            final waveHeights = _voiceWaveHeights(
+                              message,
+                              count: barCount,
+                            );
                             return Row(
                               children: List.generate(barCount, (i) {
                                 final t = i / (barCount - 1);
                                 final isActive = t <= progress;
                                 double baseHeight = waveHeights[i];
                                 if (isPlaying) {
-                                  final pulse = 0.8 + 0.4 * math.sin(
-                                    DateTime.now().millisecondsSinceEpoch / 150 + i * 0.5,
-                                  );
+                                  final pulse =
+                                      0.8 +
+                                      0.4 *
+                                          math.sin(
+                                            DateTime.now()
+                                                        .millisecondsSinceEpoch /
+                                                    150 +
+                                                i * 0.5,
+                                          );
                                   baseHeight = baseHeight * pulse;
                                 }
                                 final height = baseHeight.clamp(6.0, 32.0);
@@ -1845,9 +1936,11 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                     color: isActive
                                         ? (mine ? Colors.white : kChatBlue)
                                         : (mine
-                                            ? Colors.white.withOpacity(0.45)
-                                            : kChatBlue.withOpacity(0.35)),
-                                    borderRadius: BorderRadius.circular(barWidth / 2),
+                                              ? Colors.white.withOpacity(0.45)
+                                              : kChatBlue.withOpacity(0.35)),
+                                    borderRadius: BorderRadius.circular(
+                                      barWidth / 2,
+                                    ),
                                   ),
                                 );
                               }),
@@ -1872,7 +1965,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                 color: mine
                                     ? Colors.white.withOpacity(0.9)
                                     : kChatInkSoft,
-                                fontFeatures: const [FontFeature.tabularFigures()],
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
                               ),
                               child: Text(
                                 isPlaying
@@ -1885,13 +1980,19 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                             GestureDetector(
                               onTap: () {
                                 double newSpeed;
-                                if (speed == 1.0) newSpeed = 1.5;
-                                else if (speed == 1.5) newSpeed = 2.0;
-                                else newSpeed = 1.0;
+                                if (speed == 1.0)
+                                  newSpeed = 1.5;
+                                else if (speed == 1.5)
+                                  newSpeed = 2.0;
+                                else
+                                  newSpeed = 1.0;
                                 _setVoiceSpeed(message, newSpeed);
                               },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(12),
                                   color: mine
@@ -1923,7 +2024,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                               ),
                             ),
                             const SizedBox(width: 4),
-                            _statusIcon(message, mine),   // ← галочки "прочитано"
+                            _statusIcon(message, mine), // ← галочки "прочитано"
                           ],
                         ),
                       ],
@@ -1939,7 +2040,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   Future<void> _toggleInlineVoicePlayback(ChatMessage message) async {
-    final fullUrl = _cacheSafeAttachmentUrl(message) ?? _fullUrl(message.attachmentUrl);
+    final fullUrl =
+        _cacheSafeAttachmentUrl(message) ?? _fullUrl(message.attachmentUrl);
     if (fullUrl == null || fullUrl.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1978,7 +2080,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         return;
       }
 
-      if (_playingVoiceMessageId != null && _playingVoiceMessageId != message.id) {
+      if (_playingVoiceMessageId != null &&
+          _playingVoiceMessageId != message.id) {
         final previousWeb = _voiceAudioElements[_playingVoiceMessageId!];
         try {
           previousWeb?.pause();
@@ -2033,8 +2136,12 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     final player = await _ensureNativeVoicePlayer(message);
     debugPrint('VOICE TAP -> messageId=${message.id}');
     debugPrint('VOICE TAP -> attachmentUrl=${message.attachmentUrl}');
-    debugPrint('VOICE TAP -> preparedLocalPath=${_nativeVoiceLocalPaths[message.id]}');
-    debugPrint('VOICE TAP -> currentSeconds=${_voiceCurrentSeconds[message.id]}');
+    debugPrint(
+      'VOICE TAP -> preparedLocalPath=${_nativeVoiceLocalPaths[message.id]}',
+    );
+    debugPrint(
+      'VOICE TAP -> currentSeconds=${_voiceCurrentSeconds[message.id]}',
+    );
     if (player == null) {
       resetLoading();
       if (!mounted) return;
@@ -2047,7 +2154,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       return;
     }
 
-    if (_playingVoiceMessageId != null && _playingVoiceMessageId != message.id) {
+    if (_playingVoiceMessageId != null &&
+        _playingVoiceMessageId != message.id) {
       final previousNative = _nativeVoicePlayers[_playingVoiceMessageId!];
       if (previousNative != null) {
         try {
@@ -2116,7 +2224,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       final audio = _voiceAudioElements[message.id];
       if (audio != null) audio.currentTime = seconds;
     } else {
-      _nativeVoicePlayers[message.id]?.seek(Duration(milliseconds: (seconds * 1000).round()));
+      _nativeVoicePlayers[message.id]?.seek(
+        Duration(milliseconds: (seconds * 1000).round()),
+      );
     }
     if (mounted) {
       setState(() => _voiceCurrentSeconds[message.id] = seconds);
@@ -2129,10 +2239,10 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     final current = _voiceSpeeds[message.id] ?? 1.0;
     final nextIndex = (speeds.indexOf(current) + 1) % speeds.length;
     _voiceSpeeds[message.id] = speeds[nextIndex];
-    
+
     final player = _nativeVoicePlayers[message.id];
     player?.setPlaybackRate(speeds[nextIndex]);
-    
+
     if (mounted) setState(() {}); // обновляем кнопку
   }
 
@@ -2141,7 +2251,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   Widget _hiddenVoiceAudioHost(ChatMessage message) {
-    final fullUrl = _cacheSafeAttachmentUrl(message) ?? _fullUrl(message.attachmentUrl);
+    final fullUrl =
+        _cacheSafeAttachmentUrl(message) ?? _fullUrl(message.attachmentUrl);
     if (!kIsWeb || fullUrl == null || fullUrl.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -2161,7 +2272,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
             host.style.opacity = '0';
             host.style.overflow = 'hidden';
             host.style.pointerEvents = 'none';
-            host.innerHtml = '<audio preload="metadata" style="display:none"></audio>';
+            host.innerHtml =
+                '<audio preload="metadata" style="display:none"></audio>';
             final dynamic audio = host.querySelector('audio');
             if (audio == null) return;
             audio.src = fullUrl;
@@ -2188,7 +2300,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
   void _startVoiceProgressTicker(String messageId) {
     _voiceProgressTimer?.cancel();
-    _voiceProgressTimer = Timer.periodic(const Duration(milliseconds: 180), (_) {
+    _voiceProgressTimer = Timer.periodic(const Duration(milliseconds: 180), (
+      _,
+    ) {
       final audio = _voiceAudioElements[messageId];
       if (audio == null || !mounted) {
         _voiceProgressTimer?.cancel();
@@ -2286,16 +2400,18 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       player.onDurationChanged.listen((duration) {
         if (!mounted) return;
         setState(() {
-          _voiceTotalSeconds[message.id] =
-              duration.inMilliseconds <= 0 ? 0 : duration.inMilliseconds / 1000.0;
+          _voiceTotalSeconds[message.id] = duration.inMilliseconds <= 0
+              ? 0
+              : duration.inMilliseconds / 1000.0;
         });
       });
 
       player.onPositionChanged.listen((position) {
         if (!mounted) return;
         setState(() {
-          _voiceCurrentSeconds[message.id] =
-              position.inMilliseconds <= 0 ? 0 : position.inMilliseconds / 1000.0;
+          _voiceCurrentSeconds[message.id] = position.inMilliseconds <= 0
+              ? 0
+              : position.inMilliseconds / 1000.0;
         });
       });
 
@@ -2348,7 +2464,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     final savedSpeed = _voicePlaybackRates[message.id];
     if (savedSpeed != null && savedSpeed != 1.0) {
       await player.setPlaybackRate(savedSpeed);
-    }    
+    }
     return player;
   }
 
@@ -2376,7 +2492,10 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   double _voiceProgress(ChatMessage message) {
     final duration = _voiceEffectiveDuration(message);
     if (duration <= 0) return 0;
-    final current = (_voiceCurrentSeconds[message.id] ?? 0).clamp(0.0, duration);
+    final current = (_voiceCurrentSeconds[message.id] ?? 0).clamp(
+      0.0,
+      duration,
+    );
     return (current / duration).clamp(0.0, 1.0);
   }
 
@@ -2407,7 +2526,10 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       return;
     }
 
-    final opened = await launchUrlString(fullUrl, mode: LaunchMode.externalApplication);
+    final opened = await launchUrlString(
+      fullUrl,
+      mode: LaunchMode.externalApplication,
+    );
     if (!opened && mounted) {
       await Clipboard.setData(ClipboardData(text: fullUrl));
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2463,9 +2585,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
   void _openUrlPreview(String url) {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => _ImagePreviewScreen.network(url: url),
-      ),
+      MaterialPageRoute(builder: (_) => _ImagePreviewScreen.network(url: url)),
     );
   }
 
@@ -2480,7 +2600,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
   Widget _statusIcon(ChatMessage message, bool mine) {
     if (!mine || message.isDeleted) return const SizedBox.shrink();
-    
+
     Icon icon;
     Color color;
     double size = 13;
@@ -2501,29 +2621,56 @@ class _StaffChatScreenState extends State<StaffChatScreen>
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(CupertinoIcons.check_mark, size: 11, color: Colors.white.withOpacity(0.85)),
+              Icon(
+                CupertinoIcons.check_mark,
+                size: 11,
+                color: Colors.white.withOpacity(0.85),
+              ),
               const SizedBox(width: -3), // Наложение для эффекта "двойной"
-              Icon(CupertinoIcons.check_mark, size: 11, color: Colors.white.withOpacity(0.85)),
+              Icon(
+                CupertinoIcons.check_mark,
+                size: 11,
+                color: Colors.white.withOpacity(0.85),
+              ),
             ],
           ),
         );
       case MessageStatus.read:
         return Animate(
-          effects: [ScaleEffect(duration: 300.ms, begin: const Offset(0.6, 0.6), end: Offset.zero, curve: Curves.elasticOut), FadeEffect()],
+          effects: [
+            ScaleEffect(
+              duration: 300.ms,
+              begin: const Offset(0.6, 0.6),
+              end: Offset.zero,
+              curve: Curves.elasticOut,
+            ),
+            FadeEffect(),
+          ],
           child: Padding(
             padding: const EdgeInsets.only(left: 5),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(CupertinoIcons.check_mark, size: 12, color: const Color(0xFF64D2FF)),
+                Icon(
+                  CupertinoIcons.check_mark,
+                  size: 12,
+                  color: const Color(0xFF64D2FF),
+                ),
                 const SizedBox(width: -3),
-                Icon(CupertinoIcons.check_mark, size: 12, color: const Color(0xFF64D2FF)),
+                Icon(
+                  CupertinoIcons.check_mark,
+                  size: 12,
+                  color: const Color(0xFF64D2FF),
+                ),
               ],
             ),
           ),
         );
     }
-    return Padding(padding: const EdgeInsets.only(left: 5), child: Icon(icon.icon, color: color, size: size));
+    return Padding(
+      padding: const EdgeInsets.only(left: 5),
+      child: Icon(icon.icon, color: color, size: size),
+    );
   }
 
   bool _shouldShowUnreadDivider(ChatMessage current, ChatMessage? prev) {
@@ -2561,20 +2708,22 @@ class _StaffChatScreenState extends State<StaffChatScreen>
             ),
           ),
           IconButton(
-            onPressed: _selectedMessageIds.isEmpty ? null : () async {
-              final text = _selectedMessages()
-                  .map((m) => _messagePreview(m))
-                  .join('\n\n');
-              await Clipboard.setData(ClipboardData(text: text));
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Сообщения скопированы'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-              _clearSelectionMode();
-            },
+            onPressed: _selectedMessageIds.isEmpty
+                ? null
+                : () async {
+                    final text = _selectedMessages()
+                        .map((m) => _messagePreview(m))
+                        .join('\n\n');
+                    await Clipboard.setData(ClipboardData(text: text));
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Сообщения скопированы'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                    _clearSelectionMode();
+                  },
             icon: Icon(
               CupertinoIcons.doc_on_doc,
               color: _selectedMessageIds.isEmpty
@@ -2583,7 +2732,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
             ),
           ),
           IconButton(
-            onPressed: _selectedMessageIds.isEmpty ? null : _deleteSelectedMessages,
+            onPressed: _selectedMessageIds.isEmpty
+                ? null
+                : _deleteSelectedMessages,
             icon: Icon(
               CupertinoIcons.delete,
               color: _selectedMessageIds.isEmpty
@@ -2606,7 +2757,11 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       child: Animate(
         effects: [
           FadeEffect(duration: 300.ms),
-          SlideEffect(begin: const Offset(0, -30), end: Offset.zero, duration: 400.ms),
+          SlideEffect(
+            begin: const Offset(0, -30),
+            end: Offset.zero,
+            duration: 400.ms,
+          ),
         ],
         child: _GlassCard(
           radius: 24,
@@ -2757,7 +2912,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
           child: Align(
             alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
             child: Row(
-              mainAxisAlignment: mine ? MainAxisAlignment.end : MainAxisAlignment.start,
+              mainAxisAlignment: mine
+                  ? MainAxisAlignment.end
+                  : MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 if (!mine)
@@ -2767,14 +2924,17 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                       builder: (buttonContext) => _bubbleSideButton(
                         icon: _selectionMode
                             ? (isSelected
-                                ? CupertinoIcons.check_mark_circled_solid
-                                : CupertinoIcons.circle)
+                                  ? CupertinoIcons.check_mark_circled_solid
+                                  : CupertinoIcons.circle)
                             : CupertinoIcons.ellipsis_circle,
                         onTap: () {
                           if (_selectionMode) {
                             _toggleSelection(message);
                           } else {
-                            _openMessageActions(message, anchorContext: buttonContext);
+                            _openMessageActions(
+                              message,
+                              anchorContext: buttonContext,
+                            );
                           }
                         },
                       ),
@@ -2785,7 +2945,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                     maxWidth: MediaQuery.of(context).size.width * 0.74,
                   ),
                   child: Column(
-                    crossAxisAlignment: mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                    crossAxisAlignment: mine
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
                     children: [
                       GestureDetector(
                         onLongPress: () {
@@ -2797,7 +2959,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                         },
                         onSecondaryTap: () => _openMessageActions(message),
                         child: message.type == AttachmentType.voice
-                            ? Column(   // для голосовых — без внешней плашки
+                            ? Column(
+                                // для голосовых — без внешней плашки
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   // Автор (если не моё и showAuthor)
@@ -2805,7 +2968,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                     Padding(
                                       padding: const EdgeInsets.only(bottom: 6),
                                       child: Text(
-                                        message.senderName.isEmpty ? 'Сотрудник' : message.senderName,
+                                        message.senderName.isEmpty
+                                            ? 'Сотрудник'
+                                            : message.senderName,
                                         style: const TextStyle(
                                           fontSize: 12.5,
                                           fontWeight: FontWeight.w900,
@@ -2814,15 +2979,30 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                       ),
                                     ),
                                   // Reply (если есть)
-                                  if ((message.replyText ?? '').trim().isNotEmpty ||
-                                      (message.replySenderName ?? '').trim().isNotEmpty)
+                                  if ((message.replyText ?? '')
+                                          .trim()
+                                          .isNotEmpty ||
+                                      (message.replySenderName ?? '')
+                                          .trim()
+                                          .isNotEmpty)
                                     GestureDetector(
-                                      onTap: () => _scrollToMessageById(message.replyToMessageId),
+                                      onTap: () => _scrollToMessageById(
+                                        message.replyToMessageId,
+                                      ),
                                       child: Container(
-                                        margin: const EdgeInsets.only(bottom: 8),
-                                        padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                                        margin: const EdgeInsets.only(
+                                          bottom: 8,
+                                        ),
+                                        padding: const EdgeInsets.fromLTRB(
+                                          10,
+                                          8,
+                                          10,
+                                          8,
+                                        ),
                                         decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(14),
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
                                           color: mine
                                               ? Colors.white.withOpacity(0.16)
                                               : kChatBlue.withOpacity(0.08),
@@ -2833,46 +3013,71 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                           ),
                                         ),
                                         child: Row(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Container(
                                               width: 3,
                                               height: 30,
-                                              margin: const EdgeInsets.only(top: 1, right: 8),
+                                              margin: const EdgeInsets.only(
+                                                top: 1,
+                                                right: 8,
+                                              ),
                                               decoration: BoxDecoration(
-                                                borderRadius: BorderRadius.circular(99),
-                                                color: mine ? Colors.white : kChatBlue,
+                                                borderRadius:
+                                                    BorderRadius.circular(99),
+                                                color: mine
+                                                    ? Colors.white
+                                                    : kChatBlue,
                                               ),
                                             ),
                                             Expanded(
                                               child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    (message.replySenderName ?? 'Сотрудник').trim().isEmpty
+                                                    (message.replySenderName ??
+                                                                'Сотрудник')
+                                                            .trim()
+                                                            .isEmpty
                                                         ? 'Сотрудник'
-                                                        : message.replySenderName!.trim(),
+                                                        : message
+                                                              .replySenderName!
+                                                              .trim(),
                                                     maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                     style: TextStyle(
                                                       fontSize: 12.5,
-                                                      fontWeight: FontWeight.w900,
-                                                      color: mine ? Colors.white : kChatBlue,
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      color: mine
+                                                          ? Colors.white
+                                                          : kChatBlue,
                                                     ),
                                                   ),
                                                   const SizedBox(height: 2),
                                                   Text(
-                                                    (message.replyText ?? '').trim().isEmpty
+                                                    (message.replyText ?? '')
+                                                            .trim()
+                                                            .isEmpty
                                                         ? 'Сообщение'
-                                                        : message.replyText!.trim(),
+                                                        : message.replyText!
+                                                              .trim(),
                                                     maxLines: 2,
-                                                    overflow: TextOverflow.ellipsis,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                     style: TextStyle(
                                                       fontSize: 12.5,
                                                       height: 1.25,
-                                                      fontWeight: FontWeight.w700,
+                                                      fontWeight:
+                                                          FontWeight.w700,
                                                       color: mine
-                                                          ? Colors.white.withOpacity(0.86)
+                                                          ? Colors.white
+                                                                .withOpacity(
+                                                                  0.86,
+                                                                )
                                                           : kChatInkSoft,
                                                     ),
                                                   ),
@@ -2885,7 +3090,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                     ),
                                   // Само голосовое сообщение
                                   _voiceBubble(mine, message),
-                                  if (message.messageText.trim().isNotEmpty) const SizedBox(height: 8),
+                                  if (message.messageText.trim().isNotEmpty)
+                                    const SizedBox(height: 8),
                                   if (!message.isDeleted &&
                                       message.messageText.trim().isNotEmpty &&
                                       _shouldShowVoiceTranscript(message))
@@ -2895,8 +3101,13 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       if (message.isPinned) ...[
-                                        Icon(CupertinoIcons.pin_fill, size: 12,
-                                            color: mine ? Colors.white.withOpacity(0.82) : kChatBlue),
+                                        Icon(
+                                          CupertinoIcons.pin_fill,
+                                          size: 12,
+                                          color: mine
+                                              ? Colors.white.withOpacity(0.82)
+                                              : kChatBlue,
+                                        ),
                                         const SizedBox(width: 4),
                                       ],
                                       Text(
@@ -2904,18 +3115,23 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                         style: TextStyle(
                                           fontSize: 11.5,
                                           fontWeight: FontWeight.w800,
-                                          color: mine ? Colors.white.withOpacity(0.86) : kChatInkSoft,
+                                          color: mine
+                                              ? Colors.white.withOpacity(0.86)
+                                              : kChatInkSoft,
                                         ),
                                       ),
                                       _statusIcon(message, mine),
-                                      if (message.isEdited && !message.isDeleted) ...[
+                                      if (message.isEdited &&
+                                          !message.isDeleted) ...[
                                         const SizedBox(width: 6),
                                         Text(
                                           'изменено',
                                           style: TextStyle(
                                             fontSize: 11.5,
                                             fontWeight: FontWeight.w800,
-                                            color: mine ? Colors.white.withOpacity(0.80) : kChatInkSoft,
+                                            color: mine
+                                                ? Colors.white.withOpacity(0.80)
+                                                : kChatInkSoft,
                                           ),
                                         ),
                                       ],
@@ -2923,18 +3139,31 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                   ),
                                 ],
                               )
-                            : Container(   // для всех остальных типов (текст, фото, файл) — оставляем старую красивую плашку
-                                padding: const EdgeInsets.fromLTRB(13, 11, 13, 9),
+                            : Container(
+                                // для всех остальных типов (текст, фото, файл) — оставляем старую красивую плашку
+                                padding: const EdgeInsets.fromLTRB(
+                                  13,
+                                  11,
+                                  13,
+                                  9,
+                                ),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(showAuthor ? 24 : 18),
-                                    topRight: Radius.circular(showAuthor ? 24 : 18),
+                                    topLeft: Radius.circular(
+                                      showAuthor ? 24 : 18,
+                                    ),
+                                    topRight: Radius.circular(
+                                      showAuthor ? 24 : 18,
+                                    ),
                                     bottomLeft: Radius.circular(mine ? 24 : 8),
                                     bottomRight: Radius.circular(mine ? 8 : 24),
                                   ),
                                   gradient: mine
                                       ? const LinearGradient(
-                                          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                                          colors: [
+                                            Color(0xFF6366F1),
+                                            Color(0xFF8B5CF6),
+                                          ],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         )
@@ -2949,28 +3178,40 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                   border: mine
                                       ? Border.all(
                                           color: isSelected
-                                              ? kChatAccentSoft.withOpacity(0.90)
+                                              ? kChatAccentSoft.withOpacity(
+                                                  0.90,
+                                                )
                                               : isHighlighted
-                                                  ? Colors.white.withOpacity(0.45)
-                                                  : Colors.transparent,
-                                          width: isSelected ? 1.6 : (isHighlighted ? 1.2 : 0),
+                                              ? Colors.white.withOpacity(0.45)
+                                              : Colors.transparent,
+                                          width: isSelected
+                                              ? 1.6
+                                              : (isHighlighted ? 1.2 : 0),
                                         )
                                       : Border.all(
                                           color: isSelected
                                               ? kChatAmber.withOpacity(0.90)
                                               : isHighlighted
-                                                  ? kChatBlue.withOpacity(0.55)
-                                                  : Colors.white.withOpacity(0.94),
-                                          width: isSelected ? 1.6 : (isHighlighted ? 1.4 : 1),
+                                              ? kChatBlue.withOpacity(0.55)
+                                              : Colors.white.withOpacity(0.94),
+                                          width: isSelected
+                                              ? 1.6
+                                              : (isHighlighted ? 1.4 : 1),
                                         ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: (mine ? const Color(0xFF6366F1) : Colors.black).withOpacity(0.15),
+                                      color:
+                                          (mine
+                                                  ? const Color(0xFF6366F1)
+                                                  : Colors.black)
+                                              .withOpacity(0.15),
                                       blurRadius: 12,
                                       offset: const Offset(0, 4),
                                     ),
                                     BoxShadow(
-                                      color: (mine ? Colors.black : Colors.white).withOpacity(0.05),
+                                      color:
+                                          (mine ? Colors.black : Colors.white)
+                                              .withOpacity(0.05),
                                       blurRadius: 2,
                                       offset: const Offset(0, 1),
                                     ),
@@ -2993,9 +3234,13 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                   children: [
                                     if (!mine && showAuthor)
                                       Padding(
-                                        padding: const EdgeInsets.only(bottom: 6),
+                                        padding: const EdgeInsets.only(
+                                          bottom: 6,
+                                        ),
                                         child: Text(
-                                          message.senderName.isEmpty ? 'Сотрудник' : message.senderName,
+                                          message.senderName.isEmpty
+                                              ? 'Сотрудник'
+                                              : message.senderName,
                                           style: const TextStyle(
                                             fontSize: 12.5,
                                             fontWeight: FontWeight.w900,
@@ -3003,65 +3248,107 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                           ),
                                         ),
                                       ),
-                                    if ((message.replyText ?? '').trim().isNotEmpty ||
-                                        (message.replySenderName ?? '').trim().isNotEmpty)
+                                    if ((message.replyText ?? '')
+                                            .trim()
+                                            .isNotEmpty ||
+                                        (message.replySenderName ?? '')
+                                            .trim()
+                                            .isNotEmpty)
                                       GestureDetector(
-                                        onTap: () => _scrollToMessageById(message.replyToMessageId),
+                                        onTap: () => _scrollToMessageById(
+                                          message.replyToMessageId,
+                                        ),
                                         child: Container(
-                                          margin: const EdgeInsets.only(bottom: 8),
-                                          padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                                          margin: const EdgeInsets.only(
+                                            bottom: 8,
+                                          ),
+                                          padding: const EdgeInsets.fromLTRB(
+                                            10,
+                                            8,
+                                            10,
+                                            8,
+                                          ),
                                           decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(14),
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
                                             color: mine
                                                 ? Colors.white.withOpacity(0.16)
                                                 : kChatBlue.withOpacity(0.08),
                                             border: Border.all(
                                               color: mine
-                                                  ? Colors.white.withOpacity(0.18)
+                                                  ? Colors.white.withOpacity(
+                                                      0.18,
+                                                    )
                                                   : kChatBlue.withOpacity(0.14),
                                             ),
                                           ),
                                           child: Row(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Container(
                                                 width: 3,
                                                 height: 30,
-                                                margin: const EdgeInsets.only(top: 1, right: 8),
+                                                margin: const EdgeInsets.only(
+                                                  top: 1,
+                                                  right: 8,
+                                                ),
                                                 decoration: BoxDecoration(
-                                                  borderRadius: BorderRadius.circular(99),
-                                                  color: mine ? Colors.white : kChatBlue,
+                                                  borderRadius:
+                                                      BorderRadius.circular(99),
+                                                  color: mine
+                                                      ? Colors.white
+                                                      : kChatBlue,
                                                 ),
                                               ),
                                               Expanded(
                                                 child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
-                                                      (message.replySenderName ?? 'Сотрудник').trim().isEmpty
+                                                      (message.replySenderName ??
+                                                                  'Сотрудник')
+                                                              .trim()
+                                                              .isEmpty
                                                           ? 'Сотрудник'
-                                                          : message.replySenderName!.trim(),
+                                                          : message
+                                                                .replySenderName!
+                                                                .trim(),
                                                       maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
                                                       style: TextStyle(
                                                         fontSize: 12.5,
-                                                        fontWeight: FontWeight.w900,
-                                                        color: mine ? Colors.white : kChatBlue,
+                                                        fontWeight:
+                                                            FontWeight.w900,
+                                                        color: mine
+                                                            ? Colors.white
+                                                            : kChatBlue,
                                                       ),
                                                     ),
                                                     const SizedBox(height: 2),
                                                     Text(
-                                                      (message.replyText ?? '').trim().isEmpty
+                                                      (message.replyText ?? '')
+                                                              .trim()
+                                                              .isEmpty
                                                           ? 'Сообщение'
-                                                          : message.replyText!.trim(),
+                                                          : message.replyText!
+                                                                .trim(),
                                                       maxLines: 2,
-                                                      overflow: TextOverflow.ellipsis,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
                                                       style: TextStyle(
                                                         fontSize: 12.5,
                                                         height: 1.25,
-                                                        fontWeight: FontWeight.w700,
+                                                        fontWeight:
+                                                            FontWeight.w700,
                                                         color: mine
-                                                            ? Colors.white.withOpacity(0.86)
+                                                            ? Colors.white
+                                                                  .withOpacity(
+                                                                    0.86,
+                                                                  )
                                                             : kChatInkSoft,
                                                       ),
                                                     ),
@@ -3072,13 +3359,17 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                           ),
                                         ),
                                       ),
-                                    if (message.type == AttachmentType.image) ...[
+                                    if (message.type ==
+                                        AttachmentType.image) ...[
                                       _messageImage(message),
-                                      if (_shouldShowVoiceTranscript(message)) const SizedBox(height: 8),
+                                      if (_shouldShowVoiceTranscript(message))
+                                        const SizedBox(height: 8),
                                     ],
-                                    if (message.type == AttachmentType.file) ...[
+                                    if (message.type ==
+                                        AttachmentType.file) ...[
                                       _fileBubble(mine, message),
-                                      if (message.messageText.trim().isNotEmpty) const SizedBox(height: 8),
+                                      if (message.messageText.trim().isNotEmpty)
+                                        const SizedBox(height: 8),
                                     ],
                                     if (message.type != AttachmentType.voice &&
                                         message.type != AttachmentType.image &&
@@ -3091,8 +3382,13 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         if (message.isPinned) ...[
-                                          Icon(CupertinoIcons.pin_fill, size: 12,
-                                              color: mine ? Colors.white.withOpacity(0.82) : kChatBlue),
+                                          Icon(
+                                            CupertinoIcons.pin_fill,
+                                            size: 12,
+                                            color: mine
+                                                ? Colors.white.withOpacity(0.82)
+                                                : kChatBlue,
+                                          ),
                                           const SizedBox(width: 4),
                                         ],
                                         Text(
@@ -3100,18 +3396,25 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                                           style: TextStyle(
                                             fontSize: 11.5,
                                             fontWeight: FontWeight.w800,
-                                            color: mine ? Colors.white.withOpacity(0.86) : kChatInkSoft,
+                                            color: mine
+                                                ? Colors.white.withOpacity(0.86)
+                                                : kChatInkSoft,
                                           ),
                                         ),
                                         _statusIcon(message, mine),
-                                        if (message.isEdited && !message.isDeleted) ...[
+                                        if (message.isEdited &&
+                                            !message.isDeleted) ...[
                                           const SizedBox(width: 6),
                                           Text(
                                             'изменено',
                                             style: TextStyle(
                                               fontSize: 11.5,
                                               fontWeight: FontWeight.w800,
-                                              color: mine ? Colors.white.withOpacity(0.80) : kChatInkSoft,
+                                              color: mine
+                                                  ? Colors.white.withOpacity(
+                                                      0.80,
+                                                    )
+                                                  : kChatInkSoft,
                                             ),
                                           ),
                                         ],
@@ -3132,14 +3435,17 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                       builder: (buttonContext) => _bubbleSideButton(
                         icon: _selectionMode
                             ? (isSelected
-                                ? CupertinoIcons.check_mark_circled_solid
-                                : CupertinoIcons.circle)
+                                  ? CupertinoIcons.check_mark_circled_solid
+                                  : CupertinoIcons.circle)
                             : CupertinoIcons.ellipsis_circle,
                         onTap: () {
                           if (_selectionMode) {
                             _toggleSelection(message);
                           } else {
-                            _openMessageActions(message, anchorContext: buttonContext);
+                            _openMessageActions(
+                              message,
+                              anchorContext: buttonContext,
+                            );
                           }
                         },
                       ),
@@ -3157,7 +3463,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     ChatMessage message, {
     BuildContext? anchorContext,
   }) async {
-    final RenderBox? renderBox = anchorContext?.findRenderObject() as RenderBox?;
+    final RenderBox? renderBox =
+        anchorContext?.findRenderObject() as RenderBox?;
     final position = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
     final size = renderBox?.size ?? Size.zero;
 
@@ -3166,37 +3473,100 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     final items = [
       PopupMenuItem(
         value: 'select',
-        child: Row(children: [Icon(CupertinoIcons.check_mark_circled, color: kChatAmber, size: 20), const SizedBox(width: 12), const Text('Выбрать')]),
+        child: Row(
+          children: [
+            Icon(
+              CupertinoIcons.check_mark_circled,
+              color: kChatAmber,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            const Text('Выбрать'),
+          ],
+        ),
       ),
       PopupMenuItem(
         value: 'reply',
-        child: Row(children: [Icon(CupertinoIcons.reply, color: kChatBlue, size: 20), const SizedBox(width: 12), const Text('Ответить')]),
+        child: Row(
+          children: [
+            Icon(CupertinoIcons.reply, color: kChatBlue, size: 20),
+            const SizedBox(width: 12),
+            const Text('Ответить'),
+          ],
+        ),
       ),
       PopupMenuItem(
         value: 'copy',
-        child: Row(children: [Icon(CupertinoIcons.doc_on_doc, color: kChatViolet, size: 20), const SizedBox(width: 12), const Text('Копировать')]),
+        child: Row(
+          children: [
+            Icon(CupertinoIcons.doc_on_doc, color: kChatViolet, size: 20),
+            const SizedBox(width: 12),
+            const Text('Копировать'),
+          ],
+        ),
       ),
       PopupMenuItem(
         value: 'react',
-        child: Row(children: [Icon(CupertinoIcons.smiley, color: kChatGreen, size: 20), const SizedBox(width: 12), const Text('Добавить реакцию')]),
+        child: Row(
+          children: [
+            Icon(CupertinoIcons.smiley, color: kChatGreen, size: 20),
+            const SizedBox(width: 12),
+            const Text('Добавить реакцию'),
+          ],
+        ),
       ),
       PopupMenuItem(
         value: 'pin',
-        child: Row(children: [Icon(CupertinoIcons.pin, color: kChatAmber, size: 20), const SizedBox(width: 12), Text(message.isPinned ? 'Открепить' : 'Закрепить')]),
+        child: Row(
+          children: [
+            Icon(CupertinoIcons.pin, color: kChatAmber, size: 20),
+            const SizedBox(width: 12),
+            Text(message.isPinned ? 'Открепить' : 'Закрепить'),
+          ],
+        ),
       ),
-      if (message.type == AttachmentType.file || message.type == AttachmentType.voice)
+      if (message.type == AttachmentType.file ||
+          message.type == AttachmentType.voice)
         PopupMenuItem(
           value: 'open',
-          child: Row(children: [Icon(message.type == AttachmentType.voice ? CupertinoIcons.play_circle : CupertinoIcons.paperclip, color: kChatBlue, size: 20), const SizedBox(width: 12), Text(message.type == AttachmentType.voice ? 'Прослушать' : 'Открыть файл')]),
+          child: Row(
+            children: [
+              Icon(
+                message.type == AttachmentType.voice
+                    ? CupertinoIcons.play_circle
+                    : CupertinoIcons.paperclip,
+                color: kChatBlue,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                message.type == AttachmentType.voice
+                    ? 'Прослушать'
+                    : 'Открыть файл',
+              ),
+            ],
+          ),
         ),
       if (mine && !message.isDeleted && message.type == AttachmentType.text)
         PopupMenuItem(
           value: 'edit',
-          child: Row(children: [Icon(CupertinoIcons.pencil, color: kChatBlue, size: 20), const SizedBox(width: 12), const Text('Редактировать')]),
+          child: Row(
+            children: [
+              Icon(CupertinoIcons.pencil, color: kChatBlue, size: 20),
+              const SizedBox(width: 12),
+              const Text('Редактировать'),
+            ],
+          ),
         ),
       PopupMenuItem(
         value: 'delete',
-        child: Row(children: [Icon(CupertinoIcons.delete_solid, color: kChatRed, size: 20), const SizedBox(width: 12), Text(mine ? 'Удалить у всех' : 'Удалить у себя')]),
+        child: Row(
+          children: [
+            Icon(CupertinoIcons.delete_solid, color: kChatRed, size: 20),
+            const SizedBox(width: 12),
+            Text(mine ? 'Удалить у всех' : 'Удалить у себя'),
+          ],
+        ),
       ),
     ];
 
@@ -3216,19 +3586,35 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     if (selected == null) return;
 
     switch (selected) {
-      case 'select': _enterSelectionMode(message); break;
-      case 'reply': _startReply(message); break;
-      case 'copy': await _copyMessageText(message); break;
-      case 'react': await _openEmojiPanel(message); break;
-      case 'pin': await _togglePinnedMessageLocal(message); break;
-      case 'open':
-        if (message.type == AttachmentType.voice) await _toggleInlineVoicePlayback(message);
-        else await _openAttachment(message);
+      case 'select':
+        _enterSelectionMode(message);
         break;
-      case 'edit': await _startEditMessage(message); break;
+      case 'reply':
+        _startReply(message);
+        break;
+      case 'copy':
+        await _copyMessageText(message);
+        break;
+      case 'react':
+        await _openEmojiPanel(message);
+        break;
+      case 'pin':
+        await _togglePinnedMessageLocal(message);
+        break;
+      case 'open':
+        if (message.type == AttachmentType.voice)
+          await _toggleInlineVoicePlayback(message);
+        else
+          await _openAttachment(message);
+        break;
+      case 'edit':
+        await _startEditMessage(message);
+        break;
       case 'delete':
-        if (mine) await _deleteForAll(message);
-        else await _deleteForMe(message);
+        if (mine)
+          await _deleteForAll(message);
+        else
+          await _deleteForMe(message);
         break;
     }
   }
@@ -3544,7 +3930,12 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     return Animate(
       effects: [
         FadeEffect(duration: 200.ms),
-        SlideEffect(begin: const Offset(0, -20), end: Offset.zero, duration: 300.ms, curve: Curves.easeOutBack),
+        SlideEffect(
+          begin: const Offset(0, -20),
+          end: Offset.zero,
+          duration: 300.ms,
+          curve: Curves.easeOutBack,
+        ),
       ],
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
@@ -3563,7 +3954,10 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.3),
+                  width: 1,
+                ),
                 borderRadius: BorderRadius.circular(32),
                 boxShadow: [
                   BoxShadow(
@@ -3600,7 +3994,11 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                               ),
                             ],
                           ),
-                          child: const Icon(Icons.mic, color: Colors.white, size: 16),
+                          child: const Icon(
+                            Icons.mic,
+                            color: Colors.white,
+                            size: 16,
+                          ),
                         ),
                       ],
                     ),
@@ -3681,7 +4079,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(30),
           color: filled ? kChatBlue : Colors.white.withOpacity(0.15),
-          border: filled ? null : Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+          border: filled
+              ? null
+              : Border.all(color: Colors.white.withOpacity(0.3), width: 1),
         ),
         child: Text(
           label,
@@ -3830,7 +4230,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
   }
 
   Widget _composer() {
-    final showSendButton = _messageController.text.trim().isNotEmpty ||
+    final showSendButton =
+        _messageController.text.trim().isNotEmpty ||
         _pendingImageBytes != null ||
         _editingMessageId != null;
 
@@ -3871,10 +4272,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                           borderRadius: BorderRadius.circular(18),
                           color: kChatPink.withOpacity(0.10),
                         ),
-                        child: const Icon(
-                          CupertinoIcons.add,
-                          color: kChatInk,
-                        ),
+                        child: const Icon(CupertinoIcons.add, color: kChatInk),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -3890,8 +4288,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                           hintText: _editingMessageId != null
                               ? 'Изменить сообщение'
                               : _replyingToMessageId != null
-                                  ? 'Напиши ответ...'
-                                  : 'Написать сообщение',
+                              ? 'Напиши ответ...'
+                              : 'Написать сообщение',
                           hintStyle: const TextStyle(
                             color: kChatInkSoft,
                             fontWeight: FontWeight.w700,
@@ -3922,7 +4320,10 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                               borderRadius: BorderRadius.circular(18),
                               color: kChatRed.withOpacity(0.15),
                             ),
-                            child: const Icon(CupertinoIcons.mic_fill, color: kChatRed),
+                            child: const Icon(
+                              CupertinoIcons.mic_fill,
+                              color: kChatRed,
+                            ),
                           ),
                         ),
                       )
@@ -3937,20 +4338,23 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: (_editingMessageId != null
-                                      ? kChatAmber
-                                      : kChatBlue)
-                                  .withOpacity(0.22),
+                              color:
+                                  (_editingMessageId != null
+                                          ? kChatAmber
+                                          : kChatBlue)
+                                      .withOpacity(0.22),
                               blurRadius: 14,
                               offset: const Offset(0, 8),
                             ),
                           ],
                         ),
                         child: GestureDetector(
-                          onTap: _sending ? null : () async {
-                            HapticFeedback.lightImpact();
-                            await _sendMessage();
-                          },
+                          onTap: _sending
+                              ? null
+                              : () async {
+                                  HapticFeedback.lightImpact();
+                                  await _sendMessage();
+                                },
                           child: AnimatedScale(
                             scale: 0.95,
                             duration: const Duration(milliseconds: 100),
@@ -4073,7 +4477,8 @@ class _StaffChatScreenState extends State<StaffChatScreen>
 
             final message = filteredMessages[index];
             final prev = index > 0 ? filteredMessages[index - 1] : null;
-            final showDayDivider = prev == null || !_isSameDay(prev.createdAt, message.createdAt);
+            final showDayDivider =
+                prev == null || !_isSameDay(prev.createdAt, message.createdAt);
             final showUnreadDivider = _shouldShowUnreadDivider(message, prev);
 
             return Column(
@@ -4086,11 +4491,16 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Center(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 11,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(999),
                             color: Colors.white.withOpacity(0.20),
-                            border: Border.all(color: Colors.white.withOpacity(0.24)),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.24),
+                            ),
                           ),
                           child: Text(
                             _formatDayLabel(message.createdAt),
@@ -4109,11 +4519,16 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Center(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(999),
                           color: kChatAmber.withOpacity(0.18),
-                          border: Border.all(color: Colors.white.withOpacity(0.24)),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.24),
+                          ),
                         ),
                         child: const Text(
                           'Непрочитанные сообщения',
@@ -4131,7 +4546,10 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                   child: _messageBubble(
                     message,
                     showAuthor: _shouldShowAuthor(index, filteredMessages),
-                    compactTopSpacing: _shouldShowCompactSpacing(index, filteredMessages),
+                    compactTopSpacing: _shouldShowCompactSpacing(
+                      index,
+                      filteredMessages,
+                    ),
                     order: index,
                   ),
                 ),
@@ -4161,9 +4579,14 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.90),
                               borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: Colors.white.withOpacity(0.94)),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.94),
+                              ),
                             ),
-                            child: const Icon(CupertinoIcons.mail_solid, color: kChatAmber),
+                            child: const Icon(
+                              CupertinoIcons.mail_solid,
+                              color: kChatAmber,
+                            ),
                           ),
                         ),
                       ),
@@ -4182,7 +4605,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.90),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white.withOpacity(0.94)),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.94),
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.08),
@@ -4191,7 +4616,10 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                             ),
                           ],
                         ),
-                        child: const Icon(CupertinoIcons.arrow_down, color: kChatInk),
+                        child: const Icon(
+                          CupertinoIcons.arrow_down,
+                          color: kChatInk,
+                        ),
                       ),
                     ),
                   ),
@@ -4329,8 +4757,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                         const SizedBox(width: 10),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () =>
-                                Navigator.of(context).pop(controller.text.trim()),
+                            onPressed: () => Navigator.of(
+                              context,
+                            ).pop(controller.text.trim()),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: kChatBlue,
                               foregroundColor: Colors.white,
@@ -4365,7 +4794,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     final set = <String>{};
     final messages = _chatCubit.state.messages;
     for (final m in messages) {
-      final name = m.senderName.trim().isEmpty ? 'Сотрудник' : m.senderName.trim();
+      final name = m.senderName.trim().isEmpty
+          ? 'Сотрудник'
+          : m.senderName.trim();
       set.add(name);
     }
     return set.toList()..sort();
@@ -4376,7 +4807,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     final stats = <String, int>{};
     final messages = _chatCubit.state.messages;
     for (final m in messages) {
-      final name = m.senderName.trim().isEmpty ? 'Сотрудник' : m.senderName.trim();
+      final name = m.senderName.trim().isEmpty
+          ? 'Сотрудник'
+          : m.senderName.trim();
       stats[name] = (stats[name] ?? 0) + 1;
     }
 
@@ -4419,7 +4852,10 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                     padding: EdgeInsets.all(20),
                     child: Text(
                       'Участники чата',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   Flexible(
@@ -4429,10 +4865,21 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                       itemBuilder: (ctx, idx) {
                         final name = names[idx];
                         final count = stats[name] ?? 0;
-                        final initials = name.split(' ').map((e) => e[0]).take(2).join().toUpperCase();
+                        final initials = name
+                            .split(' ')
+                            .map((e) => e[0])
+                            .take(2)
+                            .join()
+                            .toUpperCase();
                         return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
                             color: Colors.grey[50],
@@ -4441,15 +4888,28 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                             children: [
                               CircleAvatar(
                                 radius: 22,
-                                backgroundImage: NetworkImage('https://ui-avatars.com/api/?background=6366F1&color=fff&name=$initials'),
+                                backgroundImage: NetworkImage(
+                                  'https://ui-avatars.com/api/?background=6366F1&color=fff&name=$initials',
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                    Text('Сообщений: $count', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                                    Text(
+                                      name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Сообщений: $count',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -4472,16 +4932,17 @@ class _StaffChatScreenState extends State<StaffChatScreen>
             begin: const Offset(0, -1),
             end: Offset.zero,
           ).animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic)),
-          child: FadeTransition(
-            opacity: anim1,
-            child: child,
-          ),
+          child: FadeTransition(opacity: anim1, child: child),
         );
       },
     );
   }
 
-  Widget _modernActionTile({required IconData icon, required String label, required VoidCallback onTap}) {
+  Widget _modernActionTile({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -4492,7 +4953,11 @@ class _StaffChatScreenState extends State<StaffChatScreen>
               shape: BoxShape.circle,
               gradient: const LinearGradient(colors: [kChatBlue, kChatViolet]),
               boxShadow: [
-                BoxShadow(color: kChatBlue.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4)),
+                BoxShadow(
+                  color: kChatBlue.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
             child: Icon(icon, color: Colors.white, size: 28),
@@ -4536,22 +5001,34 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                     _modernActionTile(
                       icon: Icons.image,
                       label: 'Фото',
-                      onTap: () { Navigator.pop(context); _pickImage(); },
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImage();
+                      },
                     ),
                     _modernActionTile(
                       icon: Icons.camera_alt,
                       label: 'Камера',
-                      onTap: () { Navigator.pop(context); _pickFromCamera(); },
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickFromCamera();
+                      },
                     ),
                     _modernActionTile(
                       icon: Icons.insert_drive_file,
                       label: 'Файл',
-                      onTap: () { Navigator.pop(context); _sendDocument(); },
+                      onTap: () {
+                        Navigator.pop(context);
+                        _sendDocument();
+                      },
                     ),
                     _modernActionTile(
                       icon: Icons.mic,
                       label: 'Голос',
-                      onTap: () { Navigator.pop(context); _startVoiceRecording(); },
+                      onTap: () {
+                        Navigator.pop(context);
+                        _startVoiceRecording();
+                      },
                     ),
                   ],
                 ),
@@ -4790,15 +5267,14 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       }
 
       if (index > start) {
-        spans.add(TextSpan(text: text.substring(start, index), style: baseStyle));
+        spans.add(
+          TextSpan(text: text.substring(start, index), style: baseStyle),
+        );
       }
 
       final int end = index + q.length;
       spans.add(
-        TextSpan(
-          text: text.substring(index, end),
-          style: highlightStyle,
-        ),
+        TextSpan(text: text.substring(index, end), style: highlightStyle),
       );
 
       start = end;
@@ -4874,10 +5350,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     );
   }
 
-  Widget _stagger({
-    required int index,
-    required Widget child,
-  }) {
+  Widget _stagger({required int index, required Widget child}) {
     final double start = (index * 0.08).clamp(0.0, 0.82).toDouble();
     final double end = (start + 0.24).clamp(0.0, 1.0).toDouble();
 
@@ -4902,10 +5375,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
     );
   }
 
-  Widget _topIconButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
+  Widget _topIconButton({required IconData icon, required VoidCallback onTap}) {
     return _Pressable(
       onTap: onTap,
       borderRadius: 18,
@@ -4928,11 +5398,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                 ),
               ],
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 21,
-            ),
+            child: Icon(icon, color: Colors.white, size: 21),
           ),
         ),
       ),
@@ -5091,7 +5557,9 @@ class _StaffChatScreenState extends State<StaffChatScreen>
                             ),
                           if (!_selectionMode)
                             Positioned(
-                              left: 0, right: 0, bottom: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -5113,6 +5581,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
       ),
     );
   }
+
   Future<void> _setVoiceSpeed(ChatMessage message, double speed) async {
     if (mounted) {
       setState(() {
@@ -5129,7 +5598,7 @@ class _StaffChatScreenState extends State<StaffChatScreen>
         webAudio.playbackRate = speed;
       } catch (_) {}
     }
-  }  
+  }
 }
 
 class _GlassCard extends StatelessWidget {
@@ -5284,15 +5753,11 @@ class _ImagePreviewScreen extends StatelessWidget {
   final Uint8List? bytes;
   final String? url;
 
-  const _ImagePreviewScreen.memory({
-    required Uint8List this.bytes,
-    super.key,
-  }) : url = null;
+  const _ImagePreviewScreen.memory({required Uint8List this.bytes, super.key})
+    : url = null;
 
-  const _ImagePreviewScreen.network({
-    required String this.url,
-    super.key,
-  }) : bytes = null;
+  const _ImagePreviewScreen.network({required String this.url, super.key})
+    : bytes = null;
 
   @override
   Widget build(BuildContext context) {
@@ -5314,65 +5779,63 @@ class _ImagePreviewScreen extends StatelessWidget {
 }
 
 class _AnimatedTypingDots extends StatefulWidget {
-    @override
-    State<_AnimatedTypingDots> createState() => _AnimatedTypingDotsState();
+  @override
+  State<_AnimatedTypingDots> createState() => _AnimatedTypingDotsState();
+}
+
+class _AnimatedTypingDotsState extends State<_AnimatedTypingDots>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
   }
 
-  class _AnimatedTypingDotsState extends State<_AnimatedTypingDots> with SingleTickerProviderStateMixin {
-    late AnimationController _controller;
-
-    @override
-    void initState() {
-      super.initState();
-      _controller = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 1200),
-      )..repeat();
-    }
-
-    @override
-    void dispose() {
-      _controller.dispose();
-      super.dispose();
-    }
-
-    @override
-    Widget build(BuildContext context) {
-      return AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          final t = _controller.value;
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDot(0, t),
-              const SizedBox(width: 4),
-              _buildDot(1, t),
-              const SizedBox(width: 4),
-              _buildDot(2, t),
-            ],
-          );
-        },
-      );
-    }
-
-    Widget _buildDot(int index, double t) {
-      final delay = index * 0.2;
-      final scale = (t + delay) % 1.0;
-      final animatedScale = scale < 0.5 ? scale * 2 : 2 - scale * 2;
-      return Transform.scale(
-        scale: 0.6 + animatedScale * 0.4,
-        child: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: kChatGreen,
-          ),
-        ),
-      );
-    }
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final t = _controller.value;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildDot(0, t),
+            const SizedBox(width: 4),
+            _buildDot(1, t),
+            const SizedBox(width: 4),
+            _buildDot(2, t),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDot(int index, double t) {
+    final delay = index * 0.2;
+    final scale = (t + delay) % 1.0;
+    final animatedScale = scale < 0.5 ? scale * 2 : 2 - scale * 2;
+    return Transform.scale(
+      scale: 0.6 + animatedScale * 0.4,
+      child: Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: kChatGreen),
+      ),
+    );
+  }
+}
 
 class _VoiceProgressWave extends StatefulWidget {
   final double progress;
@@ -5391,7 +5854,8 @@ class _VoiceProgressWave extends StatefulWidget {
   State<_VoiceProgressWave> createState() => _VoiceProgressWaveState();
 }
 
-class _VoiceProgressWaveState extends State<_VoiceProgressWave> with SingleTickerProviderStateMixin {
+class _VoiceProgressWaveState extends State<_VoiceProgressWave>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _animationController;
   int _lastTick = 0;
 
@@ -5444,11 +5908,14 @@ class _VoiceProgressWaveState extends State<_VoiceProgressWave> with SingleTicke
               double height;
               if (widget.isPlaying) {
                 final int phase = (now ~/ 150 + i) % 360;
-                height = 10 + 12 * (0.5 + 0.5 * math.sin(phase * math.pi / 180));
+                height =
+                    10 + 12 * (0.5 + 0.5 * math.sin(phase * math.pi / 180));
               } else {
                 // Неактивная часть или завершённая часть – линейное затухание
                 if (isActive) {
-                  height = 14 + 8 * (1 - (widget.progress - t).abs()).clamp(0.0, 1.0);
+                  height =
+                      14 +
+                      8 * (1 - (widget.progress - t).abs()).clamp(0.0, 1.0);
                 } else {
                   height = 6;
                 }
@@ -5461,7 +5928,9 @@ class _VoiceProgressWaveState extends State<_VoiceProgressWave> with SingleTicke
                 margin: const EdgeInsets.only(right: 1),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(barWidth / 2),
-                  color: isActive ? widget.color : widget.color.withOpacity(0.2),
+                  color: isActive
+                      ? widget.color
+                      : widget.color.withOpacity(0.2),
                 ),
               );
             }),

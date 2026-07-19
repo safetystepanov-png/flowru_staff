@@ -111,10 +111,7 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
       body: Stack(
         children: [
           Positioned.fill(
-            child: MobileScanner(
-              controller: _controller,
-              onDetect: _onDetect,
-            ),
+            child: MobileScanner(controller: _controller, onDetect: _onDetect),
           ),
           Positioned.fill(
             child: CustomPaint(
@@ -171,10 +168,7 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
   Widget _topBar() {
     return Row(
       children: [
-        _CircleButton(
-          icon: CupertinoIcons.xmark,
-          onTap: _closeScanner,
-        ),
+        _CircleButton(icon: CupertinoIcons.xmark, onTap: _closeScanner),
         const SizedBox(width: 12),
         Expanded(
           child: Container(
@@ -570,6 +564,5 @@ class _ScannerOverlayPainter extends CustomPainter {
         oldDelegate.accentColor != accentColor;
   }
 }
-
 
 // STAFF_SCANNER_OVERLAY_CLASS_FIXED_NO_CORNERS_20260523

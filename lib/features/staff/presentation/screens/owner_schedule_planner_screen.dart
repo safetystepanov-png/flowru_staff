@@ -106,12 +106,8 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
 
     try {
       final results = await Future.wait([
-        _requestsApi.getOwnerRequests(
-          establishmentId: widget.establishmentId,
-        ),
-        _scheduleApi.getEmployees(
-          establishmentId: widget.establishmentId,
-        ),
+        _requestsApi.getOwnerRequests(establishmentId: widget.establishmentId),
+        _scheduleApi.getEmployees(establishmentId: widget.establishmentId),
         _scheduleApi.getScheduleMonth(
           establishmentId: widget.establishmentId,
           year: _targetMonth.year,
@@ -157,10 +153,7 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
 
           final assignment = _PlannerAssignment.fromApprovedRequest(request);
 
-          final list = prepared.putIfAbsent(
-            date,
-            () => <_PlannerAssignment>[],
-          );
+          final list = prepared.putIfAbsent(date, () => <_PlannerAssignment>[]);
 
           final exists = list.any((e) => e.uniqueKey == assignment.uniqueKey);
           if (!exists) {
@@ -201,7 +194,10 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
   }
 
   int get _assignedCount {
-    return _selectedByDay.values.fold<int>(0, (sum, items) => sum + items.length);
+    return _selectedByDay.values.fold<int>(
+      0,
+      (sum, items) => sum + items.length,
+    );
   }
 
   int get _filledDaysCount {
@@ -249,21 +245,24 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
   Future<void> _pickDay(DateTime date) async {
     if (date.month != _targetMonth.month) return;
 
-    final approved =
-        _requests.where((item) => item.selectedDays.contains(date.day)).toList();
+    final approved = _requests
+        .where((item) => item.selectedDays.contains(date.day))
+        .toList();
 
     await showDialog<void>(
       context: context,
       barrierDismissible: true,
       builder: (dialogContext) {
         final selected = <String>{
-          for (final item in (_selectedByDay[date] ?? const <_PlannerAssignment>[]))
+          for (final item
+              in (_selectedByDay[date] ?? const <_PlannerAssignment>[]))
             item.uniqueKey,
         };
 
-        final manualItems = (_selectedByDay[date] ?? const <_PlannerAssignment>[])
-            .where((e) => e.isManual)
-            .toList();
+        final manualItems =
+            (_selectedByDay[date] ?? const <_PlannerAssignment>[])
+                .where((e) => e.isManual)
+                .toList();
 
         OwnerScheduleEmployee? selectedEmployee;
 
@@ -283,8 +282,9 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
 
               final manual = _PlannerAssignment.fromEmployee(employee);
 
-              final exists =
-                  manualItems.any((e) => e.uniqueKey == manual.uniqueKey);
+              final exists = manualItems.any(
+                (e) => e.uniqueKey == manual.uniqueKey,
+              );
 
               if (exists) return;
 
@@ -316,8 +316,10 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
 
             return Dialog(
               backgroundColor: Colors.transparent,
-              insetPadding:
-                  const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 24,
+              ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(30),
                 child: BackdropFilter(
@@ -351,7 +353,8 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
                                 shape: const CircleBorder(),
                                 child: InkWell(
                                   customBorder: const CircleBorder(),
-                                  onTap: () => Navigator.of(dialogContext).pop(),
+                                  onTap: () =>
+                                      Navigator.of(dialogContext).pop(),
                                   child: const SizedBox(
                                     width: 40,
                                     height: 40,
@@ -376,7 +379,8 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
                           const SizedBox(height: 10),
                           if (approved.isEmpty)
                             const _OwnerInfoCard(
-                              icon: CupertinoIcons.person_crop_circle_badge_xmark,
+                              icon:
+                                  CupertinoIcons.person_crop_circle_badge_xmark,
                               title: 'Нет согласованных пожеланий',
                               text:
                                   'На этот день пока нет сотрудников с подтвержденными пожеланиями.',
@@ -385,8 +389,9 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
                             ...approved.map((item) {
                               final assignment =
                                   _PlannerAssignment.fromApprovedRequest(item);
-                              final isSelected =
-                                  selected.contains(assignment.uniqueKey);
+                              final isSelected = selected.contains(
+                                assignment.uniqueKey,
+                              );
 
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 10),
@@ -424,9 +429,9 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
                                             decoration: BoxDecoration(
                                               color: isSelected
                                                   ? kOwnerPlanSuccess
-                                                      .withOpacity(0.14)
+                                                        .withOpacity(0.14)
                                                   : kOwnerPlanAccent
-                                                      .withOpacity(0.12),
+                                                        .withOpacity(0.12),
                                               borderRadius:
                                                   BorderRadius.circular(14),
                                             ),
@@ -552,8 +557,7 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
                                       height: 38,
                                       decoration: BoxDecoration(
                                         color: kOwnerPlanBlue.withOpacity(0.12),
-                                        borderRadius:
-                                            BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Center(
                                         child: Text(
@@ -664,37 +668,24 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
     );
   }
 
-  InputDecoration _inputDecoration(
-    String hint, {
-    String? counterText,
-  }) {
+  InputDecoration _inputDecoration(String hint, {String? counterText}) {
     return InputDecoration(
       hintText: hint,
       counterText: counterText,
       filled: true,
       fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 14,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(
-          color: Color(0xFFE4F0F1),
-        ),
+        borderSide: const BorderSide(color: Color(0xFFE4F0F1)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(
-          color: Color(0xFFE4F0F1),
-        ),
+        borderSide: const BorderSide(color: Color(0xFFE4F0F1)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(
-          color: kOwnerPlanBlue,
-          width: 1.3,
-        ),
+        borderSide: const BorderSide(color: kOwnerPlanBlue, width: 1.3),
       ),
     );
   }
@@ -873,9 +864,7 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.74),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: const Color(0xA6FFFFFF),
-                    ),
+                    border: Border.all(color: const Color(0xA6FFFFFF)),
                   ),
                   child: Column(
                     children: [
@@ -1036,10 +1025,7 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
         elevation: 0,
         title: const Text(
           'Планировщик графика',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         systemOverlayStyle: SystemUiOverlayStyle.light,
@@ -1066,16 +1052,19 @@ class _OwnerSchedulePlannerScreenState extends State<OwnerSchedulePlannerScreen>
                     if (_loading)
                       const _OwnerGlassCard(
                         radius: 26,
-                        padding:
-                            EdgeInsets.symmetric(vertical: 34, horizontal: 20),
+                        padding: EdgeInsets.symmetric(
+                          vertical: 34,
+                          horizontal: 20,
+                        ),
                         child: Center(
                           child: SizedBox(
                             width: 42,
                             height: 42,
                             child: CircularProgressIndicator(
                               strokeWidth: 3,
-                              valueColor:
-                                  AlwaysStoppedAnimation(kOwnerPlanViolet),
+                              valueColor: AlwaysStoppedAnimation(
+                                kOwnerPlanViolet,
+                              ),
                             ),
                           ),
                         ),
@@ -1174,10 +1163,7 @@ class _OwnerMonthNavButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
-  const _OwnerMonthNavButton({
-    required this.icon,
-    required this.onTap,
-  });
+  const _OwnerMonthNavButton({required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1190,11 +1176,7 @@ class _OwnerMonthNavButton extends StatelessWidget {
         child: SizedBox(
           width: 42,
           height: 42,
-          child: Icon(
-            icon,
-            color: kOwnerPlanInk,
-            size: 20,
-          ),
+          child: Icon(icon, color: kOwnerPlanInk, size: 20),
         ),
       ),
     );
@@ -1223,10 +1205,7 @@ class _OwnerGlassCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(radius),
             gradient: const LinearGradient(
-              colors: [
-                Color(0xE8FFFFFF),
-                Color(0xCCFFFFFF),
-              ],
+              colors: [Color(0xE8FFFFFF), Color(0xCCFFFFFF)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -1326,8 +1305,9 @@ class _OwnerDayTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final opacity = isCurrentMonth ? 1.0 : 0.28;
-    final accent =
-        assignments.isNotEmpty ? kOwnerPlanSuccess : const Color(0xFFDDE7EA);
+    final accent = assignments.isNotEmpty
+        ? kOwnerPlanSuccess
+        : const Color(0xFFDDE7EA);
 
     final labels = assignments.take(4).map((e) => e.badge).toList();
     final extra = assignments.length > 4 ? assignments.length - 4 : 0;
@@ -1343,10 +1323,7 @@ class _OwnerDayTile extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.78),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: accent,
-              width: 1.15,
-            ),
+            border: Border.all(color: accent, width: 1.15),
             boxShadow: [
               BoxShadow(
                 color: accent.withOpacity(0.10),

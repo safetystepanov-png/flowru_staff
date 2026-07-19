@@ -4,9 +4,7 @@ class AuthApi {
   static Future<Map<String, dynamic>> requestCode(String phone) async {
     final response = await ApiClient.dio.post(
       '/api/v1/auth/request-code',
-      data: {
-        'phone': phone,
-      },
+      data: {'phone': phone},
     );
     return Map<String, dynamic>.from(response.data);
   }

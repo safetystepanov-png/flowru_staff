@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'reaction_item.dart';
 
 enum MessageStatus { sending, sent, delivered, read }
+
 enum AttachmentType { text, image, file, voice }
 
 class ChatMessage {
@@ -54,7 +55,9 @@ class ChatMessage {
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     List<ReactionItem> parseReactions(dynamic value) {
       if (value is! List) return [];
-      return value.map((e) => ReactionItem.fromJson(e as Map<String, dynamic>)).toList();
+      return value
+          .map((e) => ReactionItem.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
 
     bool parseBool(dynamic value) {
@@ -80,22 +83,28 @@ class ChatMessage {
       return MessageStatus.sent;
     }
 
-    final typeRaw = (json['message_type']?.toString().toLowerCase() ??
-            json['type']?.toString().toLowerCase() ??
-            '')
-        .trim();
+    final typeRaw =
+        (json['message_type']?.toString().toLowerCase() ??
+                json['type']?.toString().toLowerCase() ??
+                '')
+            .trim();
 
-    final fileUrl = json['file_url']?.toString() ?? json['attachment_url']?.toString();
-    final imageUrl = json['image_url']?.toString() ?? json['media_url']?.toString();
-    final audioUrl = json['audio_url']?.toString() ?? json['voice_url']?.toString();
-    final attachmentTypeRaw = (json['attachment_type']?.toString().toLowerCase() ?? '').trim();
+    final fileUrl =
+        json['file_url']?.toString() ?? json['attachment_url']?.toString();
+    final imageUrl =
+        json['image_url']?.toString() ?? json['media_url']?.toString();
+    final audioUrl =
+        json['audio_url']?.toString() ?? json['voice_url']?.toString();
+    final attachmentTypeRaw =
+        (json['attachment_type']?.toString().toLowerCase() ?? '').trim();
     final attachmentUrl = imageUrl?.trim().isNotEmpty == true
         ? imageUrl
         : fileUrl?.trim().isNotEmpty == true
-            ? fileUrl
-            : audioUrl;
+        ? fileUrl
+        : audioUrl;
 
-    final fileName = json['file_name']?.toString() ??
+    final fileName =
+        json['file_name']?.toString() ??
         json['original_file_name']?.toString() ??
         json['attachment_name']?.toString() ??
         json['document_name']?.toString();
@@ -122,12 +131,17 @@ class ChatMessage {
 
     return ChatMessage(
       id: json['message_id']?.toString() ?? json['id']?.toString() ?? '',
-      senderUserId: json['sender_user_id']?.toString() ?? json['user_id']?.toString() ?? '',
-      senderName: json['sender_name']?.toString() ??
+      senderUserId:
+          json['sender_user_id']?.toString() ??
+          json['user_id']?.toString() ??
+          '',
+      senderName:
+          json['sender_name']?.toString() ??
           json['full_name']?.toString() ??
           json['username']?.toString() ??
           '',
-      messageText: json['message_text']?.toString() ?? json['text']?.toString() ?? '',
+      messageText:
+          json['message_text']?.toString() ?? json['text']?.toString() ?? '',
       createdAt: json['created_at']?.toString() ?? '',
       localImageBytes: null,
       attachmentUrl: attachmentUrl,
@@ -136,11 +150,17 @@ class ChatMessage {
       isDeleted: parseBool(json['is_deleted'] ?? json['deleted']),
       isEdited: parseBool(json['is_edited'] ?? json['edited']),
       replyToMessageId: json['reply_to_message_id']?.toString(),
-      replySenderName: json['reply_sender_name']?.toString() ?? json['reply_to_sender_name']?.toString(),
-      replyText: json['reply_text']?.toString() ?? json['reply_to_message_text']?.toString(),
+      replySenderName:
+          json['reply_sender_name']?.toString() ??
+          json['reply_to_sender_name']?.toString(),
+      replyText:
+          json['reply_text']?.toString() ??
+          json['reply_to_message_text']?.toString(),
       isPinned: parseBool(json['is_pinned']),
       type: attachmentType,
-      voiceDurationSeconds: parseInt(json['voice_duration_seconds'] ?? json['duration_seconds']),
+      voiceDurationSeconds: parseInt(
+        json['voice_duration_seconds'] ?? json['duration_seconds'],
+      ),
       isLocalOnly: false,
       status: parseStatus(json['status'], isRead),
       isRead: isRead,

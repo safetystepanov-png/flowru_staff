@@ -58,9 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (!mounted) return;
 
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (_) => const LoginPhoneScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const LoginPhoneScreen()),
       (route) => false,
     );
   }
@@ -174,9 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        gradient: const LinearGradient(
-          colors: [kStaffPink, kStaffViolet],
-        ),
+        gradient: const LinearGradient(colors: [kStaffPink, kStaffViolet]),
       ),
       child: ElevatedButton(
         onPressed: _logout,

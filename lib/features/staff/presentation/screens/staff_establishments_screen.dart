@@ -34,10 +34,7 @@ const Color kEstSuccess = Color(0xFF22C55E);
 class StaffEstablishmentsScreen extends StatefulWidget {
   final bool forceChooser;
 
-  const StaffEstablishmentsScreen({
-    super.key,
-    this.forceChooser = false,
-  });
+  const StaffEstablishmentsScreen({super.key, this.forceChooser = false});
 
   @override
   State<StaffEstablishmentsScreen> createState() =>
@@ -175,10 +172,7 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
     );
   }
 
-  Widget _stagger({
-    required int index,
-    required Widget child,
-  }) {
+  Widget _stagger({required int index, required Widget child}) {
     final start = (index * 0.08).clamp(0.0, 0.82);
     final end = (start + 0.24).clamp(0.0, 1.0);
 
@@ -196,10 +190,7 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
           opacity: t,
           child: Transform.translate(
             offset: Offset(0, 24 * (1 - t)),
-            child: Transform.scale(
-              scale: 0.985 + (0.015 * t),
-              child: child,
-            ),
+            child: Transform.scale(scale: 0.985 + (0.015 * t), child: child),
           ),
         );
       },
@@ -324,10 +315,7 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
     );
   }
 
-  Widget _topIconButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
+  Widget _topIconButton({required IconData icon, required VoidCallback onTap}) {
     return _Pressable(
       onTap: onTap,
       borderRadius: 18,
@@ -350,11 +338,7 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
                 ),
               ],
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 21,
-            ),
+            child: Icon(icon, color: Colors.white, size: 21),
           ),
         ),
       ),
@@ -386,7 +370,9 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
               onTap: () async {
                 await auth_storage.AuthStorage.clearAll();
                 if (!context.mounted) return;
-                Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+                Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil('/', (route) => false);
               },
             ),
           ],
@@ -395,9 +381,7 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
         const SizedBox(
           width: 82,
           height: 82,
-          child: Center(
-            child: StaffLogoBadge(size: 60),
-          ),
+          child: Center(child: StaffLogoBadge(size: 60)),
         ),
         const SizedBox(height: 18),
         Text(
@@ -431,26 +415,23 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
     final bannerTitle = _hasOwnerRoles && _hasStaffRoles
         ? 'Точки и роли\nдоступа'
         : _hasOwnerRoles
-            ? 'Ваши заведения\nвладельца'
-            : 'Ваши рабочие\nзаведения';
+        ? 'Ваши заведения\nвладельца'
+        : 'Ваши рабочие\nзаведения';
 
     final bannerText = widget.forceChooser
         ? 'Эта точка будет сохранена как основная и в следующий запуск откроется сразу.'
         : _hasOwnerRoles && _hasStaffRoles
-            ? 'У вас есть доступ и как владельца, и как сотрудника. Выберите нужную точку входа.'
-            : _hasOwnerRoles
-                ? 'Откройте заведение и управляйте графиком, согласованиями и командой.'
-                : 'Откройте нужную точку и продолжайте работу в едином интерфейсе.';
+        ? 'У вас есть доступ и как владельца, и как сотрудника. Выберите нужную точку входа.'
+        : _hasOwnerRoles
+        ? 'Откройте заведение и управляйте графиком, согласованиями и командой.'
+        : 'Откройте нужную точку и продолжайте работу в едином интерфейсе.';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
         gradient: const LinearGradient(
-          colors: [
-            Color(0x1FFFFFFF),
-            Color(0x14FFFFFF),
-          ],
+          colors: [Color(0x1FFFFFFF), Color(0x14FFFFFF)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -483,7 +464,9 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
                   child: Text(
                     widget.forceChooser
                         ? 'ОСНОВНОЕ ЗАВЕДЕНИЕ'
-                        : (_hasOwnerRoles ? 'FLOWRU OWNER / STAFF' : 'FLOWRU BUSINESS'),
+                        : (_hasOwnerRoles
+                              ? 'FLOWRU OWNER / STAFF'
+                              : 'FLOWRU BUSINESS'),
                     style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w900,
@@ -584,9 +567,7 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
           DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              gradient: const LinearGradient(
-                colors: [kEstBlue, kEstPink],
-              ),
+              gradient: const LinearGradient(colors: [kEstBlue, kEstPink]),
               boxShadow: [
                 BoxShadow(
                   color: kEstBlue.withOpacity(0.22),
@@ -718,8 +699,9 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
                         ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(999),
-                          color:
-                              (isOwner ? kEstAccent : kEstBlue).withOpacity(0.10),
+                          color: (isOwner ? kEstAccent : kEstBlue).withOpacity(
+                            0.10,
+                          ),
                           border: Border.all(
                             color: (isOwner ? kEstAccent : kEstBlue)
                                 .withOpacity(0.12),
@@ -841,10 +823,7 @@ class _GlassCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(radius),
             gradient: LinearGradient(
-              colors: [
-                kEstCardStrong,
-                kEstCard,
-              ],
+              colors: [kEstCardStrong, kEstCard],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -1015,11 +994,7 @@ class _FloatingGlyph extends StatelessWidget {
                 end: Alignment.bottomRight,
               ),
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: iconSize,
-            ),
+            child: Icon(icon, color: Colors.white, size: iconSize),
           ),
           Positioned(
             top: size * 0.11,

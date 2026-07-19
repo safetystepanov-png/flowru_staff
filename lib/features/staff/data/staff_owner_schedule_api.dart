@@ -79,10 +79,7 @@ class OwnerScheduleSaveDay {
   final DateTime date;
   final List<OwnerScheduleSaveItem> items;
 
-  const OwnerScheduleSaveDay({
-    required this.date,
-    required this.items,
-  });
+  const OwnerScheduleSaveDay({required this.date, required this.items});
 }
 
 class OwnerScheduleMonthItem {
@@ -115,10 +112,7 @@ class OwnerScheduleMonthDay {
   final DateTime date;
   final List<OwnerScheduleMonthItem> items;
 
-  const OwnerScheduleMonthDay({
-    required this.date,
-    required this.items,
-  });
+  const OwnerScheduleMonthDay({required this.date, required this.items});
 
   factory OwnerScheduleMonthDay.fromJson(Map<String, dynamic> json) {
     final rawDate = json['date']?.toString() ?? '';
@@ -131,9 +125,8 @@ class OwnerScheduleMonthDay {
       items: rawItems
           .whereType<Map>()
           .map(
-            (e) => OwnerScheduleMonthItem.fromJson(
-              Map<String, dynamic>.from(e),
-            ),
+            (e) =>
+                OwnerScheduleMonthItem.fromJson(Map<String, dynamic>.from(e)),
           )
           .toList(),
     );
@@ -157,9 +150,7 @@ class OwnerScheduleMonthResponse {
       days: rawDays
           .whereType<Map>()
           .map(
-            (e) => OwnerScheduleMonthDay.fromJson(
-              Map<String, dynamic>.from(e),
-            ),
+            (e) => OwnerScheduleMonthDay.fromJson(Map<String, dynamic>.from(e)),
           )
           .toList(),
     );
@@ -188,10 +179,7 @@ class StaffOwnerScheduleApi {
 
     final response = await http.get(
       uri,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Accept': 'application/json',
-      },
+      headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );
 
     if (response.statusCode != 200) {
@@ -207,9 +195,7 @@ class StaffOwnerScheduleApi {
       return items
           .whereType<Map>()
           .map(
-            (e) => OwnerScheduleEmployee.fromJson(
-              Map<String, dynamic>.from(e),
-            ),
+            (e) => OwnerScheduleEmployee.fromJson(Map<String, dynamic>.from(e)),
           )
           .toList();
     }
@@ -231,10 +217,7 @@ class StaffOwnerScheduleApi {
 
     final response = await http.get(
       uri,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Accept': 'application/json',
-      },
+      headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );
 
     if (response.statusCode != 200) {

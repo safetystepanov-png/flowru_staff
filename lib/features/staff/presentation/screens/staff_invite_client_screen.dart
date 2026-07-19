@@ -1,4 +1,4 @@
-﻿import 'package:flutter/cupertino.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -17,7 +17,8 @@ const Color kInviteAccentSoft = Color(0xFFFFD166);
 const Color kInviteBlue = Color(0xFF246BFF);
 const Color kInviteViolet = Color(0xFF7A4CFF);
 
-const String kFlowruStaffAppStoreUrl = 'https://apps.apple.com/ru/app/flowru-business/id6774183750';
+const String kFlowruStaffAppStoreUrl =
+    'https://apps.apple.com/ru/app/flowru-business/id6774183750';
 
 class StaffInviteClientScreen extends StatefulWidget {
   final int establishmentId;
@@ -30,7 +31,8 @@ class StaffInviteClientScreen extends StatefulWidget {
   });
 
   @override
-  State<StaffInviteClientScreen> createState() => _StaffInviteClientScreenState();
+  State<StaffInviteClientScreen> createState() =>
+      _StaffInviteClientScreenState();
 }
 
 class _StaffInviteClientScreenState extends State<StaffInviteClientScreen>
@@ -62,7 +64,8 @@ class _StaffInviteClientScreenState extends State<StaffInviteClientScreen>
   }
 
   Future<void> _shareStaffInvite() async {
-    const text = 'Установи Flowru Business для работы с системой лояльности:\n$kFlowruStaffAppStoreUrl';
+    const text =
+        'Установи Flowru Business для работы с системой лояльности:\n$kFlowruStaffAppStoreUrl';
 
     try {
       final box = context.findRenderObject() as RenderBox?;
@@ -148,10 +151,7 @@ class _StaffInviteClientScreenState extends State<StaffInviteClientScreen>
                             text: 'Получаем ссылку приглашения заведения',
                           )
                         else if (_error != null)
-                          _InviteErrorCard(
-                            text: _error!,
-                            onRetry: _load,
-                          )
+                          _InviteErrorCard(text: _error!, onRetry: _load)
                         else if (invite != null) ...[
                           _InviteHeroCard(
                             invite: invite,
@@ -166,9 +166,7 @@ class _StaffInviteClientScreenState extends State<StaffInviteClientScreen>
 
                           const SizedBox(height: 16),
 
-                          _InviteStaffCard(
-                            onShare: _shareStaffInvite,
-                          ),
+                          _InviteStaffCard(onShare: _shareStaffInvite),
                         ],
                       ],
                     ),
@@ -202,10 +200,7 @@ class _InviteTopBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Row(
         children: [
-          _CircleButton(
-            icon: CupertinoIcons.chevron_left,
-            onTap: onBack,
-          ),
+          _CircleButton(icon: CupertinoIcons.chevron_left, onTap: onBack),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -237,10 +232,7 @@ class _InviteTopBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          _CircleButton(
-            icon: CupertinoIcons.refresh,
-            onTap: onReload,
-          ),
+          _CircleButton(icon: CupertinoIcons.refresh, onTap: onReload),
         ],
       ),
     );
@@ -251,10 +243,7 @@ class _InviteHeroCard extends StatelessWidget {
   final StaffEstablishmentInvite invite;
   final AnimationController pulseController;
 
-  const _InviteHeroCard({
-    required this.invite,
-    required this.pulseController,
-  });
+  const _InviteHeroCard({required this.invite, required this.pulseController});
 
   @override
   Widget build(BuildContext context) {
@@ -265,11 +254,7 @@ class _InviteHeroCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            kInviteDeep,
-            kInviteMintBottom,
-            kInviteMintTop,
-          ],
+          colors: [kInviteDeep, kInviteMintBottom, kInviteMintTop],
         ),
         boxShadow: [
           BoxShadow(
@@ -343,10 +328,7 @@ class _InviteHeroCard extends StatelessWidget {
             builder: (_, child) {
               final scale = 1.0 + pulseController.value * 0.025;
 
-              return Transform.scale(
-                scale: scale,
-                child: child,
-              );
+              return Transform.scale(scale: scale, child: child);
             },
             child: Container(
               padding: const EdgeInsets.all(16),
@@ -416,9 +398,7 @@ class _InviteHeroCard extends StatelessWidget {
 class _InviteStaffCard extends StatelessWidget {
   final VoidCallback onShare;
 
-  const _InviteStaffCard({
-    required this.onShare,
-  });
+  const _InviteStaffCard({required this.onShare});
 
   @override
   Widget build(BuildContext context) {
@@ -563,9 +543,7 @@ class _InviteStaffCard extends StatelessWidget {
 class _InviteStepsCard extends StatelessWidget {
   final String establishmentName;
 
-  const _InviteStepsCard({
-    required this.establishmentName,
-  });
+  const _InviteStepsCard({required this.establishmentName});
 
   @override
   Widget build(BuildContext context) {
@@ -687,9 +665,7 @@ class _StepLine extends StatelessWidget {
               height: 34,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [kInviteBlue, kInviteViolet],
-                ),
+                gradient: LinearGradient(colors: [kInviteBlue, kInviteViolet]),
               ),
               child: Center(
                 child: Text(
@@ -702,11 +678,7 @@ class _StepLine extends StatelessWidget {
               ),
             ),
             if (!isLast)
-              Container(
-                width: 2,
-                height: 34,
-                color: const Color(0xFFE5EEF2),
-              ),
+              Container(width: 2, height: 34, color: const Color(0xFFE5EEF2)),
           ],
         ),
         const SizedBox(width: 12),
@@ -790,10 +762,7 @@ class _InviteErrorCard extends StatelessWidget {
   final String text;
   final VoidCallback onRetry;
 
-  const _InviteErrorCard({
-    required this.text,
-    required this.onRetry,
-  });
+  const _InviteErrorCard({required this.text, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -843,9 +812,7 @@ class _InviteErrorCard extends StatelessWidget {
 class _WhiteCard extends StatelessWidget {
   final Widget child;
 
-  const _WhiteCard({
-    required this.child,
-  });
+  const _WhiteCard({required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -873,10 +840,7 @@ class _CircleButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
-  const _CircleButton({
-    required this.icon,
-    required this.onTap,
-  });
+  const _CircleButton({required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -914,11 +878,7 @@ class _InviteBackground extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFEFF9FA),
-              Color(0xFFF7F8FC),
-              Color(0xFFEAF1F7),
-            ],
+            colors: [Color(0xFFEFF9FA), Color(0xFFF7F8FC), Color(0xFFEAF1F7)],
           ),
         ),
         child: Stack(
@@ -926,20 +886,12 @@ class _InviteBackground extends StatelessWidget {
             Positioned(
               top: -90,
               right: -90,
-              child: _Blob(
-                size: 230,
-                color: kInviteMintTop,
-                opacity: 0.14,
-              ),
+              child: _Blob(size: 230, color: kInviteMintTop, opacity: 0.14),
             ),
             Positioned(
               bottom: 60,
               left: -120,
-              child: _Blob(
-                size: 260,
-                color: kInviteViolet,
-                opacity: 0.10,
-              ),
+              child: _Blob(size: 260, color: kInviteViolet, opacity: 0.10),
             ),
           ],
         ),
@@ -953,11 +905,7 @@ class _Blob extends StatelessWidget {
   final Color color;
   final double opacity;
 
-  const _Blob({
-    required this.size,
-    required this.color,
-    required this.opacity,
-  });
+  const _Blob({required this.size, required this.color, required this.opacity});
 
   @override
   Widget build(BuildContext context) {
@@ -972,8 +920,6 @@ class _Blob extends StatelessWidget {
   }
 }
 
-
 // STAFF_INVITE_CLIENT_AND_STAFF_20260524
-
 
 // STAFF_INVITE_STAFF_QR_SHARE_20260524

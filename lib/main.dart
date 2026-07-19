@@ -67,11 +67,14 @@ Future<void> main() async {
     await _requestNotificationPermissions();
     await _printFcmToken();
     StaffPushDeviceApi.listenTokenRefresh();
-    StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(appVersion: '1.0.1+28');
+    StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(
+      appVersion: '1.0.1+28',
+    );
     _setupForegroundMessageHandler();
 
     if (!kIsWeb) {
-      final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+      final initialMessage = await FirebaseMessaging.instance
+          .getInitialMessage();
       if (initialMessage != null) {
         debugPrint('FCM initialMessage: ${initialMessage.messageId}');
         debugPrint('FCM initial data: ${initialMessage.data}');
@@ -83,10 +86,3 @@ Future<void> main() async {
 
   runApp(const FlowruStaffApp());
 }
-
-
-
-
-
-
-

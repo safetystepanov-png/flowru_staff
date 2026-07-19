@@ -94,11 +94,7 @@ class UserMe {
   final String phone;
   final String fullName;
 
-  const UserMe({
-    required this.id,
-    required this.phone,
-    required this.fullName,
-  });
+  const UserMe({required this.id, required this.phone, required this.fullName});
 
   factory UserMe.fromJson(Map<String, dynamic> json) {
     return UserMe(
@@ -188,7 +184,10 @@ class AccessProfile {
       user: json['user'] is Map<String, dynamic>
           ? AccessProfileUser.fromJson(json['user'] as Map<String, dynamic>)
           : null,
-      roles: rolesRaw.map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).toList(),
+      roles: rolesRaw
+          .map((e) => e?.toString() ?? '')
+          .where((e) => e.isNotEmpty)
+          .toList(),
       hasAccess: json['has_access'] as bool? ?? false,
       establishments: establishmentsRaw
           .whereType<Map<String, dynamic>>()
@@ -232,7 +231,8 @@ class UserApi {
     try {
       final decoded = jsonDecode(response.body);
       if (decoded is Map<String, dynamic>) {
-        message = decoded['detail']?.toString() ??
+        message =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             message;
       }
@@ -241,73 +241,73 @@ class UserApi {
     return AuthResult.error(message);
   }
 
+  Future<AuthResult> login({
+    required String phone,
+    required String password,
+    required String deviceId,
+    required String platform,
+  }) async {
+    final uri = Uri.parse('${AppConfig.baseUrl}/api/v1/auth/login');
 
-Future<AuthResult> login({
-  required String phone,
-  required String password,
-  required String deviceId,
-  required String platform,
-}) async {
-  final uri = Uri.parse('${AppConfig.baseUrl}/api/v1/auth/login');
+    Object? lastError;
 
-  Object? lastError;
-
-  for (int attempt = 1; attempt <= 2; attempt++) {
-    try {
-      final response = await http
-          .post(
-            uri,
-            headers: const {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            body: jsonEncode({
-              'phone': phone,
-              'password': password,
-              'device_id': deviceId,
-              'platform': platform,
-            }),
-          )
-          .timeout(const Duration(seconds: 20));
-
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-        return AuthResult.fromJson(decoded);
-      }
-
-      String message = 'Ошибка входа';
+    for (int attempt = 1; attempt <= 2; attempt++) {
       try {
-        final decoded = jsonDecode(response.body);
-        if (decoded is Map<String, dynamic>) {
-          message = decoded['detail']?.toString() ??
-              decoded['message']?.toString() ??
-              message;
-        }
-      } catch (_) {}
+        final response = await http
+            .post(
+              uri,
+              headers: const {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
+              body: jsonEncode({
+                'phone': phone,
+                'password': password,
+                'device_id': deviceId,
+                'platform': platform,
+              }),
+            )
+            .timeout(const Duration(seconds: 20));
 
-      final canRetry = response.statusCode >= 500 && attempt < 2;
-      if (canRetry) {
-        await Future<void>.delayed(const Duration(milliseconds: 700));
-        continue;
+        if (response.statusCode == 200) {
+          final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+          return AuthResult.fromJson(decoded);
+        }
+
+        String message = 'Ошибка входа';
+        try {
+          final decoded = jsonDecode(response.body);
+          if (decoded is Map<String, dynamic>) {
+            message =
+                decoded['detail']?.toString() ??
+                decoded['message']?.toString() ??
+                message;
+          }
+        } catch (_) {}
+
+        final canRetry = response.statusCode >= 500 && attempt < 2;
+        if (canRetry) {
+          await Future<void>.delayed(const Duration(milliseconds: 700));
+          continue;
+        }
+
+        return AuthResult.error(message);
+      } on TimeoutException catch (e) {
+        lastError = e;
+      } on http.ClientException catch (e) {
+        lastError = e;
+      } catch (e) {
+        lastError = e;
+        break;
       }
 
-      return AuthResult.error(message);
-    } on TimeoutException catch (e) {
-      lastError = e;
-    } on http.ClientException catch (e) {
-      lastError = e;
-    } catch (e) {
-      lastError = e;
-      break;
+      if (attempt < 2) {
+        await Future<void>.delayed(const Duration(milliseconds: 700));
+      }
     }
 
-    if (attempt < 2) {
-      await Future<void>.delayed(const Duration(milliseconds: 700));
-    }
+    return AuthResult.error('Ошибка сети: $lastError');
   }
-
-  return AuthResult.error('Ошибка сети: $lastError');
-}
 
   Future<RefreshResult> refresh({
     required String refreshToken,
@@ -336,7 +336,8 @@ Future<AuthResult> login({
     try {
       final decoded = jsonDecode(response.body);
       if (decoded is Map<String, dynamic>) {
-        message = decoded['detail']?.toString() ??
+        message =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             message;
       }

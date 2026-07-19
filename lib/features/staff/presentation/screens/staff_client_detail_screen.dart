@@ -11,8 +11,8 @@ import '../../../auth/data/auth_storage.dart';
 import '../../../../core/config/app_config.dart';
 import 'staff_client_accrual_screen.dart';
 import 'staff_client_history_screen.dart';
-import 'staff_client_rewards_screen.dart';
 import 'staff_client_spend_screen.dart';
+import '../../data/staff_subscriptions_api.dart';
 
 const Color kClientMintTop = Color(0xFF0CB7B3);
 const Color kClientMintMid = Color(0xFF08A9AB);
@@ -61,6 +61,12 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
   String? _error;
   _ClientDetail? _client;
 
+  final StaffSubscriptionsApi _subscriptionsApi = StaffSubscriptionsApi();
+  List<StaffSubscription> _subscriptions = const [];
+  bool _subscriptionsLoading = false;
+  String? _subscriptionsError;
+  int? _usingMenuItemId;
+
   late final AnimationController _bgController;
   late final AnimationController _introController;
 
@@ -100,6 +106,8 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     setState(() {
       _loading = true;
       _error = null;
+      _subscriptionsLoading = true;
+      _subscriptionsError = null;
     });
 
     try {
@@ -124,9 +132,24 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
 
+      List<StaffSubscription> subscriptions = const [];
+      String? subscriptionsError;
+      try {
+        subscriptions = await _subscriptionsApi.getClientSubscriptions(
+          establishmentId: widget.establishmentId,
+          clientId: widget.clientId,
+        );
+      } catch (_) {
+        subscriptionsError =
+            'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ Р°Р±РѕРЅРµРјРµРЅС‚С‹';
+      }
+
       if (!mounted) return;
       setState(() {
         _client = _ClientDetail.fromJson(decoded);
+        _subscriptions = subscriptions;
+        _subscriptionsError = subscriptionsError;
+        _subscriptionsLoading = false;
         _loading = false;
       });
 
@@ -135,16 +158,13 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Не удалось загрузить клиента';
+        _error = 'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РєР»РёРµРЅС‚Р°';
       });
       _introController.forward(from: 0);
     }
   }
 
-  Widget _stagger({
-    required int index,
-    required Widget child,
-  }) {
+  Widget _stagger({required int index, required Widget child}) {
     final start = (index * 0.08).clamp(0.0, 0.82);
     final end = (start + 0.24).clamp(0.0, 1.0);
 
@@ -162,10 +182,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
           opacity: t,
           child: Transform.translate(
             offset: Offset(0, 22 * (1 - t)),
-            child: Transform.scale(
-              scale: 0.985 + (0.015 * t),
-              child: child,
-            ),
+            child: Transform.scale(scale: 0.985 + (0.015 * t), child: child),
           ),
         );
       },
@@ -299,11 +316,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(34),
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF064E58),
-            Color(0xFF078D95),
-            Color(0xFF10B8A5),
-          ],
+          colors: [Color(0xFF064E58), Color(0xFF078D95), Color(0xFF10B8A5)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -373,14 +386,19 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(999),
                             color: Colors.white.withOpacity(0.16),
-                            border: Border.all(color: Colors.white.withOpacity(0.24)),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.24),
+                            ),
                           ),
                           child: const Text(
-                            'КЛИЕНТ',
+                            'РљР›РР•РќРў',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 10,
@@ -413,7 +431,8 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                client.phone ?? 'Телефон не указан',
+                                client.phone ??
+                                    'РўРµР»РµС„РѕРЅ РЅРµ СѓРєР°Р·Р°РЅ',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -443,7 +462,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Баллы',
+                      'Р‘Р°Р»Р»С‹',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.78),
                         fontSize: 13,
@@ -465,7 +484,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'доступно для списания',
+                      'РґРѕСЃС‚СѓРїРЅРѕ РґР»СЏ СЃРїРёСЃР°РЅРёСЏ',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.72),
                         fontSize: 12.5,
@@ -481,7 +500,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                   Expanded(
                     child: _clientCompactStat(
                       icon: CupertinoIcons.ticket_fill,
-                      label: 'Визиты',
+                      label: 'Р’РёР·РёС‚С‹',
                       value: client.visitsLabel,
                     ),
                   ),
@@ -489,7 +508,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                   Expanded(
                     child: _clientCompactStat(
                       icon: CupertinoIcons.creditcard_fill,
-                      label: 'Потрачено',
+                      label: 'РџРѕС‚СЂР°С‡РµРЅРѕ',
                       value: client.spentLabel,
                     ),
                   ),
@@ -523,11 +542,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
               borderRadius: BorderRadius.circular(14),
               color: kClientMintDeep.withOpacity(0.08),
             ),
-            child: Icon(
-              icon,
-              color: kClientMintDeep,
-              size: 18,
-            ),
+            child: Icon(icon, color: kClientMintDeep, size: 18),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -563,7 +578,6 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
       ),
     );
   }
-
 
   Widget _bigMetricCard({
     required String title,
@@ -620,11 +634,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                 ),
               ],
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 19,
-            ),
+            child: Icon(icon, color: Colors.white, size: 19),
           ),
           const Spacer(),
           Text(
@@ -667,8 +677,6 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     );
   }
 
-
-
   Widget _detailLine({
     required IconData icon,
     required String label,
@@ -705,11 +713,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                 end: Alignment.bottomRight,
               ),
             ),
-            child: Icon(
-              icon,
-              size: 18,
-              color: kClientInk,
-            ),
+            child: Icon(icon, size: 18, color: kClientInk),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -777,7 +781,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Действия с клиентом',
+                      'Р”РµР№СЃС‚РІРёСЏ СЃ РєР»РёРµРЅС‚РѕРј',
                       style: TextStyle(
                         color: kClientInk,
                         fontSize: 18,
@@ -787,7 +791,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                     ),
                     SizedBox(height: 3),
                     Text(
-                      'Начисление, списание и история операций',
+                      'РќР°С‡РёСЃР»РµРЅРёРµ, СЃРїРёСЃР°РЅРёРµ Рё РёСЃС‚РѕСЂРёСЏ РѕРїРµСЂР°С†РёР№',
                       style: TextStyle(
                         color: kClientInkSoft,
                         fontSize: 13,
@@ -805,8 +809,8 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
             children: [
               Expanded(
                 child: _actionButton(
-                  title: 'Начислить',
-                  subtitle: 'баллы за чек',
+                  title: 'РќР°С‡РёСЃР»РёС‚СЊ',
+                  subtitle: 'Р±Р°Р»Р»С‹ Р·Р° С‡РµРє',
                   icon: CupertinoIcons.plus_circle_fill,
                   colors: const [kClientGreen, kClientGreenSoft],
                   onTap: () async {
@@ -827,8 +831,8 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
               const SizedBox(width: 10),
               Expanded(
                 child: _actionButton(
-                  title: 'Списать',
-                  subtitle: 'использовать баллы',
+                  title: 'РЎРїРёСЃР°С‚СЊ',
+                  subtitle: 'РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ Р±Р°Р»Р»С‹',
                   icon: CupertinoIcons.minus_circle_fill,
                   colors: const [kClientRed, kClientRedSoft],
                   onTap: () async {
@@ -850,8 +854,9 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
           ),
           const SizedBox(height: 10),
           _softActionTile(
-            title: 'История клиента',
-            subtitle: 'Все начисления, списания и движения по клиенту',
+            title: 'РСЃС‚РѕСЂРёСЏ РєР»РёРµРЅС‚Р°',
+            subtitle:
+                'Р’СЃРµ РЅР°С‡РёСЃР»РµРЅРёСЏ, СЃРїРёСЃР°РЅРёСЏ Рё РґРІРёР¶РµРЅРёСЏ РїРѕ РєР»РёРµРЅС‚Сѓ',
             icon: CupertinoIcons.clock_fill,
             glow: kClientBlue,
             onTap: () {
@@ -871,8 +876,6 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
       ),
     );
   }
-
-
 
   Widget _actionButton({
     required String title,
@@ -933,11 +936,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                   ),
                 ],
               ),
-              child: Icon(
-                icon,
-                color: Colors.white,
-                size: 23,
-              ),
+              child: Icon(icon, color: Colors.white, size: 23),
             ),
             const SizedBox(height: 14),
             Text(
@@ -969,9 +968,6 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
       ),
     );
   }
-
-
-
 
   Widget _softActionTile({
     required String title,
@@ -1019,11 +1015,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                 borderRadius: BorderRadius.circular(18),
                 color: glow.withOpacity(0.13),
               ),
-              child: Icon(
-                icon,
-                color: glow,
-                size: 22,
-              ),
+              child: Icon(icon, color: glow, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -1078,7 +1070,541 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     );
   }
 
+  Future<void> _useSubscriptionItem({
+    required StaffSubscription subscription,
+    required StaffSubscriptionItem item,
+  }) async {
+    if (_usingMenuItemId != null || !item.canUse) return;
 
+    final clientId = int.tryParse(widget.clientId);
+    if (clientId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'РќРµ СѓРґР°Р»РѕСЃСЊ РѕРїСЂРµРґРµР»РёС‚СЊ РєР»РёРµРЅС‚Р°',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final remainingAfter = subscription.isUnlimited
+        ? null
+        : ((subscription.remaining ?? 0) - item.quantityPerUse).clamp(
+            0,
+            double.infinity,
+          );
+
+    final confirmed = await showGeneralDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'РџРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ СЃРїРёСЃР°РЅРёСЏ',
+      barrierColor: Colors.black.withOpacity(0.58),
+      transitionDuration: const Duration(milliseconds: 360),
+      pageBuilder: (dialogContext, animation, secondaryAnimation) {
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: 350,
+              margin: const EdgeInsets.symmetric(horizontal: 22),
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(32),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF6D4AFF),
+                    Color(0xFF4B63E8),
+                    Color(0xFF18AEB7),
+                  ],
+                ),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.32),
+                  width: 1.1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF6D4AFF).withOpacity(0.40),
+                    blurRadius: 38,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 18),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(17),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.24),
+                          ),
+                        ),
+                        child: const Icon(
+                          CupertinoIcons.bolt_fill,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 13),
+                      const Expanded(
+                        child: Text(
+                          'РСЃРїРѕР»СЊР·РѕРІР°С‚СЊ Р°Р±РѕРЅРµРјРµРЅС‚',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            height: 1.05,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.35,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  Text(
+                    subscription.planName,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.78),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 7),
+                  Text(
+                    item.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 25,
+                      height: 1.05,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.55,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 15,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withOpacity(0.16)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          CupertinoIcons.chart_bar_fill,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 11),
+                        Expanded(
+                          child: Text(
+                            subscription.isUnlimited
+                                ? 'РџРѕСЃР»Рµ СЃРїРёСЃР°РЅРёСЏ Р»РёРјРёС‚ РЅРµ РёР·РјРµРЅРёС‚СЃСЏ'
+                                : 'РџРѕСЃР»Рµ СЃРїРёСЃР°РЅРёСЏ РѕСЃС‚Р°РЅРµС‚СЃСЏ',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.78),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          subscription.isUnlimited
+                              ? 'в€ћ'
+                              : (remainingAfter == null
+                                    ? 'вЂ”'
+                                    : (remainingAfter ==
+                                              remainingAfter.roundToDouble()
+                                          ? remainingAfter.toInt().toString()
+                                          : remainingAfter.toStringAsFixed(2))),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 23,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 52,
+                          child: OutlinedButton(
+                            onPressed: () =>
+                                Navigator.of(dialogContext).pop(false),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: BorderSide(
+                                color: Colors.white.withOpacity(0.32),
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(17),
+                              ),
+                            ),
+                            child: const Text(
+                              'РћС‚РјРµРЅР°',
+                              style: TextStyle(fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: SizedBox(
+                          height: 52,
+                          child: FilledButton.icon(
+                            onPressed: () =>
+                                Navigator.of(dialogContext).pop(true),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFF5A47E8),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(17),
+                              ),
+                            ),
+                            icon: const Icon(
+                              CupertinoIcons.bolt_fill,
+                              size: 18,
+                            ),
+                            label: const Text(
+                              'РЎРїРёСЃР°С‚СЊ',
+                              style: TextStyle(fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+          reverseCurve: Curves.easeInCubic,
+        );
+
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.82, end: 1).animate(curved),
+            child: child,
+          ),
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) return;
+    setState(() => _usingMenuItemId = item.menuItemId);
+
+    try {
+      final result = await _subscriptionsApi.useItem(
+        establishmentId: widget.establishmentId,
+        clientId: clientId,
+        subscriptionId: subscription.id,
+        menuItemId: item.menuItemId,
+        quantity: item.quantityPerUse,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        final refreshed = result.subscription;
+        if (refreshed != null) {
+          _subscriptions = _subscriptions
+              .map((e) => e.id == refreshed.id ? refreshed : e)
+              .toList();
+        }
+        _usingMenuItemId = null;
+      });
+
+      HapticFeedback.mediumImpact();
+      await _showSubscriptionSuccess(item.name);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _usingMenuItemId = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: kClientRed,
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showSubscriptionSuccess(String itemName) async {
+    if (!mounted) return;
+
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: 'РЈСЃРїРµС€РЅРѕРµ СЃРїРёСЃР°РЅРёРµ',
+      barrierColor: Colors.black.withOpacity(0.48),
+      transitionDuration: const Duration(milliseconds: 420),
+      pageBuilder: (dialogContext, animation, secondaryAnimation) {
+        Future<void>.delayed(const Duration(milliseconds: 1450), () {
+          if (Navigator.of(dialogContext).canPop()) {
+            Navigator.of(dialogContext).pop();
+          }
+        });
+
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: 286,
+              margin: const EdgeInsets.symmetric(horizontal: 28),
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(32),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF16C79A),
+                    Color(0xFF12AFC0),
+                    Color(0xFF5B4BFF),
+                  ],
+                ),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.38),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF18D6AC).withOpacity(0.42),
+                    blurRadius: 42,
+                    spreadRadius: 4,
+                    offset: const Offset(0, 18),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.35, end: 1),
+                    duration: const Duration(milliseconds: 620),
+                    curve: Curves.elasticOut,
+                    builder: (context, value, child) {
+                      return Transform.scale(scale: value, child: child);
+                    },
+                    child: Container(
+                      width: 86,
+                      height: 86,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.18),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.48),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.white.withOpacity(0.22),
+                            blurRadius: 26,
+                            spreadRadius: 3,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        CupertinoIcons.check_mark,
+                        color: Colors.white,
+                        size: 46,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'РЈСЃРїРµС€РЅРѕ СЃРїРёСЃР°РЅРѕ',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      height: 1.05,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.45,
+                    ),
+                  ),
+                  const SizedBox(height: 9),
+                  Text(
+                    itemName,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.84),
+                      fontSize: 15,
+                      height: 1.25,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    height: 5,
+                    width: 112,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(100),
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white.withOpacity(0.20),
+                          Colors.white,
+                          Colors.white.withOpacity(0.20),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+          reverseCurve: Curves.easeInCubic,
+        );
+
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.72, end: 1).animate(curved),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSubscriptionsSection() {
+    if (_subscriptionsLoading) {
+      return const _GlassCard(
+        radius: 28,
+        padding: EdgeInsets.all(22),
+        child: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 3,
+            valueColor: AlwaysStoppedAnimation(kClientViolet),
+          ),
+        ),
+      );
+    }
+
+    if (_subscriptionsError != null) {
+      return _GlassCard(
+        radius: 28,
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: kClientRed.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                CupertinoIcons.exclamationmark_triangle_fill,
+                color: kClientRed,
+                size: 21,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _subscriptionsError!,
+                style: const TextStyle(
+                  color: kClientInkSoft,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_subscriptions.isEmpty) return const SizedBox.shrink();
+
+    final orderedSubscriptions = [..._subscriptions]
+      ..sort((a, b) {
+        int priority(StaffSubscription subscription) {
+          final hasAvailableItem = subscription.items.any(
+            (item) => item.canUse,
+          );
+          final exhausted =
+              !subscription.isUnlimited && (subscription.remaining ?? 0) <= 0;
+
+          if (subscription.status == 'active' &&
+              hasAvailableItem &&
+              !exhausted) {
+            return 0;
+          }
+          if (subscription.status == 'active') return 1;
+          if (subscription.status == 'paused') return 2;
+          if (subscription.status == 'pending') return 3;
+          return 4;
+        }
+
+        final byPriority = priority(a).compareTo(priority(b));
+        if (byPriority != 0) return byPriority;
+        return a.planName.compareTo(b.planName);
+      });
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 11),
+          child: Text(
+            'РђР±РѕРЅРµРјРµРЅС‚С‹',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.35,
+            ),
+          ),
+        ),
+        ...List.generate(orderedSubscriptions.length, (index) {
+          final subscription = orderedSubscriptions[index];
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: index == orderedSubscriptions.length - 1 ? 0 : 12,
+            ),
+            child: _SubscriptionCard(
+              subscription: subscription,
+              usingMenuItemId: _usingMenuItemId,
+              onUseItem: (item) =>
+                  _useSubscriptionItem(subscription: subscription, item: item),
+            ),
+          );
+        }),
+      ],
+    );
+  }
 
   Widget _stateCard({
     required IconData icon,
@@ -1121,7 +1647,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     if (_error != null) {
       return _stateCard(
         icon: CupertinoIcons.exclamationmark_circle_fill,
-        title: 'Ошибка',
+        title: 'РћС€РёР±РєР°',
         subtitle: _error!,
       );
     }
@@ -1129,8 +1655,9 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     if (_client == null) {
       return _stateCard(
         icon: CupertinoIcons.person_crop_circle_badge_xmark,
-        title: 'Клиент не найден',
-        subtitle: 'Не удалось получить данные клиента',
+        title: 'РљР»РёРµРЅС‚ РЅРµ РЅР°Р№РґРµРЅ',
+        subtitle:
+            'РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РґР°РЅРЅС‹Рµ РєР»РёРµРЅС‚Р°',
       );
     }
 
@@ -1138,7 +1665,9 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
       children: [
         _stagger(index: 0, child: _topCard()),
         const SizedBox(height: 18),
-        _stagger(index: 1, child: _buildActionSection()),
+        _stagger(index: 1, child: _buildSubscriptionsSection()),
+        const SizedBox(height: 18),
+        _stagger(index: 2, child: _buildActionSection()),
       ],
     );
   }
@@ -1180,9 +1709,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                     )
                   : ListView(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                      children: [
-                        _content(),
-                      ],
+                      children: [_content()],
                     ),
             ),
           ],
@@ -1214,10 +1741,7 @@ class _GlassCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(radius),
             gradient: LinearGradient(
-              colors: [
-                kClientCardStrong,
-                kClientCard,
-              ],
+              colors: [kClientCardStrong, kClientCard],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -1241,10 +1765,7 @@ class _MiniGlyph extends StatelessWidget {
   final IconData icon;
   final Color color;
 
-  const _MiniGlyph({
-    required this.icon,
-    required this.color,
-  });
+  const _MiniGlyph({required this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -1256,11 +1777,7 @@ class _MiniGlyph extends StatelessWidget {
           shape: BoxShape.circle,
           color: color.withOpacity(0.14),
         ),
-        child: Icon(
-          icon,
-          color: color,
-          size: 20,
-        ),
+        child: Icon(icon, color: color, size: 20),
       ),
     );
   }
@@ -1269,9 +1786,7 @@ class _MiniGlyph extends StatelessWidget {
 class _EmptyOrb extends StatelessWidget {
   final IconData icon;
 
-  const _EmptyOrb({
-    required this.icon,
-  });
+  const _EmptyOrb({required this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -1303,11 +1818,7 @@ class _EmptyOrb extends StatelessWidget {
               shape: BoxShape.circle,
               color: Colors.white.withOpacity(0.92),
             ),
-            child: Icon(
-              icon,
-              color: kClientInkSoft,
-              size: 28,
-            ),
+            child: Icon(icon, color: kClientInkSoft, size: 28),
           ),
         ],
       ),
@@ -1440,6 +1951,417 @@ class _PressableState extends State<_Pressable> {
   }
 }
 
+class _SubscriptionCard extends StatefulWidget {
+  final StaffSubscription subscription;
+  final int? usingMenuItemId;
+  final ValueChanged<StaffSubscriptionItem> onUseItem;
+
+  const _SubscriptionCard({
+    required this.subscription,
+    required this.usingMenuItemId,
+    required this.onUseItem,
+  });
+
+  @override
+  State<_SubscriptionCard> createState() => _SubscriptionCardState();
+}
+
+class _SubscriptionCardState extends State<_SubscriptionCard>
+    with SingleTickerProviderStateMixin {
+  bool _expanded = false;
+  late final AnimationController _shineController;
+
+  @override
+  void initState() {
+    super.initState();
+    _shineController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 4200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _shineController.dispose();
+    super.dispose();
+  }
+
+  String _date(DateTime? d) {
+    if (d == null) return 'вЂ”';
+    return '${d.day.toString().padLeft(2, '0')}.'
+        '${d.month.toString().padLeft(2, '0')}.${d.year}';
+  }
+
+  double get _progress {
+    final limit = widget.subscription.usageLimit;
+    if (widget.subscription.isUnlimited || limit == null || limit <= 0) {
+      return 1;
+    }
+    return ((widget.subscription.remaining ?? 0).clamp(0, limit) / limit)
+        .toDouble();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.subscription;
+    final active = s.status == 'active';
+    final hasAvailableItem = s.items.any((item) => item.canUse);
+    final exhausted = active && !s.isUnlimited && (s.remaining ?? 0) <= 0;
+    final unavailable = !active || !hasAvailableItem || exhausted;
+
+    final colors = exhausted
+        ? const [Color(0xFF3D4654), Color(0xFF56606D), Color(0xFF39434B)]
+        : active
+        ? const [Color(0xFF5742E9), Color(0xFF8458FF), Color(0xFF19B6B5)]
+        : const [Color(0xFF687078), Color(0xFF858B94), Color(0xFF56636A)];
+
+    final statusText = exhausted
+        ? 'Р›РёРјРёС‚ РёСЃС‡РµСЂРїР°РЅ'
+        : !hasAvailableItem && active
+        ? 'РЎРµР№С‡Р°СЃ РЅРµРґРѕСЃС‚СѓРїРµРЅ'
+        : s.statusLabel;
+
+    final unavailableText = exhausted
+        ? 'Р’СЃРµ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ РїРѕ СЌС‚РѕРјСѓ Р°Р±РѕРЅРµРјРµРЅС‚Сѓ СѓР¶Рµ РёР·СЂР°СЃС…РѕРґРѕРІР°РЅС‹'
+        : s.status == 'paused'
+        ? 'РђР±РѕРЅРµРјРµРЅС‚ РІСЂРµРјРµРЅРЅРѕ РїСЂРёРѕСЃС‚Р°РЅРѕРІР»РµРЅ'
+        : s.status == 'pending'
+        ? 'РђР±РѕРЅРµРјРµРЅС‚ РµС‰С‘ РЅРµ РЅР°С‡Р°Р» РґРµР№СЃС‚РІРѕРІР°С‚СЊ'
+        : s.status == 'expired'
+        ? 'РЎСЂРѕРє РґРµР№СЃС‚РІРёСЏ Р°Р±РѕРЅРµРјРµРЅС‚Р° Р·Р°РєРѕРЅС‡РёР»СЃСЏ'
+        : s.status == 'cancelled'
+        ? 'РђР±РѕРЅРµРјРµРЅС‚ РѕС‚РјРµРЅС‘РЅ'
+        : 'РЎРїРёСЃР°РЅРёРµ СЃРµР№С‡Р°СЃ РЅРµРґРѕСЃС‚СѓРїРЅРѕ';
+
+    return AnimatedBuilder(
+      animation: _shineController,
+      builder: (context, child) {
+        final t = _shineController.value;
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: colors[1].withOpacity(unavailable ? 0.12 : 0.30),
+                blurRadius: unavailable ? 18 : 30,
+                spreadRadius: unavailable ? 0 : 1,
+                offset: const Offset(0, 14),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: Stack(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: colors,
+                      begin: Alignment(-1 + t * .35, -1),
+                      end: Alignment(1, 1 - t * .25),
+                    ),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _expanded = !_expanded);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(21),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 46,
+                                  height: 46,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(.16),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(.22),
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    CupertinoIcons.rectangle_stack_fill,
+                                    color: Colors.white,
+                                    size: 23,
+                                  ),
+                                ),
+                                const SizedBox(width: 13),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        s.planName,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 19,
+                                          height: 1.05,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: -0.35,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Text(
+                                        statusText,
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(.78),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                AnimatedRotation(
+                                  turns: _expanded ? .5 : 0,
+                                  duration: const Duration(milliseconds: 280),
+                                  child: const Icon(
+                                    CupertinoIcons.chevron_down,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 22),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        exhausted
+                                            ? 'РЎС‚Р°С‚СѓСЃ'
+                                            : (s.isUnlimited
+                                                  ? 'Р”РѕСЃС‚СѓРїРЅРѕ'
+                                                  : 'РћСЃС‚Р°Р»РѕСЃСЊ'),
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(.72),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        exhausted
+                                            ? 'РСЃРїРѕР»СЊР·РѕРІР°РЅ'
+                                            : s.remainingLabel,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 29,
+                                          height: 1,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  'РґРѕ ${_date(s.endsAt)}',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(.78),
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 13),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(100),
+                              child: Container(
+                                height: 7,
+                                color: Colors.white.withOpacity(.16),
+                                child: FractionallySizedBox(
+                                  alignment: Alignment.centerLeft,
+                                  widthFactor: _progress.clamp(0, 1),
+                                  child: Container(color: Colors.white),
+                                ),
+                              ),
+                            ),
+                            if (unavailable) ...[
+                              const SizedBox(height: 14),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.13),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.12),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      exhausted
+                                          ? CupertinoIcons
+                                                .check_mark_circled_solid
+                                          : CupertinoIcons
+                                                .exclamationmark_circle_fill,
+                                      color: Colors.white.withOpacity(0.86),
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        unavailableText,
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(0.78),
+                                          fontSize: 11.5,
+                                          height: 1.25,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            AnimatedSize(
+                              duration: const Duration(milliseconds: 350),
+                              curve: Curves.easeOutCubic,
+                              child: !_expanded
+                                  ? const SizedBox.shrink()
+                                  : Padding(
+                                      padding: const EdgeInsets.only(top: 18),
+                                      child: Column(
+                                        children: [
+                                          Divider(
+                                            color: Colors.white.withOpacity(
+                                              .20,
+                                            ),
+                                          ),
+                                          ...s.items.map((item) {
+                                            final loading =
+                                                widget.usingMenuItemId ==
+                                                item.menuItemId;
+                                            return Padding(
+                                              padding: const EdgeInsets.only(
+                                                bottom: 9,
+                                              ),
+                                              child: Container(
+                                                padding: const EdgeInsets.all(
+                                                  12,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white
+                                                      .withOpacity(.11),
+                                                  borderRadius:
+                                                      BorderRadius.circular(16),
+                                                  border: Border.all(
+                                                    color: Colors.white
+                                                        .withOpacity(.16),
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: Text(
+                                                        item.name,
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 13,
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    SizedBox(
+                                                      height: 36,
+                                                      child: FilledButton(
+                                                        onPressed:
+                                                            item.canUse &&
+                                                                !loading
+                                                            ? () => widget
+                                                                  .onUseItem(
+                                                                    item,
+                                                                  )
+                                                            : null,
+                                                        style:
+                                                            FilledButton.styleFrom(
+                                                              backgroundColor:
+                                                                  Colors.white,
+                                                              foregroundColor:
+                                                                  colors[0],
+                                                            ),
+                                                        child: loading
+                                                            ? const SizedBox(
+                                                                width: 17,
+                                                                height: 17,
+                                                                child:
+                                                                    CircularProgressIndicator(
+                                                                      strokeWidth:
+                                                                          2,
+                                                                    ),
+                                                              )
+                                                            : Text(
+                                                                item.canUse
+                                                                    ? 'РЎРїРёСЃР°С‚СЊ'
+                                                                    : exhausted
+                                                                    ? 'РСЃРїРѕР»СЊР·РѕРІР°РЅ'
+                                                                    : 'РќРµРґРѕСЃС‚СѓРїРЅРѕ',
+                                                              ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          }),
+                                        ],
+                                      ),
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: -80,
+                  left: -110 + t * 420,
+                  child: Transform.rotate(
+                    angle: -.42,
+                    child: Container(
+                      width: 90,
+                      height: 380,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.white.withOpacity(0),
+                            Colors.white.withOpacity(active ? .13 : .05),
+                            Colors.white.withOpacity(0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _ClientDetail {
   final String clientId;
   final String? fullName;
@@ -1473,7 +2395,8 @@ class _ClientDetail {
 
     return _ClientDetail(
       clientId: json['client_id']?.toString() ?? json['id']?.toString() ?? '',
-      fullName: json['full_name']?.toString() ??
+      fullName:
+          json['full_name']?.toString() ??
           json['name']?.toString() ??
           json['display_name']?.toString(),
       phone: json['phone']?.toString(),
@@ -1484,10 +2407,15 @@ class _ClientDetail {
             json['bonuses_balance'],
       ),
       visits: parseInt(
-        json['visits_count'] ?? json['visits'] ?? json['client_visits'] ?? json['visit_count'],
+        json['visits_count'] ??
+            json['visits'] ??
+            json['client_visits'] ??
+            json['visit_count'],
       ),
       totalSpent: parseNum(
-        json['total_spent'] ?? json['sales_total'] ?? json['client_total_spent'],
+        json['total_spent'] ??
+            json['sales_total'] ??
+            json['client_total_spent'],
       ),
     );
   }
@@ -1496,14 +2424,16 @@ class _ClientDetail {
     final name = (fullName ?? '').trim();
     if (name.isNotEmpty) return name;
     if ((phone ?? '').trim().isNotEmpty) return phone!.trim();
-    return 'Клиент';
+    return 'РљР»РёРµРЅС‚';
   }
 
   String get initials {
     final name = displayName.trim();
     if (name.isEmpty) return 'C';
-    final parts =
-        name.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    final parts = name
+        .split(RegExp(r'\s+'))
+        .where((e) => e.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return 'C';
     final first = parts.first.isNotEmpty ? parts.first[0] : 'C';
     if (parts.length == 1) return first.toUpperCase();
@@ -1533,5 +2463,5 @@ class _ClientDetail {
     return buffer.toString();
   }
 
-  String get spentLabel => '${_formatMoney(totalSpent)} ₽';
+  String get spentLabel => '${_formatMoney(totalSpent)} в‚Ѕ';
 }

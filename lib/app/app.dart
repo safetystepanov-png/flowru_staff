@@ -22,10 +22,7 @@ class FlowruStaffApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       locale: const Locale('ru', 'RU'),
-      supportedLocales: const [
-        Locale('ru', 'RU'),
-        Locale('en', 'US'),
-      ],
+      supportedLocales: const [Locale('ru', 'RU'), Locale('en', 'US')],
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -37,13 +34,9 @@ class FlowruStaffApp extends StatelessWidget {
       theme: ThemeData(
         fontFamily: 'SF Pro Display',
         scaffoldBackgroundColor: const Color(0xFFF6F7FB),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF7D63FF),
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7D63FF)),
       ),
-      routes: {
-        '/login': (context) => const LoginPhoneScreen(),
-      },
+      routes: {'/login': (context) => const LoginPhoneScreen()},
       home: const _LaunchFlowruScreen(),
     );
   }
@@ -122,15 +115,17 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
       _letterAnimations.add(
         TweenSequence<double>([
           TweenSequenceItem(
-            tween: Tween<double>(begin: 0.0, end: 0.0).chain(
-              CurveTween(curve: Curves.easeOutCubic),
-            ),
+            tween: Tween<double>(
+              begin: 0.0,
+              end: 0.0,
+            ).chain(CurveTween(curve: Curves.easeOutCubic)),
             weight: weight1,
           ),
           TweenSequenceItem(
-            tween: Tween<double>(begin: 0.0, end: 1.0).chain(
-              CurveTween(curve: Curves.easeOutCubic),
-            ),
+            tween: Tween<double>(
+              begin: 0.0,
+              end: 1.0,
+            ).chain(CurveTween(curve: Curves.easeOutCubic)),
             weight: weight2,
           ),
           TweenSequenceItem(
@@ -147,9 +142,10 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
             weight: weight1,
           ),
           TweenSequenceItem(
-            tween: Tween<double>(begin: 0.3, end: 1.0).chain(
-              CurveTween(curve: Curves.easeOutBack),
-            ),
+            tween: Tween<double>(
+              begin: 0.3,
+              end: 1.0,
+            ).chain(CurveTween(curve: Curves.easeOutBack)),
             weight: weight2,
           ),
           TweenSequenceItem(
@@ -253,9 +249,7 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
           height: height,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: RadialGradient(
-              colors: colors,
-            ),
+            gradient: RadialGradient(colors: colors),
           ),
         ),
       ),
@@ -372,7 +366,9 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
             ),
             Positioned.fill(
               child: CustomPaint(
-                painter: _BackgroundRingPainter(progress: _ambientController.value),
+                painter: _BackgroundRingPainter(
+                  progress: _ambientController.value,
+                ),
               ),
             ),
             ..._buildDecorElements(),
@@ -390,9 +386,9 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
       final floatY = math.sin(animT * math.pi * 2 * el.speed + el.phase) * 25;
       final floatX =
           math.cos(animT * math.pi * 2 * el.speed * 0.7 + el.phase) * 15;
-      final pulse = (0.5 +
-              0.5 * math.sin(animT * math.pi * 2 * el.speed + el.phase + 1))
-          .clamp(0.0, 1.0);
+      final pulse =
+          (0.5 + 0.5 * math.sin(animT * math.pi * 2 * el.speed + el.phase + 1))
+              .clamp(0.0, 1.0);
 
       return Positioned(
         left: (el.x * mediaSize.width + floatX).clamp(0.0, mediaSize.width),
@@ -408,10 +404,7 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
   }
 
   Widget _buildStar(double size) {
-    return CustomPaint(
-      size: Size(size, size),
-      painter: _StarPainter(),
-    );
+    return CustomPaint(size: Size(size, size), painter: _StarPainter());
   }
 
   Widget _buildCircle(double size) {
@@ -434,7 +427,11 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
 
   Widget _logoCore() {
     return AnimatedBuilder(
-      animation: Listenable.merge([_logoController, _pulseController, _decorationsController]),
+      animation: Listenable.merge([
+        _logoController,
+        _pulseController,
+        _decorationsController,
+      ]),
       builder: (context, child) {
         final pulse = _pulseController.value;
         final glowScale = 1.0 + (pulse * 0.08);
@@ -470,7 +467,9 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFFFC45E).withOpacity(glowOpacity),
+                            color: const Color(
+                              0xFFFFC45E,
+                            ).withOpacity(glowOpacity),
                             blurRadius: 76,
                             spreadRadius: 18,
                           ),
@@ -480,7 +479,9 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
                             spreadRadius: 10,
                           ),
                           BoxShadow(
-                            color: const Color(0xFF7D63FF).withOpacity(glowOpacity * 0.42),
+                            color: const Color(
+                              0xFF7D63FF,
+                            ).withOpacity(glowOpacity * 0.42),
                             blurRadius: 40,
                             spreadRadius: 8,
                           ),
@@ -522,10 +523,7 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: const LinearGradient(
-                        colors: [
-                          Color(0xFFFFD861),
-                          Color(0xFFFFB22E),
-                        ],
+                        colors: [Color(0xFFFFD861), Color(0xFFFFB22E)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -969,7 +967,9 @@ class _AppBootstrapScreenState extends State<_AppBootstrapScreen> {
 
   Future<_BootstrapState> _resolve() async {
     String? token = await AuthStorage.getAccessToken();
-    StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(appVersion: '1.0.1+28');
+    StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(
+      appVersion: '1.0.1+28',
+    );
     final refreshToken = await AuthStorage.getRefreshToken();
     final biometricEnabled = await AuthStorage.isBiometricEnabled();
 
@@ -1051,7 +1051,9 @@ class _AppBootstrapScreenState extends State<_AppBootstrapScreen> {
       if (!result.ok) return null;
 
       await AuthStorage.saveAccessToken(result.accessToken);
-      StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(appVersion: '1.0.1+28');
+      StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(
+        appVersion: '1.0.1+28',
+      );
       await AuthStorage.saveRefreshToken(result.refreshToken);
 
       return result.accessToken;
@@ -1074,7 +1076,8 @@ class _AppBootstrapScreenState extends State<_AppBootstrapScreen> {
     final savedRole = await AuthStorage.getSelectedEstablishmentRole();
 
     if (savedEstablishmentId != null) {
-      final matched = profile.establishments.cast<AccessProfileEstablishment?>()
+      final matched = profile.establishments
+          .cast<AccessProfileEstablishment?>()
           .firstWhere(
             (e) => e?.id == savedEstablishmentId && (e?.accessActive ?? false),
             orElse: () => null,
@@ -1082,13 +1085,13 @@ class _AppBootstrapScreenState extends State<_AppBootstrapScreen> {
 
       if (matched != null) {
         final effectiveName =
-            (savedEstablishmentName != null && savedEstablishmentName.trim().isNotEmpty)
-                ? savedEstablishmentName.trim()
-                : matched.name;
-        final effectiveRole =
-            (savedRole != null && savedRole.trim().isNotEmpty)
-                ? savedRole.trim()
-                : matched.role;
+            (savedEstablishmentName != null &&
+                savedEstablishmentName.trim().isNotEmpty)
+            ? savedEstablishmentName.trim()
+            : matched.name;
+        final effectiveRole = (savedRole != null && savedRole.trim().isNotEmpty)
+            ? savedRole.trim()
+            : matched.role;
 
         await AuthStorage.saveSelectedEstablishment(
           establishmentId: matched.id,
@@ -1161,9 +1164,7 @@ class _AppBootstrapScreenState extends State<_AppBootstrapScreen> {
         }
 
         if (state.isRevoked) {
-          return _AccessRevokedScreen(
-            onRetry: _retry,
-          );
+          return _AccessRevokedScreen(onRetry: _retry);
         }
 
         return const LoginPhoneScreen();
@@ -1190,14 +1191,14 @@ class _BootstrapState {
   });
 
   const _BootstrapState.authorized({AccessProfile? profile})
-      : this._(
-          isAuthorized: true,
-          isRevoked: false,
-          profile: profile,
-          establishmentId: null,
-          establishmentName: null,
-          role: null,
-        );
+    : this._(
+        isAuthorized: true,
+        isRevoked: false,
+        profile: profile,
+        establishmentId: null,
+        establishmentName: null,
+        role: null,
+      );
 
   const _BootstrapState.authorizedWithSelection({
     AccessProfile? profile,
@@ -1205,46 +1206,42 @@ class _BootstrapState {
     required String establishmentName,
     required String role,
   }) : this._(
-          isAuthorized: true,
-          isRevoked: false,
-          profile: profile,
-          establishmentId: establishmentId,
-          establishmentName: establishmentName,
-          role: role,
-        );
+         isAuthorized: true,
+         isRevoked: false,
+         profile: profile,
+         establishmentId: establishmentId,
+         establishmentName: establishmentName,
+         role: role,
+       );
 
   const _BootstrapState.revoked({AccessProfile? profile})
-      : this._(
-          isAuthorized: false,
-          isRevoked: true,
-          profile: profile,
-          establishmentId: null,
-          establishmentName: null,
-          role: null,
-        );
+    : this._(
+        isAuthorized: false,
+        isRevoked: true,
+        profile: profile,
+        establishmentId: null,
+        establishmentName: null,
+        role: null,
+      );
 
   const _BootstrapState.unauthorized()
-      : this._(
-          isAuthorized: false,
-          isRevoked: false,
-          profile: null,
-          establishmentId: null,
-          establishmentName: null,
-          role: null,
-        );
+    : this._(
+        isAuthorized: false,
+        isRevoked: false,
+        profile: null,
+        establishmentId: null,
+        establishmentName: null,
+        role: null,
+      );
 
   bool get hasSelectedEstablishment =>
-      establishmentId != null &&
-      establishmentName != null &&
-      role != null;
+      establishmentId != null && establishmentName != null && role != null;
 }
 
 class _AccessRevokedScreen extends StatelessWidget {
   final Future<void> Function() onRetry;
 
-  const _AccessRevokedScreen({
-    required this.onRetry,
-  });
+  const _AccessRevokedScreen({required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -1349,9 +1346,7 @@ class _AccessRevokedScreen extends StatelessWidget {
                         ),
                         child: const Text(
                           'Выйти',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                          ),
+                          style: TextStyle(fontWeight: FontWeight.w800),
                         ),
                       ),
                     ),
@@ -1377,11 +1372,7 @@ class _AppLoadingScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset(
-              'assets/images/flowru_logo.png',
-              width: 72,
-              height: 72,
-            ),
+            Image.asset('assets/images/flowru_logo.png', width: 72, height: 72),
             const SizedBox(height: 18),
             const SizedBox(
               width: 22,
@@ -1396,10 +1387,3 @@ class _AppLoadingScreen extends StatelessWidget {
 }
 
 // FLOWRU_APP_RU_LOCALIZATIONS_20260524
-
-
-
-
-
-
-

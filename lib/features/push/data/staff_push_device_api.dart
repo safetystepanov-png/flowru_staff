@@ -58,16 +58,16 @@ class StaffPushDeviceApi {
         }),
       );
 
-      debugPrint('Staff push debug status=${response.statusCode} body=${response.body}');
+      debugPrint(
+        'Staff push debug status=${response.statusCode} body=${response.body}',
+      );
     } catch (e, st) {
       debugPrint('Staff push debug error: $e');
       debugPrint('$st');
     }
   }
 
-  static Future<bool> _waitForApnsToken({
-    required String appVersion,
-  }) async {
+  static Future<bool> _waitForApnsToken({required String appVersion}) async {
     if (kIsWeb || !Platform.isIOS) {
       return true;
     }
@@ -108,13 +108,12 @@ class StaffPushDeviceApi {
     return false;
   }
 
-  static void registerCurrentDeviceTokenInBackground({
-    String appVersion = '',
-  }) {
+  static void registerCurrentDeviceTokenInBackground({String appVersion = ''}) {
     Future<void>(() async {
       await registerCurrentDeviceToken(appVersion: appVersion);
     });
   }
+
   static Future<void> registerCurrentDeviceToken({
     String appVersion = '',
   }) async {
@@ -229,6 +228,3 @@ class StaffPushDeviceApi {
     });
   }
 }
-
-
-

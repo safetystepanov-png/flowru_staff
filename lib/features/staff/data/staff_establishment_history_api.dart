@@ -66,7 +66,11 @@ class StaffEstablishmentHistoryApi {
     final List items = data['items'] as List;
 
     return items
-        .map((item) => StaffEstablishmentHistoryItem.fromJson(item as Map<String, dynamic>))
+        .map(
+          (item) => StaffEstablishmentHistoryItem.fromJson(
+            item as Map<String, dynamic>,
+          ),
+        )
         .toList();
   }
 }

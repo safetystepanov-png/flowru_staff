@@ -47,21 +47,25 @@ class StaffChatMessageItem {
     return StaffChatMessageItem(
       messageId: json['message_id']?.toString() ?? json['id']?.toString() ?? '',
       establishmentId: (json['establishment_id'] as num?)?.toInt() ?? 0,
-      senderUserId: json['sender_user_id']?.toString() ??
+      senderUserId:
+          json['sender_user_id']?.toString() ??
           json['user_id']?.toString() ??
           '',
       senderName: json['sender_name']?.toString() ?? 'Сотрудник',
       messageText:
           json['message_text']?.toString() ?? json['text']?.toString() ?? '',
       createdAt: json['created_at']?.toString() ?? '',
-      imageUrl: json['image_url']?.toString() ??
+      imageUrl:
+          json['image_url']?.toString() ??
           json['media_url']?.toString() ??
           json['file_url']?.toString() ??
           json['attachment_url']?.toString(),
       replyToMessageId: json['reply_to_message_id']?.toString(),
-      replySenderName: json['reply_sender_name']?.toString() ??
+      replySenderName:
+          json['reply_sender_name']?.toString() ??
           json['reply_to_sender_name']?.toString(),
-      replyText: json['reply_text']?.toString() ??
+      replyText:
+          json['reply_text']?.toString() ??
           json['reply_to_message_text']?.toString(),
       isPinned: parseBool(json['is_pinned']),
       isEdited: parseBool(json['is_edited'] ?? json['edited']),
@@ -74,10 +78,7 @@ class StaffChatSendResult {
   final bool ok;
   final String message;
 
-  StaffChatSendResult({
-    required this.ok,
-    required this.message,
-  });
+  StaffChatSendResult({required this.ok, required this.message});
 
   factory StaffChatSendResult.fromJson(Map<String, dynamic> json) {
     return StaffChatSendResult(
@@ -107,10 +108,7 @@ class StaffChatApi {
 
     final response = await http.get(
       uri,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
 
     if (response.statusCode != 200) {
@@ -142,9 +140,7 @@ class StaffChatApi {
   }) async {
     final token = await _token();
 
-    final uri = Uri.parse(
-      '${AppConfig.baseUrl}/api/v1/staff/chat/messages',
-    );
+    final uri = Uri.parse('${AppConfig.baseUrl}/api/v1/staff/chat/messages');
 
     final response = await http.post(
       uri,
@@ -193,11 +189,7 @@ class StaffChatApi {
     }
 
     request.files.add(
-      http.MultipartFile.fromBytes(
-        'image',
-        bytes,
-        filename: filename,
-      ),
+      http.MultipartFile.fromBytes('image', bytes, filename: filename),
     );
 
     final streamed = await request.send();

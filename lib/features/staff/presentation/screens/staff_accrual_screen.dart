@@ -1,4 +1,3 @@
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -117,11 +116,29 @@ class _StaffAccrualScreenState extends State<StaffAccrualScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(widget.clientName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: kHomeInk)),
+                      Text(
+                        widget.clientName,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: kHomeInk,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text('ID клиента: ${widget.clientId}', style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: kHomeInkSoft)),
+                      Text(
+                        'ID клиента: ${widget.clientId}',
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: kHomeInkSoft,
+                        ),
+                      ),
                       const SizedBox(height: 8),
-                      StaffInfoChip(label: 'Текущий баланс', value: balanceText, color: kHomeBlue),
+                      StaffInfoChip(
+                        label: 'Текущий баланс',
+                        value: balanceText,
+                        color: kHomeBlue,
+                      ),
                     ],
                   ),
                 ),
@@ -133,33 +150,55 @@ class _StaffAccrualScreenState extends State<StaffAccrualScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const StaffSectionHeader(title: 'Данные', subtitle: 'Сколько баллов нужно начислить'),
+                const StaffSectionHeader(
+                  title: 'Данные',
+                  subtitle: 'Сколько баллов нужно начислить',
+                ),
                 const SizedBox(height: 14),
                 StaffTextFieldCard(
                   controller: _amountController,
                   hint: 'Количество баллов',
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  prefix: const Icon(CupertinoIcons.star_fill, color: kHomeInkSoft),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  prefix: const Icon(
+                    CupertinoIcons.star_fill,
+                    color: kHomeInkSoft,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 StaffTextFieldCard(
                   controller: _commentController,
                   hint: 'Комментарий',
                   maxLines: 3,
-                  prefix: const Icon(CupertinoIcons.text_alignleft, color: kHomeInkSoft),
+                  prefix: const Icon(
+                    CupertinoIcons.text_alignleft,
+                    color: kHomeInkSoft,
+                  ),
                 ),
               ],
             ),
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
-            StaffStateCard(icon: CupertinoIcons.exclamationmark_circle_fill, title: 'Ошибка', subtitle: _error!, glow: kHomeAccentRed),
+            StaffStateCard(
+              icon: CupertinoIcons.exclamationmark_circle_fill,
+              title: 'Ошибка',
+              subtitle: _error!,
+              glow: kHomeAccentRed,
+            ),
           ],
           if (_success != null) ...[
             const SizedBox(height: 12),
             StaffGlassCard(
               glow: kHomeMintTop,
-              child: Text(_success!, style: const TextStyle(color: kHomeInk, fontWeight: FontWeight.w900)),
+              child: Text(
+                _success!,
+                style: const TextStyle(
+                  color: kHomeInk,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ),
           ],
           const SizedBox(height: 18),

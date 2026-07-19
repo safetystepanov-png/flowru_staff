@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
@@ -40,8 +40,9 @@ class StaffResolvedQrClient {
         : <String, dynamic>{};
 
     return StaffResolvedQrClient(
-      clientId: (client['client_id'] ?? client['id'] ?? '').toString(),
-      clientName: (client['name'] ?? client['client_name'] ?? 'Клиент').toString(),
+      clientId: (client['id'] ?? client['client_id'] ?? '').toString(),
+      clientName: (client['name'] ?? client['client_name'] ?? 'Клиент')
+          .toString(),
       phone: (client['phone'] ?? '').toString(),
       establishmentId: _toInt(establishment['id'] ?? json['establishment_id']),
       establishmentName: (establishment['name'] ?? '').toString(),
@@ -88,7 +89,9 @@ class StaffClientQrApi {
     if (!result.ok || result.accessToken.trim().isEmpty) {
       await AuthStorage.clearSessionButKeepBiometric();
       throw SessionExpiredException(
-        result.message.isNotEmpty ? result.message : 'Сессия истекла. Войдите снова.',
+        result.message.isNotEmpty
+            ? result.message
+            : 'Сессия истекла. Войдите снова.',
       );
     }
 

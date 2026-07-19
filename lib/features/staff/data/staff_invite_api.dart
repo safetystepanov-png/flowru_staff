@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
@@ -65,10 +65,10 @@ class StaffInviteApi {
     final token = await _token();
 
     final response = await http.get(
-      Uri.parse('${AppConfig.baseUrl}/api/v1/staff/establishment/invite?establishment_id=$establishmentId'),
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
+      Uri.parse(
+        '${AppConfig.baseUrl}/api/v1/staff/establishment/invite?establishment_id=$establishmentId',
+      ),
+      headers: {'Authorization': 'Bearer $token'},
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {

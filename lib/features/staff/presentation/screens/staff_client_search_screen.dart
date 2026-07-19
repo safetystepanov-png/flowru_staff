@@ -63,7 +63,8 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
 
   bool get _hasResult => _items.isNotEmpty;
 
-  _ClientSearchItem? get _primaryItem => _items.isNotEmpty ? _items.first : null;
+  _ClientSearchItem? get _primaryItem =>
+      _items.isNotEmpty ? _items.first : null;
 
   @override
   void initState() {
@@ -118,9 +119,7 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
     if (!mounted) return;
 
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (_) => const LoginPhoneScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const LoginPhoneScreen()),
       (route) => false,
     );
   }
@@ -188,7 +187,8 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
         raw = decoded;
       } else if (decoded is Map<String, dynamic> && decoded['items'] is List) {
         raw = decoded['items'] as List<dynamic>;
-      } else if (decoded is Map<String, dynamic> && decoded['clients'] is List) {
+      } else if (decoded is Map<String, dynamic> &&
+          decoded['clients'] is List) {
         raw = decoded['clients'] as List<dynamic>;
       } else {
         raw = [];
@@ -227,9 +227,7 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
 
   Future<void> _openQrSearch() async {
     final qrToken = await Navigator.of(context).push<String>(
-      MaterialPageRoute(
-        builder: (_) => const StaffQrScannerScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const StaffQrScannerScreen()),
     );
 
     if (!mounted || qrToken == null || qrToken.trim().isEmpty) return;
@@ -237,9 +235,8 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CupertinoActivityIndicator(radius: 18),
-      ),
+      builder: (_) =>
+          const Center(child: CupertinoActivityIndicator(radius: 18)),
     );
 
     try {
@@ -276,9 +273,7 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
         context: context,
         builder: (_) => CupertinoAlertDialog(
           title: const Text('QR не распознан'),
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-          ),
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
           actions: [
             CupertinoDialogAction(
               onPressed: () => Navigator.of(context).pop(),
@@ -302,10 +297,7 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
     );
   }
 
-  Widget _stagger({
-    required int index,
-    required Widget child,
-  }) {
+  Widget _stagger({required int index, required Widget child}) {
     final start = (index * 0.08).clamp(0.0, 0.82);
     final end = (start + 0.24).clamp(0.0, 1.0);
 
@@ -448,10 +440,7 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
     );
   }
 
-  Widget _topIconButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
+  Widget _topIconButton({required IconData icon, required VoidCallback onTap}) {
     return _Pressable(
       onTap: onTap,
       borderRadius: 18,
@@ -474,11 +463,7 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
                 ),
               ],
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 21,
-            ),
+            child: Icon(icon, color: Colors.white, size: 21),
           ),
         ),
       ),
@@ -879,9 +864,7 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          colors: [kSearchPink, kSearchViolet],
-        ),
+        gradient: const LinearGradient(colors: [kSearchPink, kSearchViolet]),
         boxShadow: [
           BoxShadow(
             color: kSearchPink.withOpacity(0.22),
@@ -943,10 +926,7 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
         elevation: 0,
         title: const Text(
           'Поиск клиента',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         systemOverlayStyle: SystemUiOverlayStyle.light,
@@ -971,10 +951,7 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 children: [
                   if (_hasResult)
-                    _stagger(
-                      index: 0,
-                      child: _resultsBlock(),
-                    )
+                    _stagger(index: 0, child: _resultsBlock())
                   else ...[
                     _stagger(index: 0, child: _heroSearchCard()),
                     if (_error != null) ...[
@@ -1021,10 +998,7 @@ class _GlassCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(radius),
             gradient: LinearGradient(
-              colors: [
-                kSearchCardStrong,
-                kSearchCard,
-              ],
+              colors: [kSearchCardStrong, kSearchCard],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -1047,9 +1021,7 @@ class _GlassCard extends StatelessWidget {
 class _EmptyOrb extends StatelessWidget {
   final IconData icon;
 
-  const _EmptyOrb({
-    required this.icon,
-  });
+  const _EmptyOrb({required this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -1081,11 +1053,7 @@ class _EmptyOrb extends StatelessWidget {
               shape: BoxShape.circle,
               color: Colors.white.withOpacity(0.92),
             ),
-            child: Icon(
-              icon,
-              color: kSearchInkSoft,
-              size: 28,
-            ),
+            child: Icon(icon, color: kSearchInkSoft, size: 28),
           ),
         ],
       ),
@@ -1096,9 +1064,7 @@ class _EmptyOrb extends StatelessWidget {
 class _AvatarGlyph extends StatelessWidget {
   final String initials;
 
-  const _AvatarGlyph({
-    required this.initials,
-  });
+  const _AvatarGlyph({required this.initials});
 
   @override
   Widget build(BuildContext context) {
@@ -1245,8 +1211,7 @@ class _ClientSearchItem {
   factory _ClientSearchItem.fromJson(Map<String, dynamic> json) {
     return _ClientSearchItem(
       clientId: json['client_id']?.toString() ?? json['id']?.toString() ?? '',
-      fullName:
-          json['full_name']?.toString() ?? json['name']?.toString() ?? '',
+      fullName: json['full_name']?.toString() ?? json['name']?.toString() ?? '',
       phone: json['phone']?.toString() ?? '',
     );
   }

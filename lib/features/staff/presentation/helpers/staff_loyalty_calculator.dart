@@ -72,11 +72,7 @@ class StaffLoyaltyCalculator {
     List<Map<String, dynamic>> levels,
   ) {
     if (levels.isEmpty) {
-      return {
-        'name': '',
-        'purchases_required': 0,
-        'discount_percent': 0.0,
-      };
+      return {'name': '', 'purchases_required': 0, 'discount_percent': 0.0};
     }
 
     final sorted = [...levels]

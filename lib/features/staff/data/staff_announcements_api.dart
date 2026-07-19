@@ -284,10 +284,7 @@ class StaffAnnouncementsApi {
 
     final response = await http.get(
       uri,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
 
     if (response.statusCode != 200) {
@@ -367,9 +364,7 @@ class StaffAnnouncementsApi {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-      body: jsonEncode({
-        'establishment_id': establishmentId,
-      }),
+      body: jsonEncode({'establishment_id': establishmentId}),
     );
 
     if (response.statusCode != 200 && response.statusCode != 201) {
@@ -395,10 +390,7 @@ class StaffAnnouncementsApi {
 
     final response = await http.delete(
       uri,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
 
     if (response.statusCode != 200) {
@@ -424,10 +416,7 @@ class StaffAnnouncementsApi {
 
     final response = await http.get(
       uri,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
 
     if (response.statusCode != 200) {

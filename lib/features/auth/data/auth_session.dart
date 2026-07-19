@@ -4,8 +4,7 @@ class AuthStorage {
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
 
-  static const String _selectedEstablishmentIdKey =
-      'selected_establishment_id';
+  static const String _selectedEstablishmentIdKey = 'selected_establishment_id';
   static const String _selectedEstablishmentNameKey =
       'selected_establishment_name';
   static const String _selectedEstablishmentRoleKey =
