@@ -31,23 +31,43 @@ class StaffResolvedQrClient {
   });
 
   factory StaffResolvedQrClient.fromJson(Map<String, dynamic> json) {
-    final client = json['client'] is Map<String, dynamic>
-        ? json['client'] as Map<String, dynamic>
-        : <String, dynamic>{};
+    final rawClient = json['client'];
 
-    final establishment = json['establishment'] is Map<String, dynamic>
-        ? json['establishment'] as Map<String, dynamic>
+    final client = rawClient is Map
+        ? Map<String, dynamic>.from(rawClient)
+        : json;
+
+    final rawEstablishment = json['establishment'];
+
+    final establishment = rawEstablishment is Map
+        ? Map<String, dynamic>.from(rawEstablishment)
         : <String, dynamic>{};
 
     return StaffResolvedQrClient(
-      clientId: (client['id'] ?? client['client_id'] ?? '').toString(),
-      clientName: (client['name'] ?? client['client_name'] ?? 'Клиент')
-          .toString(),
-      phone: (client['phone'] ?? '').toString(),
+      clientId:
+          (client['client_id'] ??
+                  client['client_legacy_id'] ??
+                  client['legacy_id'] ??
+                  client['id'] ??
+                  json['client_id'] ??
+                  json['id'] ??
+                  '')
+              .toString(),
+      clientName:
+          (client['name'] ??
+                  client['full_name'] ??
+                  client['client_name'] ??
+                  json['client_name'] ??
+                  json['full_name'] ??
+                  'Клиент')
+              .toString(),
+      phone: (client['phone'] ?? json['phone'] ?? '').toString(),
       establishmentId: _toInt(establishment['id'] ?? json['establishment_id']),
-      establishmentName: (establishment['name'] ?? '').toString(),
-      points: _toInt(client['points']),
-      visits: _toInt(client['visits']),
+      establishmentName:
+          (establishment['name'] ?? json['establishment_name'] ?? '')
+              .toString(),
+      points: _toInt(client['points'] ?? json['points']),
+      visits: _toInt(client['visits'] ?? json['visits']),
       created: json['created'] == true,
       message: (json['message'] ?? '').toString(),
     );
@@ -57,7 +77,8 @@ class StaffResolvedQrClient {
     if (value == null) return 0;
     if (value is int) return value;
     if (value is num) return value.toInt();
-    return int.tryParse(value.toString()) ?? 0;
+
+    return int.tryParse(value.toString().trim()) ?? 0;
   }
 }
 
@@ -66,15 +87,18 @@ class StaffClientQrApi {
 
   Future<String> _token() async {
     final token = await AuthStorage.getAccessToken();
+
     if (token == null || token.trim().isEmpty) {
       await AuthStorage.clearSessionButKeepBiometric();
       throw const SessionExpiredException();
     }
+
     return token.trim();
   }
 
   Future<String> _refreshAccessToken() async {
     final refreshToken = await AuthStorage.getRefreshToken();
+
     if (refreshToken == null || refreshToken.trim().isEmpty) {
       await AuthStorage.clearSessionButKeepBiometric();
       throw const SessionExpiredException();
@@ -88,6 +112,7 @@ class StaffClientQrApi {
 
     if (!result.ok || result.accessToken.trim().isEmpty) {
       await AuthStorage.clearSessionButKeepBiometric();
+
       throw SessionExpiredException(
         result.message.isNotEmpty
             ? result.message
@@ -105,11 +130,11 @@ class StaffClientQrApi {
     required String accessToken,
     required int establishmentId,
     required String qrToken,
-  }) async {
+  }) {
     return http.post(
       Uri.parse('${AppConfig.baseUrl}/api/v1/staff/clients/resolve-qr'),
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
         'Accept': 'application/json',
         'Authorization': 'Bearer $accessToken',
       },
@@ -120,28 +145,70 @@ class StaffClientQrApi {
     );
   }
 
-  String _errorMessageFromResponse(http.Response response) {
-    String message = 'Не удалось распознать QR клиента';
+  String _responseText(http.Response response) {
+    try {
+      return utf8.decode(response.bodyBytes);
+    } catch (_) {
+      return response.body;
+    }
+  }
 
-    if (response.statusCode == 401) {
-      return 'Сессия истекла. Войдите заново.';
+  Map<String, dynamic>? _responseJson(http.Response response) {
+    try {
+      final decoded = jsonDecode(_responseText(response));
+
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
+    } catch (_) {
+      return null;
     }
 
-    try {
-      final decoded = jsonDecode(response.body);
-      if (decoded is Map<String, dynamic>) {
-        final detail = decoded['detail'];
-        final serverMessage = decoded['message'];
+    return null;
+  }
 
-        if (detail is String && detail.trim().isNotEmpty) {
-          message = detail.trim();
-        } else if (serverMessage is String && serverMessage.trim().isNotEmpty) {
-          message = serverMessage.trim();
+  String _errorMessageFromResponse(http.Response response) {
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      return 'Сессия истекла. Войдите снова.';
+    }
+
+    final decoded = _responseJson(response);
+
+    if (decoded != null) {
+      final detail = decoded['detail'];
+      final message = decoded['message'];
+      final error = decoded['error'];
+
+      if (detail is String && detail.trim().isNotEmpty) {
+        return detail.trim();
+      }
+
+      if (message is String && message.trim().isNotEmpty) {
+        return message.trim();
+      }
+
+      if (error is String && error.trim().isNotEmpty) {
+        return error.trim();
+      }
+
+      if (detail is Map) {
+        final nested = detail['message'] ?? detail['error'];
+
+        if (nested is String && nested.trim().isNotEmpty) {
+          return nested.trim();
         }
       }
-    } catch (_) {}
+    }
 
-    return message;
+    if (response.statusCode == 404) {
+      return 'Клиент не найден. Проверьте QR-код и попробуйте снова.';
+    }
+
+    if (response.statusCode >= 500) {
+      return 'Сервер временно недоступен. Попробуйте ещё раз.';
+    }
+
+    return 'Не удалось распознать QR клиента.';
   }
 
   Future<StaffResolvedQrClient> resolveClientQr({
@@ -149,8 +216,9 @@ class StaffClientQrApi {
     required String qrToken,
   }) async {
     final normalizedQrToken = qrToken.trim();
+
     if (normalizedQrToken.isEmpty) {
-      throw Exception('QR пустой');
+      throw Exception('QR-код пустой.');
     }
 
     var accessToken = await _token();
@@ -160,6 +228,13 @@ class StaffClientQrApi {
       establishmentId: establishmentId,
       qrToken: normalizedQrToken,
     );
+
+    print('========== RESOLVE QR ==========');
+    print('ESTABLISHMENT_ID=$establishmentId');
+    print('QR_TOKEN=$normalizedQrToken');
+    print('QR_STATUS=${response.statusCode}');
+    print('QR_BODY=${utf8.decode(response.bodyBytes, allowMalformed: true)}');
+    print('================================');
 
     if (response.statusCode == 401 || response.statusCode == 403) {
       accessToken = await _refreshAccessToken();
@@ -180,11 +255,18 @@ class StaffClientQrApi {
       throw Exception(_errorMessageFromResponse(response));
     }
 
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic>) {
-      throw Exception('Некорректный ответ сервера');
+    final decoded = _responseJson(response);
+
+    if (decoded == null) {
+      throw Exception('Сервер вернул некорректный ответ.');
     }
 
-    return StaffResolvedQrClient.fromJson(decoded);
+    final result = StaffResolvedQrClient.fromJson(decoded);
+
+    if (result.clientId.trim().isEmpty) {
+      throw Exception('Сервер не вернул номер клиента.');
+    }
+
+    return result;
   }
 }

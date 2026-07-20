@@ -169,7 +169,10 @@ class _StaffSubscriptionSaleScreenState
       setState(() {
         _scanning = false;
         _loading = false;
-        _error = _message(error);
+        print('========== SALE SCREEN ERROR ==========');
+        print(error);
+        print('=======================================');
+        _error = error.toString().replaceFirst('Exception: ', '').trim();
       });
     }
   }
@@ -240,7 +243,10 @@ class _StaffSubscriptionSaleScreenState
 
       setState(() {
         _activating = false;
-        _error = _message(error);
+        print('========== SALE SCREEN ERROR ==========');
+        print(error);
+        print('=======================================');
+        _error = error.toString().replaceFirst('Exception: ', '').trim();
       });
 
       HapticFeedback.heavyImpact();

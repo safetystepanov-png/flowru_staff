@@ -140,8 +140,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
           clientId: widget.clientId,
         );
       } catch (_) {
-        subscriptionsError =
-            'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ Р°Р±РѕРЅРµРјРµРЅС‚С‹';
+        subscriptionsError = 'Не удалось загрузить абонементы';
       }
 
       if (!mounted) return;
@@ -158,7 +157,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РєР»РёРµРЅС‚Р°';
+        _error = 'Не удалось загрузить клиента';
       });
       _introController.forward(from: 0);
     }
@@ -398,7 +397,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                             ),
                           ),
                           child: const Text(
-                            'РљР›РР•РќРў',
+                            'КЛИЕНТ',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 10,
@@ -431,8 +430,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                client.phone ??
-                                    'РўРµР»РµС„РѕРЅ РЅРµ СѓРєР°Р·Р°РЅ',
+                                client.phone ?? 'Телефон не указан',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -462,7 +460,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Р‘Р°Р»Р»С‹',
+                      'Баллы',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.78),
                         fontSize: 13,
@@ -484,7 +482,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'РґРѕСЃС‚СѓРїРЅРѕ РґР»СЏ СЃРїРёСЃР°РЅРёСЏ',
+                      'доступно для списания',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.72),
                         fontSize: 12.5,
@@ -500,7 +498,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                   Expanded(
                     child: _clientCompactStat(
                       icon: CupertinoIcons.ticket_fill,
-                      label: 'Р’РёР·РёС‚С‹',
+                      label: 'Визиты',
                       value: client.visitsLabel,
                     ),
                   ),
@@ -508,7 +506,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                   Expanded(
                     child: _clientCompactStat(
                       icon: CupertinoIcons.creditcard_fill,
-                      label: 'РџРѕС‚СЂР°С‡РµРЅРѕ',
+                      label: 'Потрачено',
                       value: client.spentLabel,
                     ),
                   ),
@@ -781,7 +779,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Р”РµР№СЃС‚РІРёСЏ СЃ РєР»РёРµРЅС‚РѕРј',
+                      'Действия с клиентом',
                       style: TextStyle(
                         color: kClientInk,
                         fontSize: 18,
@@ -791,7 +789,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                     ),
                     SizedBox(height: 3),
                     Text(
-                      'РќР°С‡РёСЃР»РµРЅРёРµ, СЃРїРёСЃР°РЅРёРµ Рё РёСЃС‚РѕСЂРёСЏ РѕРїРµСЂР°С†РёР№',
+                      'Начисление, списание и история операций',
                       style: TextStyle(
                         color: kClientInkSoft,
                         fontSize: 13,
@@ -809,8 +807,8 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
             children: [
               Expanded(
                 child: _actionButton(
-                  title: 'РќР°С‡РёСЃР»РёС‚СЊ',
-                  subtitle: 'Р±Р°Р»Р»С‹ Р·Р° С‡РµРє',
+                  title: 'Начислить',
+                  subtitle: 'баллы за чек',
                   icon: CupertinoIcons.plus_circle_fill,
                   colors: const [kClientGreen, kClientGreenSoft],
                   onTap: () async {
@@ -831,8 +829,8 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
               const SizedBox(width: 10),
               Expanded(
                 child: _actionButton(
-                  title: 'РЎРїРёСЃР°С‚СЊ',
-                  subtitle: 'РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ Р±Р°Р»Р»С‹',
+                  title: 'Списать',
+                  subtitle: 'использовать баллы',
                   icon: CupertinoIcons.minus_circle_fill,
                   colors: const [kClientRed, kClientRedSoft],
                   onTap: () async {
@@ -854,9 +852,8 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
           ),
           const SizedBox(height: 10),
           _softActionTile(
-            title: 'РСЃС‚РѕСЂРёСЏ РєР»РёРµРЅС‚Р°',
-            subtitle:
-                'Р’СЃРµ РЅР°С‡РёСЃР»РµРЅРёСЏ, СЃРїРёСЃР°РЅРёСЏ Рё РґРІРёР¶РµРЅРёСЏ РїРѕ РєР»РёРµРЅС‚Сѓ',
+            title: 'История клиента',
+            subtitle: 'Все начисления, списания и движения по клиенту',
             icon: CupertinoIcons.clock_fill,
             glow: kClientBlue,
             onTap: () {
@@ -1079,11 +1076,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     final clientId = int.tryParse(widget.clientId);
     if (clientId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'РќРµ СѓРґР°Р»РѕСЃСЊ РѕРїСЂРµРґРµР»РёС‚СЊ РєР»РёРµРЅС‚Р°',
-          ),
-        ),
+        const SnackBar(content: Text('Не удалось определить клиента')),
       );
       return;
     }
@@ -1098,7 +1091,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     final confirmed = await showGeneralDialog<bool>(
       context: context,
       barrierDismissible: true,
-      barrierLabel: 'РџРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ СЃРїРёСЃР°РЅРёСЏ',
+      barrierLabel: 'Подтверждение списания',
       barrierColor: Colors.black.withOpacity(0.58),
       transitionDuration: const Duration(milliseconds: 360),
       pageBuilder: (dialogContext, animation, secondaryAnimation) {
@@ -1158,7 +1151,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                       const SizedBox(width: 13),
                       const Expanded(
                         child: Text(
-                          'РСЃРїРѕР»СЊР·РѕРІР°С‚СЊ Р°Р±РѕРЅРµРјРµРЅС‚',
+                          'Использовать абонемент',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -1213,8 +1206,8 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                         Expanded(
                           child: Text(
                             subscription.isUnlimited
-                                ? 'РџРѕСЃР»Рµ СЃРїРёСЃР°РЅРёСЏ Р»РёРјРёС‚ РЅРµ РёР·РјРµРЅРёС‚СЃСЏ'
-                                : 'РџРѕСЃР»Рµ СЃРїРёСЃР°РЅРёСЏ РѕСЃС‚Р°РЅРµС‚СЃСЏ',
+                                ? 'После списания лимит не изменится'
+                                : 'После списания останется',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.78),
                               fontSize: 12,
@@ -1259,7 +1252,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                               ),
                             ),
                             child: const Text(
-                              'РћС‚РјРµРЅР°',
+                              'Отмена',
                               style: TextStyle(fontWeight: FontWeight.w900),
                             ),
                           ),
@@ -1285,7 +1278,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                               size: 18,
                             ),
                             label: const Text(
-                              'РЎРїРёСЃР°С‚СЊ',
+                              'Списать',
                               style: TextStyle(fontWeight: FontWeight.w900),
                             ),
                           ),
@@ -1360,7 +1353,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     await showGeneralDialog<void>(
       context: context,
       barrierDismissible: false,
-      barrierLabel: 'РЈСЃРїРµС€РЅРѕРµ СЃРїРёСЃР°РЅРёРµ',
+      barrierLabel: 'Успешное списание',
       barrierColor: Colors.black.withOpacity(0.48),
       transitionDuration: const Duration(milliseconds: 420),
       pageBuilder: (dialogContext, animation, secondaryAnimation) {
@@ -1438,7 +1431,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    'РЈСЃРїРµС€РЅРѕ СЃРїРёСЃР°РЅРѕ',
+                    'Успешно списано',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white,
@@ -1579,7 +1572,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
         const Padding(
           padding: EdgeInsets.only(left: 4, bottom: 11),
           child: Text(
-            'РђР±РѕРЅРµРјРµРЅС‚С‹',
+            'Абонементы',
             style: TextStyle(
               color: Colors.white,
               fontSize: 20,
@@ -1647,7 +1640,7 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     if (_error != null) {
       return _stateCard(
         icon: CupertinoIcons.exclamationmark_circle_fill,
-        title: 'РћС€РёР±РєР°',
+        title: 'Ошибка',
         subtitle: _error!,
       );
     }
@@ -1655,9 +1648,8 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
     if (_client == null) {
       return _stateCard(
         icon: CupertinoIcons.person_crop_circle_badge_xmark,
-        title: 'РљР»РёРµРЅС‚ РЅРµ РЅР°Р№РґРµРЅ',
-        subtitle:
-            'РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РґР°РЅРЅС‹Рµ РєР»РёРµРЅС‚Р°',
+        title: 'Клиент не найден',
+        subtitle: 'Не удалось получить данные клиента',
       );
     }
 
@@ -2016,22 +2008,22 @@ class _SubscriptionCardState extends State<_SubscriptionCard>
         : const [Color(0xFF687078), Color(0xFF858B94), Color(0xFF56636A)];
 
     final statusText = exhausted
-        ? 'Р›РёРјРёС‚ РёСЃС‡РµСЂРїР°РЅ'
+        ? 'Лимит исчерпан'
         : !hasAvailableItem && active
-        ? 'РЎРµР№С‡Р°СЃ РЅРµРґРѕСЃС‚СѓРїРµРЅ'
+        ? 'Сейчас недоступен'
         : s.statusLabel;
 
     final unavailableText = exhausted
-        ? 'Р’СЃРµ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ РїРѕ СЌС‚РѕРјСѓ Р°Р±РѕРЅРµРјРµРЅС‚Сѓ СѓР¶Рµ РёР·СЂР°СЃС…РѕРґРѕРІР°РЅС‹'
+        ? 'Все использования по этому абонементу уже израсходованы'
         : s.status == 'paused'
-        ? 'РђР±РѕРЅРµРјРµРЅС‚ РІСЂРµРјРµРЅРЅРѕ РїСЂРёРѕСЃС‚Р°РЅРѕРІР»РµРЅ'
+        ? 'Абонемент временно приостановлен'
         : s.status == 'pending'
-        ? 'РђР±РѕРЅРµРјРµРЅС‚ РµС‰С‘ РЅРµ РЅР°С‡Р°Р» РґРµР№СЃС‚РІРѕРІР°С‚СЊ'
+        ? 'Абонемент ещё не начал действовать'
         : s.status == 'expired'
-        ? 'РЎСЂРѕРє РґРµР№СЃС‚РІРёСЏ Р°Р±РѕРЅРµРјРµРЅС‚Р° Р·Р°РєРѕРЅС‡РёР»СЃСЏ'
+        ? 'Срок действия абонемента закончился'
         : s.status == 'cancelled'
-        ? 'РђР±РѕРЅРµРјРµРЅС‚ РѕС‚РјРµРЅС‘РЅ'
-        : 'РЎРїРёСЃР°РЅРёРµ СЃРµР№С‡Р°СЃ РЅРµРґРѕСЃС‚СѓРїРЅРѕ';
+        ? 'Абонемент отменён'
+        : 'Списание сейчас недоступно';
 
     return AnimatedBuilder(
       animation: _shineController,
@@ -2142,10 +2134,10 @@ class _SubscriptionCardState extends State<_SubscriptionCard>
                                     children: [
                                       Text(
                                         exhausted
-                                            ? 'РЎС‚Р°С‚СѓСЃ'
+                                            ? 'Статус'
                                             : (s.isUnlimited
-                                                  ? 'Р”РѕСЃС‚СѓРїРЅРѕ'
-                                                  : 'РћСЃС‚Р°Р»РѕСЃСЊ'),
+                                                  ? 'Доступно'
+                                                  : 'Осталось'),
                                         style: TextStyle(
                                           color: Colors.white.withOpacity(.72),
                                           fontSize: 11,
@@ -2155,7 +2147,7 @@ class _SubscriptionCardState extends State<_SubscriptionCard>
                                       const SizedBox(height: 3),
                                       Text(
                                         exhausted
-                                            ? 'РСЃРїРѕР»СЊР·РѕРІР°РЅ'
+                                            ? 'Использован'
                                             : s.remainingLabel,
                                         style: const TextStyle(
                                           color: Colors.white,
@@ -2168,7 +2160,7 @@ class _SubscriptionCardState extends State<_SubscriptionCard>
                                   ),
                                 ),
                                 Text(
-                                  'РґРѕ ${_date(s.endsAt)}',
+                                  'до ${_date(s.endsAt)}',
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(.78),
                                     fontSize: 11.5,
@@ -2311,10 +2303,10 @@ class _SubscriptionCardState extends State<_SubscriptionCard>
                                                               )
                                                             : Text(
                                                                 item.canUse
-                                                                    ? 'РЎРїРёСЃР°С‚СЊ'
+                                                                    ? 'Списать'
                                                                     : exhausted
-                                                                    ? 'РСЃРїРѕР»СЊР·РѕРІР°РЅ'
-                                                                    : 'РќРµРґРѕСЃС‚СѓРїРЅРѕ',
+                                                                    ? 'Использован'
+                                                                    : 'Недоступно',
                                                               ),
                                                       ),
                                                     ),
@@ -2424,7 +2416,7 @@ class _ClientDetail {
     final name = (fullName ?? '').trim();
     if (name.isNotEmpty) return name;
     if ((phone ?? '').trim().isNotEmpty) return phone!.trim();
-    return 'РљР»РёРµРЅС‚';
+    return 'Клиент';
   }
 
   String get initials {
@@ -2463,5 +2455,5 @@ class _ClientDetail {
     return buffer.toString();
   }
 
-  String get spentLabel => '${_formatMoney(totalSpent)} в‚Ѕ';
+  String get spentLabel => '${_formatMoney(totalSpent)} \u20BD';
 }

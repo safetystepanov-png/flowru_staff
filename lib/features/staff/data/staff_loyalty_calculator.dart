@@ -120,14 +120,14 @@ class StaffLoyaltyCalculator {
       if (config.pointsEnabledInDiscountMode) {
         if (accrualType == 'per_purchase') {
           added = config.fixedPointsPerPurchase;
-          label = 'Р¤РёРєСЃРёСЂРѕРІР°РЅРЅС‹Рµ Р±Р°Р»Р»С‹ Р·Р° РїРѕРєСѓРїРєСѓ';
+          label = 'Фиксированные баллы за покупку';
         } else {
           added = ((payable / 100.0) * config.pointsPer100Rub).floor();
-          label = '${config.pointsPer100Rub} Р±Р°Р»Р»РѕРІ Р·Р° 100 в‚Ѕ';
+          label = '${config.pointsPer100Rub} баллов за 100 ₽';
         }
       } else {
         added = 0;
-        label = 'Р‘Р°Р»Р»С‹ РІ СЂРµР¶РёРјРµ СЃРєРёРґРѕРє РѕС‚РєР»СЋС‡РµРЅС‹';
+        label = 'Баллы в режиме скидок отключены';
       }
 
       return StaffAccrualPreview(
@@ -148,8 +148,7 @@ class StaffLoyaltyCalculator {
       );
       appliedPercent = percent;
       added = ((amount / 100.0) * percent).round();
-      label =
-          'РљСЌС€Р±СЌРє ${percent.toStringAsFixed(percent % 1 == 0 ? 0 : 1)}%';
+      label = 'Кэшбэк ${percent.toStringAsFixed(percent % 1 == 0 ? 0 : 1)}%';
       return StaffAccrualPreview(
         added: added,
         label: label,
@@ -162,10 +161,10 @@ class StaffLoyaltyCalculator {
 
     if (accrualType == 'per_purchase') {
       added = config.fixedPointsPerPurchase;
-      label = 'Р¤РёРєСЃРёСЂРѕРІР°РЅРЅС‹Рµ Р±Р°Р»Р»С‹ Р·Р° РїРѕРєСѓРїРєСѓ';
+      label = 'Фиксированные баллы за покупку';
     } else {
       added = ((amount / 100.0) * config.pointsPer100Rub).floor();
-      label = '${config.pointsPer100Rub} Р±Р°Р»Р»РѕРІ Р·Р° 100 в‚Ѕ';
+      label = '${config.pointsPer100Rub} баллов за 100 ₽';
     }
 
     return StaffAccrualPreview(
