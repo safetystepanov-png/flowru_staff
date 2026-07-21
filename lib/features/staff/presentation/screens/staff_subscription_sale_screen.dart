@@ -131,7 +131,7 @@ class _StaffSubscriptionSaleScreenState
         qrToken: qrToken.trim(),
       );
 
-      final clientId = int.tryParse(resolved.clientId.trim());
+      final clientId = int.tryParse(resolved.coreClientId.trim());
 
       if (clientId == null || clientId <= 0) {
         throw const StaffSubscriptionSaleException(

@@ -9,6 +9,7 @@ import '../../auth/data/user_api.dart';
 
 class StaffResolvedQrClient {
   final String clientId;
+  final String coreClientId;
   final String clientName;
   final String phone;
   final int establishmentId;
@@ -20,6 +21,7 @@ class StaffResolvedQrClient {
 
   const StaffResolvedQrClient({
     required this.clientId,
+    required this.coreClientId,
     required this.clientName,
     required this.phone,
     required this.establishmentId,
@@ -53,6 +55,7 @@ class StaffResolvedQrClient {
                   json['id'] ??
                   '')
               .toString(),
+      coreClientId: (client['id'] ?? json['id'] ?? '').toString(),
       clientName:
           (client['name'] ??
                   client['full_name'] ??
