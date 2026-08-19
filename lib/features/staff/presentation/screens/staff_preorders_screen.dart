@@ -38,6 +38,7 @@ class StaffPreordersScreen extends StatefulWidget {
 
 class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     with SingleTickerProviderStateMixin {
+  // FLOWRU_STAFF_PREORDERS_V2_20260818
   bool _loading = true;
   bool _updating = false;
   String? _error;
@@ -594,123 +595,210 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
   Widget _heroCard() {
     final activeCount = _activeItems.length;
 
+    Widget metric({
+      required String label,
+      required int value,
+      required IconData icon,
+      required Color color,
+    }) {
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 11),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.075),
+            borderRadius: BorderRadius.circular(19),
+            border: Border.all(color: color.withOpacity(0.11)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.10),
+                      blurRadius: 11,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: color, size: 16),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$value',
+                      style: const TextStyle(
+                        color: _ink,
+                        fontSize: 20,
+                        height: 1,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _soft,
+                        fontSize: 10.4,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return AnimatedBuilder(
       animation: _motion,
       builder: (context, child) {
-        final glow = 0.16 + (_motion.value * 0.10);
         return Container(
-          padding: const EdgeInsets.all(22),
+          padding: const EdgeInsets.fromLTRB(17, 17, 17, 15),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(36),
             gradient: const LinearGradient(
-              colors: [Color(0xFF1ECAD3), Color(0xFF118EAF), Color(0xFF0B4E73)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
+              colors: [Color(0xFFFFFFFF), Color(0xFFF5FBFC)],
+            ),
+            borderRadius: BorderRadius.circular(29),
+            border: Border.all(
+              color: const Color(0xFF0F9EAA).withOpacity(0.10),
             ),
             boxShadow: [
               BoxShadow(
-                color: _mint.withOpacity(glow),
-                blurRadius: 36,
-                offset: const Offset(0, 18),
+                color: _deep.withOpacity(0.045 + (_motion.value * 0.012)),
+                blurRadius: 26,
+                offset: const Offset(0, 12),
               ),
             ],
           ),
           child: child,
         );
       },
-      child: Stack(
+      child: Column(
         children: [
-          Positioned(
-            right: -26,
-            top: -32,
-            child: Container(
-              width: 118,
-              height: 118,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.10),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 34,
-            bottom: -42,
-            child: Container(
-              width: 92,
-              height: 92,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.08),
-              ),
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 62,
-                    height: 62,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.white.withOpacity(0.16)),
-                    ),
-                    child: const Icon(
-                      CupertinoIcons.bag_fill,
-                      color: Colors.white,
-                      size: 31,
-                    ),
+              Container(
+                width: 49,
+                height: 49,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF13C8BE), Color(0xFF10849A)],
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Предзаказы',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 30,
-                            height: 1,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.8,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          activeCount > 0
-                              ? '$activeCount активных заказов сейчас'
-                              : 'Активных заказов сейчас нет',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.88),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
+                  borderRadius: BorderRadius.circular(17),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _mint.withOpacity(0.17),
+                      blurRadius: 15,
+                      offset: const Offset(0, 7),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                child: const Icon(
+                  CupertinoIcons.bag_fill,
+                  color: Colors.white,
+                  size: 22,
+                ),
               ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  _heroMetric('новые', _newCount, CupertinoIcons.bell_fill),
-                  const SizedBox(width: 9),
-                  _heroMetric(
-                    'в работе',
-                    _inWorkCount,
-                    CupertinoIcons.flame_fill,
-                  ),
-                  const SizedBox(width: 9),
-                  _heroMetric(
-                    'готовы',
-                    _readyCount,
-                    CupertinoIcons.checkmark_seal_fill,
-                  ),
-                ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Предзаказы',
+                      style: TextStyle(
+                        color: _ink,
+                        fontSize: 23,
+                        height: 1,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.55,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      activeCount == 0
+                          ? 'Сейчас активных заказов нет'
+                          : '$activeCount активных · контролируем выдачу',
+                      style: const TextStyle(
+                        color: _soft,
+                        fontSize: 12.1,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _green.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 7,
+                      height: 7,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: _green,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      'онлайн',
+                      style: TextStyle(
+                        color: _green,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          Row(
+            children: [
+              metric(
+                label: 'Новые',
+                value: _newCount,
+                icon: CupertinoIcons.bell_fill,
+                color: _orange,
+              ),
+              const SizedBox(width: 8),
+              metric(
+                label: 'Готовятся',
+                value: _inWorkCount,
+                icon: CupertinoIcons.flame_fill,
+                color: _blue,
+              ),
+              const SizedBox(width: 8),
+              metric(
+                label: 'Готовы',
+                value: _readyCount,
+                icon: CupertinoIcons.checkmark_seal_fill,
+                color: _green,
               ),
             ],
           ),
@@ -914,249 +1002,472 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     );
   }
 
-  Widget _orderCard(_PreorderItem item, int index) {
-    final attentionColor = _attentionColor(item);
-    final pulse = _needsPulse(item);
+  List<String> _flowOrderLines(_PreorderItem item) {
+    return item.orderText
+        .split(RegExp(r'\r?\n'))
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .where((line) => !line.toLowerCase().startsWith('комментарий:'))
+        .toList();
+  }
 
-    final statusColor = _statusColor(item.status);
-    final isActive =
-        item.status == 'new' ||
-        item.status == 'in_work' ||
-        item.status == 'ready';
+  String? _flowOrderComment(_PreorderItem item) {
+    for (final raw in item.orderText.split(RegExp(r'\r?\n'))) {
+      final line = raw.trim();
+      if (line.toLowerCase().startsWith('комментарий:')) {
+        final colon = line.indexOf(':');
+        if (colon >= 0 && colon + 1 < line.length) {
+          final value = line.substring(colon + 1).trim();
+          if (value.isNotEmpty) return value;
+        }
+      }
+    }
+    return null;
+  }
 
-    return _fadeIn(
-      delay: index.clamp(0, 6) * 70,
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 180),
-        scale: isActive ? 1.0 : 0.995,
-        child: Container(
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(
-              color: isActive ? statusColor.withOpacity(0.30) : _stroke,
-              width: isActive ? 1.5 : 1,
+  Widget _flowOrderContents(_PreorderItem item) {
+    final lines = _flowOrderLines(item);
+    final comment = _flowOrderComment(item);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (lines.isEmpty)
+          const Text(
+            'Состав заказа не указан',
+            style: TextStyle(
+              color: _soft,
+              fontSize: 12.8,
+              fontWeight: FontWeight.w700,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: (isActive ? statusColor : Colors.black).withOpacity(
-                  isActive ? 0.12 : 0.045,
-                ),
-                blurRadius: isActive ? 30 : 18,
-                offset: const Offset(0, 14),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                right: -24,
-                top: -28,
-                child: Container(
-                  width: 92,
-                  height: 92,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: statusColor.withOpacity(0.07),
-                  ),
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      AnimatedBuilder(
-                        animation: _motion,
-                        builder: (context, child) {
-                          final scale = item.status == 'new'
-                              ? 1.0 + (_motion.value * 0.035)
-                              : 1.0;
-                          return Transform.scale(scale: scale, child: child);
-                        },
-                        child: Container(
-                          width: 50,
-                          height: 50,
+          )
+        else
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7FAFB),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: _stroke.withOpacity(0.80)),
+            ),
+            child: Column(
+              children: [
+                for (int i = 0; i < lines.length; i++) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 23,
+                          height: 23,
+                          alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(19),
-                            gradient: LinearGradient(
-                              colors: [
-                                statusColor,
-                                statusColor.withOpacity(0.65),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+                            color: _mint.withOpacity(0.09),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '${i + 1}',
+                            style: const TextStyle(
+                              color: _deep,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
                             ),
                           ),
-                          child: Icon(
-                            _statusIcon(item.status),
-                            color: Colors.white,
-                            size: 23,
-                          ),
                         ),
-                      ),
-                      const SizedBox(width: 11),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.clientName.isEmpty
-                                  ? 'Клиент'
-                                  : 'Заказал: ${item.clientName}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: _ink,
-                                fontSize: 16.5,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.2,
-                              ),
+                        const SizedBox(width: 9),
+                        Expanded(
+                          child: Text(
+                            lines[i],
+                            style: const TextStyle(
+                              color: _ink,
+                              fontSize: 13.2,
+                              height: 1.3,
+                              fontWeight: FontWeight.w800,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              item.clientPhone.isEmpty
-                                  ? 'Телефон не указан'
-                                  : item.clientPhone,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: _soft,
-                                fontSize: 12.7,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 7,
-                        ),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.13),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: statusColor.withOpacity(0.14),
                           ),
                         ),
-                        child: Text(
-                          _statusText(item.status),
-                          style: TextStyle(
-                            color: statusColor,
-                            fontSize: 11.4,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    item.orderText.trim().isEmpty
-                        ? 'Заказ без описания'
-                        : item.orderText.trim(),
-                    maxLines: 5,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: _ink,
-                      fontSize: 15.2,
-                      height: 1.36,
-                      fontWeight: FontWeight.w800,
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _infoLine(
-                          icon: CupertinoIcons.arrow_down_circle_fill,
-                          label: 'Поступил',
-                          value: item.createdLabel,
-                          color: _blue,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _infoLine(
-                          icon: CupertinoIcons.clock_fill,
-                          label: 'Забрать',
-                          value: item.pickupLabel,
-                          color: _orange,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  _paymentLine(item),
-                  if (item.amountTotal != null ||
-                      item.bonusAccrued != null) ...[
-                    const SizedBox(height: 8),
-                    _accrualLine(item),
-                  ],
-                  const SizedBox(height: 12),
-                  _attentionBanner(item),
-                  const SizedBox(height: 12),
-                  if (item.status == 'new')
-                    Row(
-                      children: [
-                        _actionButton(
-                          text: 'В работе',
-                          color: _blue,
-                          icon: CupertinoIcons.flame_fill,
-                          onTap: () => _setStatus(item, 'in_work'),
-                        ),
-                        const SizedBox(width: 8),
-                        _actionButton(
-                          text: 'Отменить',
-                          color: _red,
-                          icon: CupertinoIcons.xmark_circle_fill,
-                          onTap: () => _setStatus(item, 'cancelled'),
-                        ),
-                      ],
-                    )
-                  else if (item.status == 'in_work')
-                    Row(
-                      children: [
-                        _actionButton(
-                          text: 'Готов',
-                          color: _green,
-                          icon: CupertinoIcons.checkmark_seal_fill,
-                          onTap: () => _setStatus(item, 'ready'),
-                        ),
-                        const SizedBox(width: 8),
-                        _actionButton(
-                          text: 'Отменить',
-                          color: _red,
-                          icon: CupertinoIcons.xmark_circle_fill,
-                          onTap: () => _setStatus(item, 'cancelled'),
-                        ),
-                      ],
-                    )
-                  else if (item.status == 'ready')
-                    Row(
-                      children: [
-                        _actionButton(
-                          text: 'Выдан',
-                          color: _deep,
-                          icon: CupertinoIcons.archivebox_fill,
-                          onTap: () => _completePreorder(item),
-                        ),
-                        const SizedBox(width: 8),
-                        _actionButton(
-                          text: 'Отменить',
-                          color: _red,
-                          icon: CupertinoIcons.xmark_circle_fill,
-                          onTap: () => _setStatus(item, 'cancelled'),
-                        ),
-                      ],
+                  if (i != lines.length - 1)
+                    Divider(
+                      height: 1,
+                      indent: 43,
+                      endIndent: 11,
+                      color: _stroke.withOpacity(0.65),
                     ),
                 ],
+              ],
+            ),
+          ),
+        if (comment != null) ...[
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+            decoration: BoxDecoration(
+              color: _orange.withOpacity(0.07),
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: _orange.withOpacity(0.12)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  CupertinoIcons.text_bubble_fill,
+                  color: _orange,
+                  size: 15,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    comment,
+                    style: const TextStyle(
+                      color: _ink,
+                      fontSize: 12.2,
+                      height: 1.3,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _flowSection({
+    required String title,
+    required String subtitle,
+    required Color color,
+    required IconData icon,
+    required List<_PreorderItem> items,
+  }) {
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.09),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Icon(icon, color: color, size: 17),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: _ink,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.30,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: _soft,
+                        fontSize: 11.2,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.085),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '${items.length}',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
               ),
             ],
           ),
+          const SizedBox(height: 9),
+          _ordersList(items),
+        ],
+      ),
+    );
+  }
+
+  Widget _orderCard(_PreorderItem item, int index) {
+    final statusColor = _statusColor(item.status);
+    final left = _minutesLeft(item);
+    final attention = _attentionText(item);
+
+    String mainText;
+    Color mainColor;
+    IconData mainIcon;
+    VoidCallback mainTap;
+
+    if (item.status == 'new') {
+      mainText = 'Принять в работу';
+      mainColor = _blue;
+      mainIcon = CupertinoIcons.flame_fill;
+      mainTap = () => _setStatus(item, 'in_work');
+    } else if (item.status == 'in_work') {
+      mainText = 'Заказ готов';
+      mainColor = _green;
+      mainIcon = CupertinoIcons.checkmark_seal_fill;
+      mainTap = () => _setStatus(item, 'ready');
+    } else {
+      mainText = 'Выдать клиенту';
+      mainColor = _deep;
+      mainIcon = CupertinoIcons.archivebox_fill;
+      mainTap = () => _completePreorder(item);
+    }
+
+    String timeLabel = 'Забрать';
+    String timeValue = item.pickupLabel;
+
+    if (item.status == 'in_work' && left != null) {
+      if (left < 0) {
+        timeLabel = 'Просрочено';
+        timeValue = '${left.abs()} мин';
+      } else {
+        timeLabel = 'До выдачи';
+        timeValue = '$left мин';
+      }
+    } else if (item.status == 'ready') {
+      timeLabel = 'Статус';
+      timeValue = 'Ждёт клиента';
+    }
+
+    return _fadeIn(
+      delay: index.clamp(0, 6) * 55,
+      child: AnimatedBuilder(
+        animation: _motion,
+        builder: (context, child) {
+          final newGlow = item.status == 'new'
+              ? 0.075 + (_motion.value * 0.045)
+              : 0.055;
+
+          return Container(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 13),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFFFFFFF), Color(0xFFFAFCFD)],
+              ),
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(
+                color: statusColor.withOpacity(
+                  item.status == 'new' ? 0.27 : 0.17,
+                ),
+                width: item.status == 'new' ? 1.4 : 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: statusColor.withOpacity(newGlow),
+                  blurRadius: item.status == 'new' ? 25 : 19,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: child,
+          );
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 43,
+                  height: 43,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [statusColor, statusColor.withOpacity(0.72)],
+                    ),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Icon(
+                    _statusIcon(item.status),
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.clientName.trim().isEmpty
+                            ? 'Клиент'
+                            : item.clientName.trim(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: _ink,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        item.clientPhone.trim().isEmpty
+                            ? 'Телефон не указан'
+                            : item.clientPhone.trim(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: _soft,
+                          fontSize: 11.7,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.09),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    _statusText(item.status),
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 11),
+            Container(
+              padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    statusColor.withOpacity(0.075),
+                    statusColor.withOpacity(0.032),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(17),
+              ),
+              child: Row(
+                children: [
+                  Icon(CupertinoIcons.clock_fill, color: statusColor, size: 16),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      timeLabel,
+                      style: const TextStyle(
+                        color: _soft,
+                        fontSize: 11.2,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    timeValue,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            _flowOrderContents(item),
+            if (attention != null) ...[
+              const SizedBox(height: 9),
+              _attentionBanner(item),
+            ],
+            if (item.amountTotal != null || item.bonusAccrued != null) ...[
+              const SizedBox(height: 8),
+              _accrualLine(item),
+            ],
+            const SizedBox(height: 11),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: _updating ? null : mainTap,
+                      icon: Icon(mainIcon, size: 16),
+                      label: Text(
+                        mainText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: mainColor,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: mainColor.withOpacity(0.34),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(17),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: _updating
+                        ? null
+                        : () => _setStatus(item, 'cancelled'),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      foregroundColor: _red,
+                      side: BorderSide(color: _red.withOpacity(0.20)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(17),
+                      ),
+                    ),
+                    child: const Icon(CupertinoIcons.xmark, size: 18),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -1164,37 +1475,56 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
 
   Widget _doneRow(_PreorderItem item) {
     final statusColor = _statusColor(item.status);
+    final lines = _flowOrderLines(item);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 9),
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+      margin: const EdgeInsets.only(bottom: 7),
+      padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.90),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _stroke),
+        color: Colors.white.withOpacity(0.86),
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(color: _stroke.withOpacity(0.82)),
       ),
       child: Row(
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(14),
+              color: statusColor.withOpacity(0.085),
+              borderRadius: BorderRadius.circular(11),
             ),
-            child: Icon(_statusIcon(item.status), color: statusColor, size: 18),
+            child: Icon(_statusIcon(item.status), color: statusColor, size: 16),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 9),
           Expanded(
-            child: Text(
-              item.doneCompactTitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: _ink,
-                fontSize: 13.2,
-                fontWeight: FontWeight.w800,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.clientName.trim().isEmpty
+                      ? _statusText(item.status)
+                      : item.clientName.trim(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _ink,
+                    fontSize: 12.4,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  lines.isEmpty ? item.doneCompactTitle : lines.first,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _soft,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 8),
@@ -1202,7 +1532,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
             item.createdLabel,
             style: const TextStyle(
               color: _soft,
-              fontSize: 12,
+              fontSize: 10.7,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -1489,9 +1819,12 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
-    final activeItems = _activeItems;
-    final doneItems = _doneItems.take(10).toList();
+    final newItems = _activeItems.where((e) => e.status == 'new').toList();
+    final workItems = _activeItems.where((e) => e.status == 'in_work').toList();
+    final readyItems = _activeItems.where((e) => e.status == 'ready').toList();
+    final doneItems = _doneItems.take(8).toList();
 
     return Scaffold(
       backgroundColor: _bg,
@@ -1506,13 +1839,14 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
           style: TextStyle(
             fontWeight: FontWeight.w900,
             letterSpacing: -0.45,
-            fontSize: 24,
+            fontSize: 23,
           ),
         ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: IconButton(
+              tooltip: 'Обновить',
               onPressed: _load,
               icon: const Icon(CupertinoIcons.refresh_bold),
             ),
@@ -1526,17 +1860,80 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                 onRefresh: _load,
                 color: _mint,
                 child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
                   padding: const EdgeInsets.fromLTRB(16, 6, 16, 34),
                   children: [
                     _fadeIn(child: _heroCard()),
                     _errorBanner(),
-                    _sectionHeader('Активные', '${activeItems.length} заказов'),
-                    if (activeItems.isEmpty)
-                      _emptyState()
-                    else
-                      _ordersList(activeItems),
+                    if (_activeItems.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 17),
+                        child: _emptyState(),
+                      )
+                    else ...[
+                      _flowSection(
+                        title: 'Новые',
+                        subtitle: 'Нужно принять решение',
+                        color: _orange,
+                        icon: CupertinoIcons.bell_fill,
+                        items: newItems,
+                      ),
+                      _flowSection(
+                        title: 'Готовятся',
+                        subtitle: 'Следим за временем выдачи',
+                        color: _blue,
+                        icon: CupertinoIcons.flame_fill,
+                        items: workItems,
+                      ),
+                      _flowSection(
+                        title: 'Готовы к выдаче',
+                        subtitle: 'Можно встречать клиента',
+                        color: _green,
+                        icon: CupertinoIcons.checkmark_seal_fill,
+                        items: readyItems,
+                      ),
+                    ],
                     if (doneItems.isNotEmpty) ...[
-                      _sectionHeader('Недавние', '${doneItems.length}'),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Недавние',
+                              style: TextStyle(
+                                color: _ink,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.25,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.75),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: _stroke.withOpacity(0.75),
+                              ),
+                            ),
+                            child: Text(
+                              '${doneItems.length}',
+                              style: const TextStyle(
+                                color: _soft,
+                                fontSize: 10.8,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
                       ...doneItems.map(_doneRow),
                     ],
                   ],

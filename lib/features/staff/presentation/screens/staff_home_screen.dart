@@ -2353,6 +2353,773 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       return _stagger(index: current, child: child);
     }
 
+    Widget glassShell({
+      required Widget child,
+      EdgeInsets padding = const EdgeInsets.all(16),
+    }) {
+      return AnimatedBuilder(
+        animation: _ambientController,
+        builder: (context, _) {
+          final t = _ambientController.value;
+          final glow = 0.5 + 0.5 * math.sin(t * math.pi * 2);
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(30),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                padding: padding,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  gradient: LinearGradient(
+                    begin: Alignment(-1 + (t * 0.35), -1),
+                    end: Alignment(1, 1 - (t * 0.25)),
+                    colors: [
+                      Colors.white.withOpacity(0.18 + glow * 0.02),
+                      Colors.white.withOpacity(0.075),
+                    ],
+                  ),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.20 + glow * 0.05),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(
+                        0xFF083E55,
+                      ).withOpacity(0.07 + glow * 0.025),
+                      blurRadius: 28 + glow * 8,
+                      offset: const Offset(0, 14),
+                    ),
+                  ],
+                ),
+                child: child,
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    Widget sectionTitle(String eyebrow, String title) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    eyebrow.toUpperCase(),
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.58),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.7,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      height: 1,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.8,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            AnimatedBuilder(
+              animation: _ambientController,
+              builder: (context, _) {
+                final t = _ambientController.value;
+                return Container(
+                  width: 66,
+                  height: 3,
+                  margin: const EdgeInsets.only(bottom: 3),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    gradient: LinearGradient(
+                      begin: Alignment(-1 + t * 0.7, 0),
+                      end: const Alignment(1, 0),
+                      colors: [
+                        Colors.white.withOpacity(0.08),
+                        kHomeAccentSoft.withOpacity(0.92),
+                        Colors.white.withOpacity(0.10),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: kHomeAccentSoft.withOpacity(0.20),
+                        blurRadius: 9,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget quickTile({
+      required IconData icon,
+      required String title,
+      required String subtitle,
+      required VoidCallback onTap,
+      required List<Color> colors,
+      String? badge,
+    }) {
+      final accent = colors.first;
+      final accent2 = colors.last;
+
+      return _Pressable(
+        onTap: onTap,
+        borderRadius: 24,
+        child: AnimatedBuilder(
+          animation: _ambientController,
+          builder: (context, _) {
+            final t = _ambientController.value;
+            return Container(
+              constraints: const BoxConstraints(minHeight: 118),
+              padding: const EdgeInsets.fromLTRB(15, 15, 15, 14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: LinearGradient(
+                  begin: Alignment(-1 + t * 0.22, -1),
+                  end: const Alignment(1, 1),
+                  colors: [
+                    Colors.white.withOpacity(0.96),
+                    Colors.white.withOpacity(0.82),
+                  ],
+                ),
+                border: Border.all(color: Colors.white.withOpacity(0.84)),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0A3950).withOpacity(0.075),
+                    blurRadius: 22,
+                    offset: const Offset(0, 10),
+                  ),
+                  BoxShadow(
+                    color: accent.withOpacity(0.035),
+                    blurRadius: 20,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    right: -18 + (t * 8),
+                    top: -20,
+                    child: Container(
+                      width: 78,
+                      height: 78,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            accent2.withOpacity(0.16),
+                            accent2.withOpacity(0.00),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: -34 + (t * 18),
+                    bottom: -46,
+                    child: Container(
+                      width: 92,
+                      height: 92,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            accent.withOpacity(0.07),
+                            accent.withOpacity(0.00),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(15),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  accent.withOpacity(0.18),
+                                  accent2.withOpacity(0.10),
+                                ],
+                              ),
+                              border: Border.all(
+                                color: accent.withOpacity(0.14),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: accent.withOpacity(0.10),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: Icon(icon, color: accent, size: 22),
+                          ),
+                          const Spacer(),
+                          if (badge != null && badge.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(999),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    accent.withOpacity(0.14),
+                                    accent2.withOpacity(0.08),
+                                  ],
+                                ),
+                                border: Border.all(
+                                  color: accent.withOpacity(0.10),
+                                ),
+                              ),
+                              child: Text(
+                                badge,
+                                style: TextStyle(
+                                  color: accent,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              width: 30,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withOpacity(0.62),
+                              ),
+                              child: Icon(
+                                CupertinoIcons.arrow_up_right,
+                                color: kHomeInkSoft.withOpacity(0.72),
+                                size: 15,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: kHomeInk,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: kHomeInkSoft,
+                          fontSize: 11.8,
+                          height: 1.2,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    Widget secondaryRow({
+      required IconData icon,
+      required String title,
+      required String subtitle,
+      required VoidCallback onTap,
+      Color accent = const Color(0xFF246BFF),
+      String? trailing,
+    }) {
+      return _Pressable(
+        onTap: onTap,
+        borderRadius: 22,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withOpacity(0.94),
+                Colors.white.withOpacity(0.82),
+              ],
+            ),
+            border: Border.all(color: Colors.white.withOpacity(0.72)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0A3950).withOpacity(0.05),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      accent.withOpacity(0.15),
+                      accent.withOpacity(0.07),
+                    ],
+                  ),
+                  border: Border.all(color: accent.withOpacity(0.08)),
+                ),
+                child: Icon(icon, color: accent, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: kHomeInk,
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: kHomeInkSoft,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (trailing != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    color: accent.withOpacity(0.10),
+                  ),
+                  child: Text(
+                    trailing,
+                    style: TextStyle(
+                      color: accent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.64),
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.chevron_right,
+                    color: kHomeInkSoft,
+                    size: 16,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    Widget clientWorkspace() {
+      return glassShell(
+        padding: const EdgeInsets.all(10),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 17),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(25),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withOpacity(0.96),
+                const Color(0xFFF0FAFA).withOpacity(0.94),
+              ],
+            ),
+            border: Border.all(color: Colors.white.withOpacity(0.72)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF0FD0C8), Color(0xFF2A8CF7)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF1AAFBF).withOpacity(0.20),
+                          blurRadius: 16,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      CupertinoIcons.person_2_fill,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 13),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Клиент на кассе',
+                          style: TextStyle(
+                            color: kHomeInk,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.35,
+                          ),
+                        ),
+                        SizedBox(height: 3),
+                        Text(
+                          'Поиск, QR и быстрые действия',
+                          style: TextStyle(
+                            color: kHomeInkSoft,
+                            fontSize: 12.3,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      color: const Color(0xFF11BFAF).withOpacity(0.08),
+                    ),
+                    child: const Text(
+                      'ГОТОВО',
+                      style: TextStyle(
+                        color: Color(0xFF0A9B8E),
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              _Pressable(
+                onTap: _openClientSearch,
+                borderRadius: 20,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 13,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.white.withOpacity(0.94),
+                    border: Border.all(color: const Color(0xFFDCEBED)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0A2B47).withOpacity(0.05),
+                        blurRadius: 14,
+                        offset: const Offset(0, 7),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: const Color(0xFF1A91F5).withOpacity(0.08),
+                        ),
+                        child: const Icon(
+                          CupertinoIcons.search,
+                          color: Color(0xFF1A78CF),
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'Телефон, имя или номер клиента',
+                          style: TextStyle(
+                            color: kHomeInkSoft,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          gradient: const LinearGradient(
+                            colors: [kHomeAccent, kHomeAccentSoft],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: kHomeAccent.withOpacity(0.18),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          CupertinoIcons.arrow_right,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 11),
+              Container(
+                height: 1,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                color: const Color(0xFFDDEBED).withOpacity(0.78),
+              ),
+              const SizedBox(height: 11),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: quickTile(
+                      icon: CupertinoIcons.ticket_fill,
+                      title: 'Абонемент',
+                      subtitle: 'Продажа клиенту',
+                      onTap: _openSubscriptionSale,
+                      colors: const [Color(0xFF7058F4), Color(0xFFB05CF0)],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: quickTile(
+                      icon: CupertinoIcons.person_badge_plus_fill,
+                      title: 'Пригласить',
+                      subtitle: 'QR для подключения',
+                      onTap: _openInviteClient,
+                      colors: const [Color(0xFFF2A31A), Color(0xFFFFC457)],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    Widget preorderWorkspace() {
+      return FutureBuilder<Map<String, int>>(
+        future: _loadPreorderSummary(),
+        builder: (context, snapshot) {
+          final active = (snapshot.data ?? const {'active': 0})['active'] ?? 0;
+          final hasActive = active > 0;
+
+          return _Pressable(
+            onTap: _openPreorders,
+            borderRadius: 28,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(28),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withOpacity(0.95),
+                        const Color(0xFFFFF8EA).withOpacity(0.90),
+                      ],
+                    ),
+                    border: Border.all(color: Colors.white.withOpacity(0.72)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF80510A).withOpacity(0.08),
+                        blurRadius: 24,
+                        offset: const Offset(0, 11),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(17),
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFFFFA51E).withOpacity(0.18),
+                              const Color(0xFFFFC85A).withOpacity(0.10),
+                            ],
+                          ),
+                          border: Border.all(
+                            color: const Color(0xFFFFA51E).withOpacity(0.14),
+                          ),
+                        ),
+                        child: Icon(
+                          hasActive
+                              ? CupertinoIcons.bell_fill
+                              : CupertinoIcons.bag_fill,
+                          color: const Color(0xFFF39A12),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 13),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    hasActive
+                                        ? 'Предзаказы ждут'
+                                        : 'Предзаказы',
+                                    style: const TextStyle(
+                                      color: kHomeInk,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.3,
+                                    ),
+                                  ),
+                                ),
+                                if (hasActive)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 9,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(999),
+                                      color: const Color(
+                                        0xFFFFA51E,
+                                      ).withOpacity(0.12),
+                                    ),
+                                    child: Text(
+                                      '$active',
+                                      style: const TextStyle(
+                                        color: Color(0xFFE27D00),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              hasActive
+                                  ? 'Есть активные заказы — откройте очередь'
+                                  : 'Новые заказы появятся здесь',
+                              style: const TextStyle(
+                                color: kHomeInkSoft,
+                                fontSize: 12.2,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(13),
+                          color: const Color(0xFFFFA51E).withOpacity(0.09),
+                        ),
+                        child: const Icon(
+                          CupertinoIcons.chevron_right,
+                          color: Color(0xFFE28A08),
+                          size: 18,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    }
+
     return Scaffold(
       backgroundColor: kHomeMintTop,
       body: AnnotatedRegion<SystemUiOverlayStyle>(
@@ -2371,50 +3138,237 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                         physics: const BouncingScrollPhysics(
                           parent: AlwaysScrollableScrollPhysics(),
                         ),
-                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 30),
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 34),
                         children: [
                           staggered(_buildTopBar()),
-                          const SizedBox(height: 18),
-                          staggered(_buildHeroCarousel()),
-                          const SizedBox(height: 14),
-                          staggered(_buildSearchHeroCard()),
-                          const SizedBox(height: 14),
-                          staggered(_buildSubscriptionSaleCard()),
-                          const SizedBox(height: 18),
-                          staggered(_buildInviteClientCard()),
-                          const SizedBox(height: 16),
-                          staggered(_buildClientActionCard()),
-                          const SizedBox(height: 14),
-                          staggered(_buildTopModulesRow()),
-                          const SizedBox(height: 16),
-                          if (_error != null) ...[
-                            staggered(_buildError()),
-                            const SizedBox(height: 16),
-                          ],
+                          const SizedBox(height: 22),
+
                           staggered(
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 2),
-                              child: Text(
-                                'Дополнительно',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.5,
-                                  color: Colors.white,
-                                ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'РАБОЧЕЕ ПРОСТРАНСТВО',
+                                          style: TextStyle(
+                                            color: Colors.white.withOpacity(
+                                              0.58,
+                                            ),
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 1.5,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 5),
+                                        Text(
+                                          widget.establishmentName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 30,
+                                            height: 1,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: -1.0,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  AnimatedBuilder(
+                                    animation: _ambientController,
+                                    builder: (context, _) {
+                                      final pulse =
+                                          0.5 +
+                                          0.5 *
+                                              math.sin(
+                                                _ambientController.value *
+                                                    math.pi *
+                                                    2,
+                                              );
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 11,
+                                          vertical: 8,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            999,
+                                          ),
+                                          color: Colors.white.withOpacity(0.13),
+                                          border: Border.all(
+                                            color: Colors.white.withOpacity(
+                                              0.20,
+                                            ),
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: kHomePulseGreen
+                                                  .withOpacity(
+                                                    0.06 + pulse * 0.08,
+                                                  ),
+                                              blurRadius: 10 + pulse * 8,
+                                            ),
+                                          ],
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 7 + pulse * 1.5,
+                                              height: 7 + pulse * 1.5,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: kHomePulseGreen,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: kHomePulseGreen
+                                                        .withOpacity(
+                                                          0.35 + pulse * 0.25,
+                                                        ),
+                                                    blurRadius: 8 + pulse * 5,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(width: 7),
+                                            const Text(
+                                              'В сети',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w900,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                          const SizedBox(height: 14),
-                          if (_isOwner) ...[
-                            staggered(_buildOwnerRequestsCard()),
-                            const SizedBox(height: 12),
-                          ],
-                          staggered(_buildHistoryCard()),
+
+                          const SizedBox(height: 24),
+                          staggered(
+                            sectionTitle('Основное', 'Работа с клиентом'),
+                          ),
                           const SizedBox(height: 12),
-                          if (!_isOwner) ...[
-                            staggered(_buildWorkScheduleCard()),
+                          staggered(clientWorkspace()),
+
+                          const SizedBox(height: 26),
+                          staggered(sectionTitle('Сегодня', 'Рабочие события')),
+                          const SizedBox(height: 12),
+                          staggered(preorderWorkspace()),
+                          const SizedBox(height: 10),
+                          staggered(
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: quickTile(
+                                    icon: Icons.forum_rounded,
+                                    title: 'Чат',
+                                    subtitle: 'Сообщения команды',
+                                    onTap: _openMessenger,
+                                    badge: _chatCount > 0
+                                        ? '$_chatCount'
+                                        : null,
+                                    colors: const [
+                                      Color(0xFF1D84FF),
+                                      Color(0xFF20B8E8),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: quickTile(
+                                    icon: Icons.campaign_rounded,
+                                    title: 'Объявления',
+                                    subtitle: 'Новости заведения',
+                                    onTap: _openAnnouncements,
+                                    badge: _announcementsHasNew ? 'NEW' : null,
+                                    colors: const [
+                                      Color(0xFFC44BFF),
+                                      Color(0xFFFF4F91),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          if (_pinnedAnnouncements.isNotEmpty) ...[
+                            const SizedBox(height: 26),
+                            staggered(
+                              sectionTitle('Команда', 'Важное объявление'),
+                            ),
+                            const SizedBox(height: 12),
+                            staggered(
+                              SizedBox(
+                                height: 220,
+                                child: _buildPinnedAnnouncementBanner(
+                                  _pinnedAnnouncements.first,
+                                  1,
+                                ),
+                              ),
+                            ),
                           ],
+
+                          if (_error != null) ...[
+                            const SizedBox(height: 18),
+                            staggered(_buildError()),
+                          ],
+
+                          const SizedBox(height: 28),
+                          staggered(sectionTitle('Сервис', 'Дополнительно')),
+                          const SizedBox(height: 12),
+                          staggered(
+                            glassShell(
+                              padding: const EdgeInsets.all(10),
+                              child: Column(
+                                children: [
+                                  if (_isOwner) ...[
+                                    secondaryRow(
+                                      icon: Icons.fact_check_rounded,
+                                      title: 'Запросы сотрудников',
+                                      subtitle: 'Смены и обращения',
+                                      onTap: _openOwnerRequests,
+                                      accent: const Color(0xFFFF8A00),
+                                      trailing: _ownerPendingRequestsCount > 0
+                                          ? '$_ownerPendingRequestsCount'
+                                          : null,
+                                    ),
+                                    const SizedBox(height: 8),
+                                  ],
+                                  secondaryRow(
+                                    icon: CupertinoIcons.clock_fill,
+                                    title: 'История заведения',
+                                    subtitle: 'События и действия',
+                                    onTap: _openHistory,
+                                    accent: const Color(0xFF14A7E8),
+                                  ),
+                                  if (!_isOwner) ...[
+                                    const SizedBox(height: 8),
+                                    secondaryRow(
+                                      icon: CupertinoIcons.calendar,
+                                      title: 'График работы',
+                                      subtitle: 'Смены и рабочие дни',
+                                      onTap: _openWorkSchedule,
+                                      accent: const Color(0xFF6757FF),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
