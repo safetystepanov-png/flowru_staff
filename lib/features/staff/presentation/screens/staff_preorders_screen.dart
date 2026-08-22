@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import '../../../auth/data/auth_storage.dart';
 import '../../../auth/data/user_api.dart';
 import '../../../../core/config/app_config.dart';
+import 'staff_client_spend_screen.dart';
 
 const Color _mint = Color(0xFF0BAEBB);
 const Color _mintLight = Color(0xFF42E8DF);
@@ -76,6 +77,32 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
       throw Exception('Сессия истекла. Войдите заново.');
     }
     return token.trim();
+  }
+
+  // FLOWRU_PREORDER_STAFF_SPEND_V2
+  Future<void> _openClientSpend(_PreorderItem item) async {
+    final clientId = item.clientId;
+
+    if (clientId == null || clientId <= 0) {
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => StaffClientSpendScreen(
+          establishmentId: widget.establishmentId,
+          establishmentName: widget.establishmentName,
+          clientId: clientId.toString(),
+          clientName: item.clientName.trim().isEmpty
+              ? '\u041a\u043b\u0438\u0435\u043d\u0442'
+              : item.clientName.trim(),
+        ),
+      ),
+    );
+
+    if (mounted) {
+      await _load();
+    }
   }
 
   Future<String> _refreshAccessToken() async {
@@ -1369,6 +1396,88 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                 ),
               ],
             ),
+            if (item.clientPoints != null) ...[
+              const SizedBox(height: 9),
+
+              // FLOWRU_PREORDER_STAFF_SPEND_V2
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap:
+                      !_updating &&
+                          item.clientId != null &&
+                          item.clientPoints! > 0
+                      ? () => _openClientSpend(item)
+                      : null,
+                  borderRadius: BorderRadius.circular(15),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 11,
+                      vertical: 9,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _mint.withOpacity(0.07),
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: _mint.withOpacity(0.12)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          CupertinoIcons.star_circle_fill,
+                          color: _mint,
+                          size: 17,
+                        ),
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                '\u0411\u0430\u043b\u0430\u043d\u0441 \u043a\u043b\u0438\u0435\u043d\u0442\u0430',
+                                style: TextStyle(
+                                  color: _soft,
+                                  fontSize: 11.2,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              if (item.clientPoints! > 0) ...[
+                                const SizedBox(height: 1),
+                                const Text(
+                                  '\u0421\u043f\u0438\u0441\u0430\u0442\u044c \u0431\u0430\u043b\u043b\u044b',
+                                  style: TextStyle(
+                                    color: _mint,
+                                    fontSize: 10.2,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 7),
+                        Text(
+                          '${item.clientPoints} \u0431\u0430\u043b\u043b\u043e\u0432',
+                          style: const TextStyle(
+                            color: _deep,
+                            fontSize: 13.2,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        if (item.clientPoints! > 0) ...[
+                          const SizedBox(width: 4),
+                          const Icon(
+                            CupertinoIcons.chevron_right,
+                            color: _mint,
+                            size: 14,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+
             const SizedBox(height: 11),
             Container(
               padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
@@ -1948,6 +2057,10 @@ class _PreorderItem {
   final int id;
   final int establishmentId;
   final int? clientId;
+
+  // FLOWRU_PREORDER_STAFF_SPEND_V2
+  final int? clientPoints;
+
   final String clientName;
   final String clientPhone;
   final String orderText;
@@ -1964,6 +2077,7 @@ class _PreorderItem {
     required this.id,
     required this.establishmentId,
     required this.clientId,
+    required this.clientPoints,
     required this.clientName,
     required this.clientPhone,
     required this.orderText,
@@ -1994,6 +2108,7 @@ class _PreorderItem {
       id: parseInt(json['id']) ?? 0,
       establishmentId: parseInt(json['establishment_id']) ?? 0,
       clientId: parseInt(json['client_id']),
+      clientPoints: parseInt(json['client_points']),
       clientName: json['client_name']?.toString() ?? '',
       clientPhone: json['client_phone']?.toString() ?? '',
       orderText: json['order_text']?.toString() ?? '',
