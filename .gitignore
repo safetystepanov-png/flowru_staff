@@ -48,3 +48,6 @@ android/key.properties
 android/keys/*.jks
 android/keys/*.keystore
 
+backups/
+*.bak_*
+*.before_*.dart
