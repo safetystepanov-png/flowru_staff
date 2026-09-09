@@ -954,30 +954,6 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     );
   }
 
-  IconData _catalogCategoryIcon(String category) {
-    final value = category.toLowerCase();
-    if (value.contains('еда') ||
-        value.contains('сэндвич') ||
-        value.contains('рол')) {
-      return Icons.restaurant_rounded;
-    }
-    if (value.contains('коф') || value.contains('класс')) {
-      return Icons.local_cafe_rounded;
-    }
-    if (value.contains('напит') ||
-        value.contains('лимонад') ||
-        value.contains('чай')) {
-      return Icons.local_drink_rounded;
-    }
-    if (value.contains('десерт') || value.contains('слад')) {
-      return Icons.cake_rounded;
-    }
-    if (value.contains('автор')) {
-      return Icons.auto_awesome_rounded;
-    }
-    return Icons.sell_rounded;
-  }
-
   Widget _fadeIn({required Widget child, int delay = 0}) {
     return TweenAnimationBuilder<double>(
       duration: Duration(milliseconds: 430 + delay),
@@ -2567,7 +2543,6 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
       required String key,
       required String label,
       required int count,
-      required IconData icon,
     }) {
       final selected = _catalogCategory == key;
       return Padding(
@@ -2611,8 +2586,6 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 15, color: selected ? Colors.white : _deep),
-                const SizedBox(width: 7),
                 Text(
                   label,
                   style: TextStyle(
@@ -2651,23 +2624,11 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     }
 
     final chips = <Widget>[
-      chip(
-        key: '__all__',
-        label: 'Все',
-        count: _catalogItems.length,
-        icon: Icons.grid_view_rounded,
-      ),
+      chip(key: '__all__', label: 'Все', count: _catalogItems.length),
     ];
 
     for (final entry in categories.entries) {
-      chips.add(
-        chip(
-          key: entry.key,
-          label: entry.key,
-          count: entry.value,
-          icon: _catalogCategoryIcon(entry.key),
-        ),
-      );
+      chips.add(chip(key: entry.key, label: entry.key, count: entry.value));
     }
 
     return SingleChildScrollView(
