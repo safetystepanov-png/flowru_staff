@@ -68,7 +68,7 @@ Future<void> main() async {
     await _printFcmToken();
     StaffPushDeviceApi.listenTokenRefresh();
     StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(
-      appVersion: '1.0.1+28',
+      appVersion: '1.0.16+60',
     );
     _setupForegroundMessageHandler();
 

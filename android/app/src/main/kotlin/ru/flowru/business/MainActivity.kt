@@ -1,4 +1,4 @@
-package com.example.flowru_staff
+package ru.flowru.business
 
 import io.flutter.embedding.android.FlutterActivity
 

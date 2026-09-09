@@ -220,7 +220,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
       await AuthStorage.saveAccessToken(result.accessToken);
       await AuthStorage.saveRefreshToken(result.refreshToken);
       StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(
-        appVersion: '1.0.1+28',
+        appVersion: '1.0.16+60',
       );
       TextInput.finishAutofillContext(shouldSave: true);
 
@@ -323,7 +323,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
       await AuthStorage.saveAccessToken(result.accessToken);
       await AuthStorage.saveRefreshToken(result.refreshToken);
       StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(
-        appVersion: '1.0.1+28',
+        appVersion: '1.0.16+60',
       );
       await AuthStorage.setBiometricEnabled(true);
 
