@@ -578,6 +578,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     _PreorderItem item,
     String status, {
     double? amountTotal,
+    String? staffComment,
   }) async {
     if (_updating) return;
 
@@ -588,6 +589,10 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
 
     try {
       final payload = <String, dynamic>{'status': status};
+
+      if (staffComment != null && staffComment.trim().isNotEmpty) {
+        payload['staff_comment'] = staffComment.trim();
+      }
 
       if (status == 'completed') {
         payload['amount_total'] = amountTotal;
@@ -631,6 +636,182 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
         });
       }
     }
+  }
+
+  // FLOWRU_PREORDER_CANCEL_REASON_V2_20260909
+  Future<void> _cancelPreorderWithReason(_PreorderItem item) async {
+    if (_updating) return;
+
+    final reason = await showModalBottomSheet<String>(
+      context: context,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        const reasons = <String>[
+          'Нет позиции в наличии',
+          'Не успеваем приготовить',
+          'Техническая проблема',
+          'Заведение скоро закрывается',
+          'Другая причина',
+        ];
+
+        return Container(
+          margin: const EdgeInsets.all(10),
+          padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(26),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: _stroke,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              Text(
+                item.status == 'new'
+                    ? 'Почему отказываем в заказе?'
+                    : 'Почему отменяем заказ?',
+                style: const TextStyle(
+                  color: _ink,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 5),
+              const Text(
+                'Причина сохранится в заказе.',
+                style: TextStyle(
+                  color: _soft,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 14),
+              ...reasons.map(
+                (value) => ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    value == 'Другая причина'
+                        ? CupertinoIcons.pencil
+                        : CupertinoIcons.xmark_circle_fill,
+                    color: value == 'Другая причина' ? _soft : _red,
+                    size: 20,
+                  ),
+                  title: Text(
+                    value,
+                    style: const TextStyle(
+                      color: _ink,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    CupertinoIcons.chevron_right,
+                    color: _soft,
+                    size: 15,
+                  ),
+                  onTap: () => Navigator.of(sheetContext).pop(value),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (!mounted || reason == null) return;
+
+    String finalReason = reason;
+
+    if (reason == 'Другая причина') {
+      final controller = TextEditingController();
+
+      final customReason = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(22),
+            ),
+            title: const Text(
+              'Причина отказа',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+            content: TextField(
+              controller: controller,
+              autofocus: true,
+              maxLength: 160,
+              maxLines: 3,
+              decoration: const InputDecoration(hintText: 'Напишите причину'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Назад'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final value = controller.text.trim();
+                  if (value.isNotEmpty) {
+                    Navigator.of(dialogContext).pop(value);
+                  }
+                },
+                child: const Text('Готово'),
+              ),
+            ],
+          );
+        },
+      );
+
+      controller.dispose();
+
+      if (!mounted || customReason == null || customReason.trim().isEmpty) {
+        return;
+      }
+
+      finalReason = customReason.trim();
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: Text(
+          item.status == 'new' ? 'Отказать в заказе?' : 'Отменить заказ?',
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+        content: Text('Причина: $finalReason'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Назад'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: _red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(item.status == 'new' ? 'Отказать' : 'Отменить'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || confirmed != true) return;
+
+    await _setStatus(item, 'cancelled', staffComment: finalReason);
   }
 
   List<_PreorderItem> get _activeItems {
@@ -1836,6 +2017,34 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                               ),
                               textStyle: const TextStyle(
                                 fontSize: 10.4,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        SizedBox(
+                          height: 26,
+                          child: TextButton.icon(
+                            onPressed: _updating
+                                ? null
+                                : () => _cancelPreorderWithReason(item),
+                            icon: const Icon(
+                              CupertinoIcons.xmark_circle,
+                              size: 12,
+                            ),
+                            label: Text(
+                              item.status == 'new' ? 'Отказать' : 'Отменить',
+                            ),
+                            style: TextButton.styleFrom(
+                              foregroundColor: _red,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                              ),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              textStyle: const TextStyle(
+                                fontSize: 9.8,
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
