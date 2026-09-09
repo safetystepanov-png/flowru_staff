@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'app/app.dart';
 import 'firebase_options.dart';
@@ -67,8 +68,17 @@ Future<void> main() async {
     await _requestNotificationPermissions();
     await _printFcmToken();
     StaffPushDeviceApi.listenTokenRefresh();
+    var appVersion = 'unknown';
+
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+    } catch (e) {
+      debugPrint('PackageInfo version read failed: $e');
+    }
+
     StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(
-      appVersion: '1.0.16+60',
+      appVersion: appVersion,
     );
     _setupForegroundMessageHandler();
 

@@ -8,6 +8,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../core/update/business_update_checker.dart';
 import '../features/auth/data/auth_storage.dart';
 import '../features/push/data/staff_push_device_api.dart';
 import '../features/auth/data/user_api.dart';
@@ -15,12 +16,29 @@ import '../features/auth/presentation/screens/login_phone_screen.dart';
 import '../features/staff/presentation/screens/staff_establishments_screen.dart';
 import '../features/staff/presentation/screens/staff_home_screen.dart';
 
-class FlowruStaffApp extends StatelessWidget {
+class FlowruStaffApp extends StatefulWidget {
   const FlowruStaffApp({super.key});
+
+  @override
+  State<FlowruStaffApp> createState() => _FlowruStaffAppState();
+}
+
+class _FlowruStaffAppState extends State<FlowruStaffApp> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      BusinessUpdateChecker.checkAndShow(_navigatorKey);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       locale: const Locale('ru', 'RU'),
       supportedLocales: const [Locale('ru', 'RU'), Locale('en', 'US')],
       localizationsDelegates: const [

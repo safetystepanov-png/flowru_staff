@@ -1,8 +1,8 @@
-﻿name: flowru_business
+name: flowru_business
 description: "Flowru Business"
 publish_to: 'none'
 
-version: 1.0.18+62
+version: 1.0.19+63
 environment:
   sdk: ^3.11.4
 
@@ -37,6 +37,7 @@ dependencies:
   crypto: ^3.0.3
   flutter_animate: ^4.5.0
   qr_flutter: ^4.1.0
+  package_info_plus: ^9.0.1
 
 dev_dependencies:
   flutter_test:
