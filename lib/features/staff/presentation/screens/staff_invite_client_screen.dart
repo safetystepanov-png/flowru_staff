@@ -65,7 +65,7 @@ class _StaffInviteClientScreenState extends State<StaffInviteClientScreen>
 
   Future<void> _shareStaffInvite() async {
     const text =
-        'РЈСЃС‚Р°РЅРѕРІРё Flowru Business РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ СЃРёСЃС‚РµРјРѕР№ Р»РѕСЏР»СЊРЅРѕСЃС‚Рё:\n$kFlowruStaffAppStoreUrl';
+        'Установи Flowru Business для работы с системой лояльности:\n$kFlowruStaffAppStoreUrl';
 
     try {
       final box = context.findRenderObject() as RenderBox?;
@@ -75,7 +75,7 @@ class _StaffInviteClientScreenState extends State<StaffInviteClientScreen>
 
       await Share.share(
         text,
-        subject: 'РџСЂРёРіР»Р°С€РµРЅРёРµ РІ Flowru Business',
+        subject: 'Приглашение в Flowru Business',
         sharePositionOrigin: origin,
       );
     } catch (_) {
@@ -83,7 +83,7 @@ class _StaffInviteClientScreenState extends State<StaffInviteClientScreen>
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ РјРµРЅСЋ РѕС‚РїСЂР°РІРєРё'),
+          content: Text('Не удалось открыть меню отправки'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -131,7 +131,7 @@ class _StaffInviteClientScreenState extends State<StaffInviteClientScreen>
             child: Column(
               children: [
                 _InviteTopBar(
-                  title: 'РџСЂРёРіР»Р°СЃРёС‚СЊ',
+                  title: 'Пригласить',
                   subtitle: widget.establishmentName,
                   onBack: () => Navigator.of(context).pop(),
                   onReload: _load,
@@ -147,8 +147,8 @@ class _StaffInviteClientScreenState extends State<StaffInviteClientScreen>
                         if (_loading)
                           const _InviteStateCard(
                             icon: CupertinoIcons.clock_fill,
-                            title: 'Р“РѕС‚РѕРІРёРј QR',
-                            text: 'РџРѕР»СѓС‡Р°РµРј СЃСЃС‹Р»РєСѓ РїСЂРёРіР»Р°С€РµРЅРёСЏ Р·Р°РІРµРґРµРЅРёСЏ',
+                            title: 'Готовим QR',
+                            text: 'Получаем ссылку приглашения заведения',
                           )
                         else if (_error != null)
                           _InviteErrorCard(text: _error!, onRetry: _load)
@@ -308,7 +308,7 @@ class _InviteHeroCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'QR РґР»СЏ РґРѕР±Р°РІР»РµРЅРёСЏ Р·Р°РІРµРґРµРЅРёСЏ',
+                      'QR для добавления заведения',
                       style: TextStyle(
                         color: Color(0xDFFFFFFF),
                         fontSize: 13.5,
@@ -369,7 +369,7 @@ class _InviteHeroCard extends StatelessWidget {
           const SizedBox(height: 18),
 
           const Text(
-            'РџРѕРєР°Р¶РёС‚Рµ QR РєР»РёРµРЅС‚Сѓ',
+            'Покажите QR клиенту',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white,
@@ -380,7 +380,7 @@ class _InviteHeroCard extends StatelessWidget {
           ),
           const SizedBox(height: 7),
           const Text(
-            'РљР»РёРµРЅС‚ РѕС‚РєСЂРѕРµС‚ СЃСЃС‹Р»РєСѓ, РІРѕР№РґС‘С‚ РІ Flowru Рё РґРѕР±Р°РІРёС‚ Р·Р°РІРµРґРµРЅРёРµ РІ СЃРІРѕР№ СЃРїРёСЃРѕРє.',
+            'Клиент откроет ссылку, войдёт в Flowru и добавит заведение в свой список.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xE8FFFFFF),
@@ -438,7 +438,7 @@ class _InviteStaffCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'РџСЂРёРіР»Р°СЃРёС‚СЊ СЃРѕС‚СЂСѓРґРЅРёРєР°',
+                      'Пригласить сотрудника',
                       style: TextStyle(
                         color: kInviteInk,
                         fontSize: 20,
@@ -448,7 +448,7 @@ class _InviteStaffCard extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'РџРѕРєР°Р¶РёС‚Рµ QR СЃРѕС‚СЂСѓРґРЅРёРєСѓ РёР»Рё РѕС‚РїСЂР°РІСЊС‚Рµ СЃСЃС‹Р»РєСѓ РІ РјРµСЃСЃРµРЅРґР¶РµСЂ. РћРЅ СѓСЃС‚Р°РЅРѕРІРёС‚ Flowru Business Рё РІРѕР№РґС‘С‚ РІ СЂР°Р±РѕС‡РёР№ РєРѕРЅС‚СѓСЂ.',
+                      'Покажите QR сотруднику или отправьте ссылку в мессенджер. Он установит Flowru Business и войдёт в рабочий контур.',
                       style: TextStyle(
                         color: kInviteInkSoft,
                         fontSize: 13.5,
@@ -501,7 +501,7 @@ class _InviteStaffCard extends StatelessWidget {
 
           const Center(
             child: Text(
-              'QR РІРµРґС‘С‚ РЅР° Flowru Business РІ App Store',
+              'QR ведёт на Flowru Business в App Store',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: kInviteInkSoft,
@@ -519,7 +519,7 @@ class _InviteStaffCard extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: onShare,
               icon: const Icon(CupertinoIcons.share),
-              label: const Text('РџРѕРґРµР»РёС‚СЊСЃСЏ СЃСЃС‹Р»РєРѕР№'),
+              label: const Text('Поделиться ссылкой'),
               style: ElevatedButton.styleFrom(
                 elevation: 0,
                 backgroundColor: kInviteBlue,
@@ -552,7 +552,7 @@ class _InviteStepsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'РљР°Рє СЌС‚Рѕ СЂР°Р±РѕС‚Р°РµС‚',
+            'Как это работает',
             style: TextStyle(
               color: kInviteInk,
               fontSize: 20,
@@ -562,18 +562,18 @@ class _InviteStepsCard extends StatelessWidget {
           const SizedBox(height: 14),
           _StepLine(
             number: '1',
-            title: 'РљР»РёРµРЅС‚ СЃРєР°РЅРёСЂСѓРµС‚ QR',
-            text: 'РћС‚РєСЂС‹РІР°РµС‚СЃСЏ СЃС‚СЂР°РЅРёС†Р° РїРѕРґРєР»СЋС‡РµРЅРёСЏ Р·Р°РІРµРґРµРЅРёСЏ.',
+            title: 'Клиент сканирует QR',
+            text: 'Открывается страница подключения заведения.',
           ),
           _StepLine(
             number: '2',
-            title: 'РљР»РёРµРЅС‚ РІС…РѕРґРёС‚ РІ Flowru',
-            text: 'Р•СЃР»Рё РїСЂРёР»РѕР¶РµРЅРёСЏ РЅРµС‚ вЂ” СѓРІРёРґРёС‚ СЃС‚СЂР°РЅРёС†Сѓ-РїРµСЂРµС…РѕРґРЅРёРє.',
+            title: 'Клиент входит в Flowru',
+            text: 'Если приложения нет — увидит страницу-переходник.',
           ),
           _StepLine(
             number: '3',
-            title: 'Р—Р°РІРµРґРµРЅРёРµ РїРѕСЏРІР»СЏРµС‚СЃСЏ Сѓ РєР»РёРµРЅС‚Р°',
-            text: '$establishmentName Р±СѓРґРµС‚ РґРѕСЃС‚СѓРїРЅРѕ РІ РµРіРѕ РїСЂРёР»РѕР¶РµРЅРёРё.',
+            title: 'Заведение появляется у клиента',
+            text: '$establishmentName будет доступно в его приложении.',
             isLast: true,
           ),
         ],
@@ -776,7 +776,7 @@ class _InviteErrorCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           const Text(
-            'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РїСЂРёРіР»Р°С€РµРЅРёРµ',
+            'Не удалось загрузить приглашение',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: kInviteInk,
@@ -798,7 +798,7 @@ class _InviteErrorCard extends StatelessWidget {
           const SizedBox(height: 16),
           _InviteActionButton(
             icon: CupertinoIcons.refresh,
-            title: 'РџРѕРІС‚РѕСЂРёС‚СЊ',
+            title: 'Повторить',
             onTap: onRetry,
             colors: const [kInviteBlue, kInviteViolet],
             fullWidth: true,
