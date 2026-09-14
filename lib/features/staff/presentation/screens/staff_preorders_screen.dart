@@ -40,6 +40,8 @@ class StaffPreordersScreen extends StatefulWidget {
 
 class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     with SingleTickerProviderStateMixin {
+  // FLOWRU_PREORDERS_CYRILLIC_FIX_V1_20260914
+  // FLOWRU_PREORDERS_FLAT_V2_20260914
   // FLOWRU_STAFF_PREORDERS_V2_20260818
   bool _loading = true;
   bool _updating = false;
@@ -1006,7 +1008,30 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     double radius = 28,
     Color glow = _mint,
     double glowStrength = 0.05,
+    bool flat = false,
   }) {
+    if (flat) {
+      final edgeOpacity = (0.035 + glowStrength).clamp(0.045, 0.14).toDouble();
+
+      return Container(
+        padding: padding,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(radius),
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              glow.withOpacity(edgeOpacity),
+              glow.withOpacity(edgeOpacity * 0.30),
+              Colors.transparent,
+            ],
+            stops: const [0, 0.36, 1],
+          ),
+        ),
+        child: child,
+      );
+    }
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: BackdropFilter(
@@ -1203,32 +1228,20 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
       required Color color,
     }) {
       return Expanded(
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 11),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                color.withOpacity(0.13),
-                color.withOpacity(0.045),
-                Colors.white.withOpacity(0.62),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.76)),
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.085),
-                blurRadius: 18,
-                offset: const Offset(0, 7),
-              ),
-            ],
-          ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           child: Row(
             children: [
-              _softIconTile(icon: icon, color: color, size: 37),
-              const SizedBox(width: 9),
+              Container(
+                width: 31,
+                height: 31,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 15),
+              ),
+              const SizedBox(width: 7),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1237,20 +1250,19 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                       '$value',
                       style: TextStyle(
                         color: value > 0 ? color : _ink,
-                        fontSize: 23,
+                        fontSize: 20,
                         height: 1,
                         fontWeight: FontWeight.w900,
-                        letterSpacing: -0.45,
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 3),
                     Text(
                       label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: _soft,
-                        fontSize: 10.5,
+                        fontSize: 9.7,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -1263,166 +1275,119 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
       );
     }
 
-    return AnimatedBuilder(
-      animation: _motion,
-      builder: (context, child) {
-        final glow = activeCount > 0 ? 0.065 + (_motion.value * 0.045) : 0.042;
-        return Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(
-                color: _mint.withOpacity(glow),
-                blurRadius: 35 + (_motion.value * 8),
-                spreadRadius: -8,
+    return _glassSurface(
+      flat: true,
+      radius: 22,
+      glow: _mint,
+      glowStrength: 0.035,
+      padding: const EdgeInsets.fromLTRB(3, 10, 3, 8),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 43,
+                height: 43,
+                decoration: BoxDecoration(
+                  color: _mint.withOpacity(0.11),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: const Icon(
+                  CupertinoIcons.bag_fill,
+                  color: _mint,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '\u041f\u0440\u0435\u0434\u0437\u0430\u043a\u0430\u0437\u044b',
+                      style: TextStyle(
+                        color: _ink,
+                        fontSize: 21,
+                        height: 1,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.45,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      activeCount == 0
+                          ? '\u041d\u043e\u0432\u044b\u0445 \u0437\u0430\u043a\u0430\u0437\u043e\u0432 \u0441\u0435\u0439\u0447\u0430\u0441 \u043d\u0435\u0442'
+                          : '$activeCount \u0430\u043a\u0442\u0438\u0432\u043d\u044b\u0445 \u2022 \u0442\u0440\u0435\u0431\u0443\u044e\u0442 \u0432\u043d\u0438\u043c\u0430\u043d\u0438\u044f',
+                      style: const TextStyle(
+                        color: _soft,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _green.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(CupertinoIcons.circle_fill, size: 7, color: _green),
+                    SizedBox(width: 5),
+                    Text(
+                      '\u043e\u043d\u043b\u0430\u0439\u043d',
+                      style: TextStyle(
+                        color: _green,
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          child: child,
-        );
-      },
-      child: _glassSurface(
-        radius: 30,
-        glow: activeCount > 0 ? _mint : _blue,
-        glowStrength: activeCount > 0 ? 0.075 : 0.035,
-        padding: const EdgeInsets.fromLTRB(19, 19, 19, 17),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(
-              right: -34,
-              top: -50,
-              child: _ambientOrb(size: 160, color: _mintLight, opacity: 0.86),
+          const SizedBox(height: 11),
+          Container(
+            height: 1.5,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  _mint.withOpacity(0.36),
+                  _blue.withOpacity(0.08),
+                  Colors.transparent,
+                ],
+              ),
             ),
-            Column(
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFF37D6D0),
-                            Color(0xFF0CAEBB),
-                            Color(0xFF087F96),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(19),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _mint.withOpacity(0.24),
-                            blurRadius: 21,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        CupertinoIcons.bag_fill,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Предзаказы',
-                            style: TextStyle(
-                              color: _ink,
-                              fontSize: 23.5,
-                              height: 1,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.65,
-                            ),
-                          ),
-                          const SizedBox(height: 7),
-                          Text(
-                            activeCount == 0
-                                ? 'Все заказы клиентов в одном месте'
-                                : '$activeCount активных · требуют внимания',
-                            style: const TextStyle(
-                              color: _soft,
-                              fontSize: 12.1,
-                              height: 1.25,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 58),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _green.withOpacity(0.085),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: _green.withOpacity(0.11)),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 7,
-                            height: 7,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: _green,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 6),
-                          Text(
-                            'онлайн',
-                            style: TextStyle(
-                              color: _green,
-                              fontSize: 9.8,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    metric(
-                      label: 'Новые',
-                      value: _newCount,
-                      icon: CupertinoIcons.bell_fill,
-                      color: const Color(0xFFFF5364),
-                    ),
-                    const SizedBox(width: 9),
-                    metric(
-                      label: 'Готовятся',
-                      value: _inWorkCount,
-                      icon: CupertinoIcons.flame_fill,
-                      color: _orange,
-                    ),
-                    const SizedBox(width: 9),
-                    metric(
-                      label: 'Готовы',
-                      value: _readyCount,
-                      icon: CupertinoIcons.checkmark_seal_fill,
-                      color: _green,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              metric(
+                label: '\u041d\u043e\u0432\u044b\u0435',
+                value: _newCount,
+                icon: CupertinoIcons.bell_fill,
+                color: const Color(0xFFFF5364),
+              ),
+              metric(
+                label: '\u0413\u043e\u0442\u043e\u0432\u044f\u0442\u0441\u044f',
+                value: _inWorkCount,
+                icon: CupertinoIcons.flame_fill,
+                color: _orange,
+              ),
+              metric(
+                label: '\u0413\u043e\u0442\u043e\u0432\u044b',
+                value: _readyCount,
+                icon: CupertinoIcons.checkmark_seal_fill,
+                color: _green,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -1758,6 +1723,108 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     );
   }
 
+  // FLOWRU_PREORDERS_FLAT_V2_20260914
+
+  String _staffMoney(double? value) {
+    if (value == null) return '\u2014';
+
+    if (value == value.roundToDouble()) {
+      return '${value.toStringAsFixed(0)} \u20bd';
+    }
+
+    return '${value.toStringAsFixed(2)} \u20bd';
+  }
+
+  String _staffReadableOrderLine(String raw) {
+    var value = raw.trim();
+    if (value.isEmpty) return value;
+
+    final dash = value.indexOf(' \u2014 ');
+
+    if (dash > 0) {
+      final left = value.substring(0, dash).trim();
+      final right = value.substring(dash + 3).trim();
+
+      final leftKey = left.toLowerCase().replaceAll('\u0451', '\u0435');
+      final rightKey = right.toLowerCase().replaceAll('\u0451', '\u0435');
+
+      if (leftKey.isNotEmpty && rightKey.startsWith(leftKey)) {
+        value = right;
+      }
+    }
+
+    final parts = value
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    if (parts.length <= 1) return value;
+
+    final base = parts.first;
+    final extras = <String>[];
+
+    const syrupHints = <String>[
+      '\u0432\u0438\u0448\u043d',
+      '\u0432\u0430\u043d\u0438\u043b',
+      '\u043a\u0430\u0440\u0430\u043c\u0435\u043b',
+      '\u0444\u0443\u043d\u0434\u0443\u043a',
+      '\u043e\u0440\u0435\u0445',
+      '\u0448\u043e\u043a\u043e\u043b\u0430\u0434',
+      '\u0430\u0439\u0440\u0438\u0448',
+      '\u043c\u044f\u0442\u0430',
+      '\u0433\u0440\u0443\u0448',
+      '\u043c\u0430\u043b\u0438\u043d',
+      '\u043a\u043b\u0443\u0431\u043d\u0438\u0447',
+      '\u043c\u0430\u043d\u0433\u043e',
+      '\u0440\u043e\u0437\u0430',
+      '\u043a\u043e\u0440\u0438\u0446\u0430',
+      '\u043b\u0430\u0432\u0430\u043d\u0434',
+      '\u0442\u0430\u0440\u0445\u0443\u043d',
+      '\u044f\u0431\u043b\u043e\u043a',
+      '\u043a\u043e\u043a\u043e\u0441',
+    ];
+
+    for (final extraRaw in parts.skip(1)) {
+      final extra = extraRaw.trim();
+      final lower = extra.toLowerCase().replaceAll('\u0451', '\u0435');
+
+      if (lower.startsWith('\u0441\u0438\u0440\u043e\u043f')) {
+        final clean = extra.replaceFirst(
+          RegExp(
+            r'^\u0441\u0438\u0440\u043e\u043f\s*:?\s*',
+            caseSensitive: false,
+            unicode: true,
+          ),
+          '',
+        );
+
+        extras.add('\u0421\u0438\u0440\u043e\u043f: $clean');
+        continue;
+      }
+
+      if (lower.contains('\u0440\u0430\u0441\u0442\u0438\u0442\u0435\u043b') ||
+          lower.contains('\u0430\u043b\u044c\u0442.') ||
+          lower.contains('\u043c\u043e\u043b\u043e\u043a\u043e')) {
+        extras.add(
+          lower.startsWith('\u043c\u043e\u043b\u043e\u043a\u043e')
+              ? extra
+              : '\u041c\u043e\u043b\u043e\u043a\u043e: $extra',
+        );
+        continue;
+      }
+
+      if (syrupHints.any(lower.contains)) {
+        extras.add('\u0421\u0438\u0440\u043e\u043f: $extra');
+        continue;
+      }
+
+      extras.add('\u0414\u043e\u0431\u0430\u0432\u043a\u0430: $extra');
+    }
+
+    return '$base  \u2022  ${extras.join('  \u2022  ')}';
+  }
+
   Widget _flowSection({
     required String title,
     required String subtitle,
@@ -1768,19 +1835,20 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     if (items.isEmpty) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.only(top: 18),
+      padding: const EdgeInsets.only(top: 14),
       child: _glassSurface(
-        radius: 26,
+        flat: true,
+        radius: 20,
         glow: color,
         glowStrength: 0.035,
-        padding: const EdgeInsets.fromLTRB(15, 14, 15, 15),
+        padding: const EdgeInsets.fromLTRB(3, 7, 2, 2),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                _softIconTile(icon: icon, color: color, size: 38),
-                const SizedBox(width: 10),
+                Icon(icon, color: color, size: 18),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1789,45 +1857,49 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                         title,
                         style: const TextStyle(
                           color: _ink,
-                          fontSize: 17.5,
-                          height: 1.1,
+                          fontSize: 17,
+                          height: 1.05,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: -0.30,
+                          letterSpacing: -0.25,
                         ),
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 2),
                       Text(
                         subtitle,
                         style: const TextStyle(
                           color: _soft,
-                          fontSize: 10.8,
+                          fontSize: 10.4,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.10),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '${items.length}',
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                    ),
+                Text(
+                  '${items.length}',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 11),
+            const SizedBox(height: 7),
+            Container(
+              height: 2,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    color.withOpacity(0.58),
+                    color.withOpacity(0.10),
+                    Colors.transparent,
+                  ],
+                  stops: const [0, 0.46, 1],
+                ),
+              ),
+            ),
+            const SizedBox(height: 7),
             _ordersList(items),
           ],
         ),
@@ -1835,320 +1907,411 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     );
   }
 
+  // FLOWRU_ORDER_BORDER_RUNTIME_FIX_20260914
   Widget _orderCard(_PreorderItem item, int index) {
     final statusColor = _statusColor(item.status);
     final left = _minutesLeft(item);
     final attention = _attentionText(item);
-    final lines = _flowOrderLines(item);
+    final attentionColor = _attentionColor(item);
+
+    final lines = _flowOrderLines(
+      item,
+    ).map(_staffReadableOrderLine).where((e) => e.trim().isNotEmpty).toList();
+
+    final comment = _flowOrderComment(item);
 
     String actionText;
     IconData actionIcon;
     VoidCallback actionTap;
 
     if (item.status == 'new') {
-      actionText = 'Принять';
-      actionIcon = CupertinoIcons.flame_fill;
+      actionText = '\u041f\u0440\u0438\u043d\u044f\u0442\u044c';
+      actionIcon = CupertinoIcons.checkmark_alt_circle_fill;
       actionTap = () => _setStatus(item, 'in_work');
     } else if (item.status == 'in_work') {
-      actionText = 'Готов';
-      actionIcon = CupertinoIcons.checkmark_alt_circle_fill;
+      actionText = '\u0413\u043e\u0442\u043e\u0432';
+      actionIcon = CupertinoIcons.checkmark_seal_fill;
       actionTap = () => _setStatus(item, 'ready');
     } else {
-      actionText = 'Выдать';
+      actionText = '\u0412\u044b\u0434\u0430\u0442\u044c';
       actionIcon = CupertinoIcons.archivebox_fill;
       actionTap = () => _completePreorder(item);
     }
 
-    String timeValue = item.pickupLabel;
+    var timeValue = item.pickupLabel;
+
     if (item.status == 'in_work' && left != null) {
-      timeValue = left < 0 ? 'Просрочено ${left.abs()} мин' : '$left мин';
+      timeValue = left < 0
+          ? '\u041f\u0440\u043e\u0441\u0440\u043e\u0447\u0435\u043d\u043e ${left.abs()} \u043c\u0438\u043d'
+          : '$left \u043c\u0438\u043d';
     } else if (item.status == 'ready') {
-      timeValue = 'Ждёт клиента';
+      timeValue =
+          '\u0416\u0434\u0451\u0442 \u043a\u043b\u0438\u0435\u043d\u0442\u0430';
     }
 
     return _fadeIn(
-      delay: index.clamp(0, 6) * 45,
+      delay: index.clamp(0, 6) * 35,
       child: AnimatedBuilder(
         animation: _motion,
-        builder: (context, child) {
+        builder: (context, _) {
           final pulse = item.status == 'new' ? _motion.value : 0.0;
+
           return Container(
-            margin: const EdgeInsets.only(bottom: 9),
+            margin: const EdgeInsets.only(bottom: 11),
+            padding: const EdgeInsets.fromLTRB(13, 12, 11, 13),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(21),
-              boxShadow: [
-                BoxShadow(
-                  color: statusColor.withOpacity(0.055 + pulse * 0.045),
-                  blurRadius: 18 + pulse * 8,
-                  offset: const Offset(0, 7),
-                ),
-              ],
-            ),
-            child: child,
-          );
-        },
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(13, 12, 12, 12),
-            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
               gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
                 colors: [
-                  statusColor.withOpacity(item.status == 'new' ? 0.10 : 0.065),
-                  Colors.white.withOpacity(0.93),
-                  Colors.white.withOpacity(0.76),
+                  statusColor.withOpacity(0.115 + pulse * 0.025),
+                  statusColor.withOpacity(0.035),
+                  Colors.transparent,
                 ],
+                stops: const [0, 0.38, 1],
               ),
-              borderRadius: BorderRadius.circular(21),
               border: Border.all(
-                color: statusColor.withOpacity(
-                  item.status == 'new' ? 0.18 : 0.11,
-                ),
+                color: statusColor.withOpacity(0.10),
+                width: 1,
               ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _softIconTile(
-                      icon: _statusIcon(item.status),
-                      color: statusColor,
-                      size: 40,
+                    Text(
+                      '#${item.id}',
+                      style: const TextStyle(
+                        color: _ink,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
+                    const SizedBox(width: 7),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.10),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        _statusText(item.status),
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Icon(CupertinoIcons.clock, size: 13, color: statusColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      timeValue,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                Text(
+                  item.clientName.trim().isEmpty
+                      ? '\u041a\u043b\u0438\u0435\u043d\u0442'
+                      : item.clientName.trim(),
+                  style: const TextStyle(
+                    color: _ink,
+                    fontSize: 15.8,
+                    height: 1,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+
+                const SizedBox(height: 9),
+
+                if (lines.isEmpty)
+                  const Text(
+                    '\u0421\u043e\u0441\u0442\u0430\u0432 \u0437\u0430\u043a\u0430\u0437\u0430 \u043d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d',
+                    style: TextStyle(
+                      color: _soft,
+                      fontSize: 12.4,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
+                else
+                  ...lines.map(
+                    (line) => Padding(
+                      padding: const EdgeInsets.only(bottom: 5),
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Text(
-                                '#${item.id}',
-                                style: const TextStyle(
-                                  color: _ink,
-                                  fontSize: 13.8,
-                                  fontWeight: FontWeight.w900,
-                                ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Container(
+                              width: 5,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.78),
+                                shape: BoxShape.circle,
                               ),
-                              const SizedBox(width: 7),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withOpacity(0.11),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Text(
-                                  _statusText(item.status),
-                                  style: TextStyle(
-                                    color: statusColor,
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            item.clientName.trim().isEmpty
-                                ? 'Клиент'
-                                : item.clientName.trim(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: _ink,
-                              fontSize: 14.2,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.15,
                             ),
                           ),
-                          const SizedBox(height: 3),
-                          Text(
-                            lines.isEmpty
-                                ? 'Состав заказа не указан'
-                                : lines.join(' · '),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: _soft,
-                              fontSize: 10.9,
-                              height: 1.25,
-                              fontWeight: FontWeight.w700,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              line,
+                              style: const TextStyle(
+                                color: _ink,
+                                fontSize: 12.8,
+                                height: 1.30,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                  ),
+
+                if (comment != null && comment.trim().isNotEmpty) ...[
+                  const SizedBox(height: 7),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(10, 7, 4, 7),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          _orange.withOpacity(0.09),
+                          _orange.withOpacity(0.025),
+                          Colors.transparent,
+                        ],
+                      ),
+                      border: Border(
+                        left: BorderSide(
+                          color: _orange.withOpacity(0.72),
+                          width: 3,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          timeValue,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontSize: 11.2,
-                            fontWeight: FontWeight.w900,
-                          ),
+                        const Icon(
+                          CupertinoIcons.text_bubble_fill,
+                          color: _orange,
+                          size: 15,
                         ),
-                        const SizedBox(height: 9),
-                        SizedBox(
-                          height: 34,
-                          child: ElevatedButton.icon(
-                            onPressed: _updating ? null : actionTap,
-                            icon: Icon(actionIcon, size: 13),
-                            label: Text(actionText),
-                            style: ElevatedButton.styleFrom(
-                              elevation: 0,
-                              backgroundColor: statusColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 11,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              textStyle: const TextStyle(
-                                fontSize: 10.4,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 1),
-                        SizedBox(
-                          height: 26,
-                          child: TextButton.icon(
-                            onPressed: _updating
-                                ? null
-                                : () => _cancelPreorderWithReason(item),
-                            icon: const Icon(
-                              CupertinoIcons.xmark_circle,
-                              size: 12,
-                            ),
-                            label: Text(
-                              item.status == 'new' ? 'Отказать' : 'Отменить',
-                            ),
-                            style: TextButton.styleFrom(
-                              foregroundColor: _red,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
-                              ),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              textStyle: const TextStyle(
-                                fontSize: 9.8,
-                                fontWeight: FontWeight.w900,
-                              ),
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: Text(
+                            '\u041a\u043e\u043c\u043c\u0435\u043d\u0442\u0430\u0440\u0438\u0439: ${comment.trim()}',
+                            style: const TextStyle(
+                              color: _ink,
+                              fontSize: 12.3,
+                              height: 1.32,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ],
-                ),
-                if (attention != null) ...[
-                  const SizedBox(height: 8),
-                  _attentionBanner(item),
+                  ),
                 ],
-                if (item.clientPoints != null && item.clientPoints! > 0) ...[
-                  const SizedBox(height: 8),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: !_updating && item.clientId != null
-                          ? () => _openClientSpend(item)
-                          : null,
-                      borderRadius: BorderRadius.circular(13),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _mint.withOpacity(0.065),
-                          borderRadius: BorderRadius.circular(13),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              CupertinoIcons.star_circle_fill,
-                              color: _mint,
-                              size: 15,
-                            ),
-                            const SizedBox(width: 7),
-                            const Expanded(
-                              child: Text(
-                                'Баланс клиента',
-                                style: TextStyle(
-                                  color: _soft,
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w800,
+
+                const SizedBox(height: 10),
+
+                Row(
+                  children: [
+                    const Text(
+                      '\u0418\u0442\u043e\u0433\u043e:',
+                      style: TextStyle(
+                        color: _soft,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _staffMoney(item.amountTotal),
+                      style: const TextStyle(
+                        color: _ink,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.25,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (item.clientPoints != null && item.clientPoints! > 0)
+                      InkWell(
+                        onTap: !_updating && item.clientId != null
+                            ? () => _openClientSpend(item)
+                            : null,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 4,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                CupertinoIcons.star_circle_fill,
+                                color: _mint,
+                                size: 15,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                '${item.clientPoints} \u0431\u0430\u043b\u043b\u043e\u0432',
+                                style: const TextStyle(
+                                  color: _deep,
+                                  fontSize: 11.3,
+                                  fontWeight: FontWeight.w900,
                                 ),
                               ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+
+                if (attention != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        CupertinoIcons.exclamationmark_triangle_fill,
+                        color: attentionColor,
+                        size: 14,
+                      ),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Text(
+                          attention,
+                          style: TextStyle(
+                            color: attentionColor,
+                            fontSize: 11.3,
+                            height: 1.25,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: SizedBox(
+                        height: 54,
+                        child: ElevatedButton.icon(
+                          onPressed: _updating ? null : actionTap,
+                          icon: Icon(actionIcon, size: 17),
+                          label: Text(actionText),
+                          style: ElevatedButton.styleFrom(
+                            elevation: 0,
+                            backgroundColor: statusColor,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: statusColor.withOpacity(
+                              0.35,
                             ),
-                            Text(
-                              '${item.clientPoints} баллов',
-                              style: const TextStyle(
-                                color: _deep,
-                                fontSize: 11.4,
-                                fontWeight: FontWeight.w900,
-                              ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                          ],
+                            textStyle: const TextStyle(
+                              fontSize: 13.8,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 11),
+                    Expanded(
+                      flex: 2,
+                      child: SizedBox(
+                        height: 54,
+                        child: OutlinedButton.icon(
+                          onPressed: _updating
+                              ? null
+                              : () => _cancelPreorderWithReason(item),
+                          icon: const Icon(
+                            CupertinoIcons.xmark_circle,
+                            size: 17,
+                          ),
+                          label: Text(
+                            item.status == 'new'
+                                ? '\u041e\u0442\u043a\u0430\u0437\u0430\u0442\u044c'
+                                : '\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c',
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _red,
+                            side: BorderSide(
+                              color: _red.withOpacity(0.38),
+                              width: 1.2,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            textStyle: const TextStyle(
+                              fontSize: 12.4,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 
   Widget _doneRow(_PreorderItem item) {
     final statusColor = _statusColor(item.status);
-    final lines = _flowOrderLines(item);
+
+    final lines = _flowOrderLines(
+      item,
+    ).map(_staffReadableOrderLine).where((e) => e.trim().isNotEmpty).toList();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
+      padding: const EdgeInsets.fromLTRB(8, 10, 5, 10),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
           colors: [
-            Colors.white.withOpacity(0.88),
-            statusColor.withOpacity(0.035),
+            statusColor.withOpacity(0.07),
+            statusColor.withOpacity(0.018),
+            Colors.transparent,
           ],
+          stops: const [0, 0.42, 1],
         ),
-        borderRadius: BorderRadius.circular(17),
-        border: Border.all(color: Colors.white.withOpacity(0.86)),
-        boxShadow: [
-          BoxShadow(
-            color: _deep.withOpacity(0.035),
-            blurRadius: 12,
-            offset: const Offset(0, 5),
-          ),
-        ],
+        border: Border(
+          bottom: BorderSide(color: _stroke.withOpacity(0.40), width: 0.8),
+        ),
       ),
       child: Row(
         children: [
-          _softIconTile(
-            icon: CupertinoIcons.archivebox_fill,
-            color: statusColor,
-            size: 34,
-          ),
+          Icon(_statusIcon(item.status), color: statusColor, size: 17),
           const SizedBox(width: 9),
           Expanded(
             child: Column(
@@ -2162,18 +2325,19 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: _ink,
-                    fontSize: 12.3,
+                    fontSize: 12.4,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   lines.isEmpty ? item.doneCompactTitle : lines.first,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: _soft,
-                    fontSize: 10.4,
+                    fontSize: 10.5,
+                    height: 1.2,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -3550,6 +3714,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                                               if (doneItems.isNotEmpty) ...[
                                                 const SizedBox(height: 18),
                                                 _glassSurface(
+                                                  flat: true,
                                                   radius: 25,
                                                   glow: _blue,
                                                   glowStrength: 0.02,
