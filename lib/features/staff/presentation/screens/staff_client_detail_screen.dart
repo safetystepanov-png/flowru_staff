@@ -1217,9 +1217,9 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
                         ),
                         Text(
                           subscription.isUnlimited
-                              ? 'в€ћ'
+                              ? '∞'
                               : (remainingAfter == null
-                                    ? 'вЂ”'
+                                    ? '—'
                                     : (remainingAfter ==
                                               remainingAfter.roundToDouble()
                                           ? remainingAfter.toInt().toString()
@@ -1979,7 +1979,7 @@ class _SubscriptionCardState extends State<_SubscriptionCard>
   }
 
   String _date(DateTime? d) {
-    if (d == null) return 'вЂ”';
+    if (d == null) return '—';
     return '${d.day.toString().padLeft(2, '0')}.'
         '${d.month.toString().padLeft(2, '0')}.${d.year}';
   }
