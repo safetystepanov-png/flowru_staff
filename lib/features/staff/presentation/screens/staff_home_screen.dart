@@ -2772,207 +2772,338 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
       );
     }
 
-    Widget clientWorkspace() {
-      return glassShell(
-        padding: const EdgeInsets.all(10),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 17),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(25),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withOpacity(0.96),
-                const Color(0xFFF0FAFA).withOpacity(0.94),
-              ],
-            ),
-            border: Border.all(color: Colors.white.withOpacity(0.72)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF0FD0C8), Color(0xFF2A8CF7)],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF1AAFBF).withOpacity(0.20),
-                          blurRadius: 16,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      CupertinoIcons.person_2_fill,
-                      color: Colors.white,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 13),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Клиент на кассе',
-                          style: TextStyle(
-                            color: kHomeInk,
-                            fontSize: 19,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.35,
-                          ),
-                        ),
-                        SizedBox(height: 3),
-                        Text(
-                          'Поиск, QR и быстрые действия',
-                          style: TextStyle(
-                            color: kHomeInkSoft,
-                            fontSize: 12.3,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(999),
-                      color: const Color(0xFF11BFAF).withOpacity(0.08),
-                    ),
-                    child: const Text(
-                      'ГОТОВО',
-                      style: TextStyle(
-                        color: Color(0xFF0A9B8E),
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+    Widget unifiedActionRow({
+      required IconData icon,
+      required String title,
+      required String subtitle,
+      required VoidCallback onTap,
+      required Color accent,
+      String? badge,
+      bool primary = false,
+    }) {
+      final foreground = primary ? Colors.white : kHomeInk;
+      final secondary = primary ? Colors.white.withOpacity(0.76) : kHomeInkSoft;
 
-              _Pressable(
-                onTap: _openClientSearch,
-                borderRadius: 20,
-                child: Container(
+      return _Pressable(
+        onTap: onTap,
+        borderRadius: 20,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: primary
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF087E9C), Color(0xFF14B9B1)],
+                  )
+                : null,
+            boxShadow: primary
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF087E9C).withOpacity(0.20),
+                      blurRadius: 18,
+                      offset: const Offset(0, 9),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 43,
+                height: 43,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  color: primary
+                      ? Colors.white.withOpacity(0.17)
+                      : accent.withOpacity(0.10),
+                ),
+                child: Icon(
+                  icon,
+                  color: primary ? Colors.white : accent,
+                  size: 21,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: foreground,
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: secondary,
+                        fontSize: 11.8,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (badge != null && badge.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    color: primary
+                        ? Colors.white.withOpacity(0.18)
+                        : accent.withOpacity(0.10),
+                  ),
+                  child: Text(
+                    badge,
+                    style: TextStyle(
+                      color: primary ? Colors.white : accent,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                )
+              else
+                Icon(
+                  CupertinoIcons.chevron_right,
+                  color: primary
+                      ? Colors.white.withOpacity(0.82)
+                      : kHomeInkSoft.withOpacity(0.72),
+                  size: 17,
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    Widget unifiedDivider() {
+      return Container(
+        height: 1,
+        margin: const EdgeInsets.only(left: 69),
+        color: const Color(0xFFE3ECEE),
+      );
+    }
+
+    Widget preorderActionRow() {
+      return FutureBuilder<Map<String, int>>(
+        future: _loadPreorderSummary(),
+        builder: (context, snapshot) {
+          final active = (snapshot.data ?? const {'active': 0})['active'] ?? 0;
+
+          if (active <= 0) {
+            return unifiedActionRow(
+              icon: CupertinoIcons.bag_fill,
+              title: 'Предзаказы',
+              subtitle: 'Новые заказы появятся здесь',
+              onTap: _openPreorders,
+              accent: const Color(0xFFE99013),
+            );
+          }
+
+          return _Pressable(
+            onTap: _openPreorders,
+            borderRadius: 20,
+            child: AnimatedBuilder(
+              animation: _ambientController,
+              builder: (context, _) {
+                final t = _ambientController.value;
+                final pulse = 0.5 + 0.5 * math.sin(t * math.pi * 2);
+
+                return Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 13,
                   ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
-                    color: Colors.white.withOpacity(0.94),
-                    border: Border.all(color: const Color(0xFFDCEBED)),
+                    gradient: LinearGradient(
+                      begin: Alignment(-1.6 + t * 2.2, -0.8),
+                      end: Alignment(0.6 + t * 1.4, 0.9),
+                      colors: const [
+                        Color(0xFFFFA31A),
+                        Color(0xFFFF426F),
+                        Color(0xFF8B5CF6),
+                        Color(0xFF23B9E8),
+                        Color(0xFFFFA31A),
+                      ],
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF0A2B47).withOpacity(0.05),
-                        blurRadius: 14,
-                        offset: const Offset(0, 7),
+                        color: const Color(
+                          0xFFFF426F,
+                        ).withOpacity(0.20 + pulse * 0.16),
+                        blurRadius: 18 + pulse * 10,
+                        offset: const Offset(0, 9),
                       ),
                     ],
                   ),
                   child: Row(
                     children: [
                       Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          color: const Color(0xFF1A91F5).withOpacity(0.08),
-                        ),
-                        child: const Icon(
-                          CupertinoIcons.search,
-                          color: Color(0xFF1A78CF),
-                          size: 18,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                        child: Text(
-                          'Телефон, имя или номер клиента',
-                          style: TextStyle(
-                            color: kHomeInkSoft,
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        width: 38,
-                        height: 38,
+                        width: 43,
+                        height: 43,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(14),
-                          gradient: const LinearGradient(
-                            colors: [kHomeAccent, kHomeAccentSoft],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: kHomeAccent.withOpacity(0.18),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
+                          color: Colors.white.withOpacity(0.20),
+                        ),
+                        child: const Icon(
+                          CupertinoIcons.bell_fill,
+                          color: Colors.white,
+                          size: 21,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Новый предзаказ',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 15.5,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Откройте очередь и примите заказ',
+                              style: TextStyle(
+                                color: Color(0xE6FFFFFF),
+                                fontSize: 11.8,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          CupertinoIcons.arrow_right,
-                          color: Colors.white,
-                          size: 18,
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(999),
+                          color: Colors.white.withOpacity(0.22),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.28),
+                          ),
+                        ),
+                        child: Text(
+                          '$active',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              ),
+                );
+              },
+            ),
+          );
+        },
+      );
+    }
 
-              const SizedBox(height: 11),
-              Container(
-                height: 1,
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                color: const Color(0xFFDDEBED).withOpacity(0.78),
-              ),
-              const SizedBox(height: 11),
+    Widget clientWorkspace() {
+      return Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.96),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: Colors.white),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF063B50).withOpacity(0.11),
+              blurRadius: 28,
+              offset: const Offset(0, 14),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            unifiedActionRow(
+              icon: CupertinoIcons.qrcode_viewfinder,
+              title: 'Найти клиента',
+              subtitle: 'Сканировать QR, найти по телефону или имени',
+              onTap: _openClientSearch,
+              accent: const Color(0xFF0A9F9A),
+              primary: true,
+            ),
+            const SizedBox(height: 5),
+            preorderActionRow(),
+            unifiedDivider(),
+            unifiedActionRow(
+              icon: CupertinoIcons.ticket_fill,
+              title: 'Продать абонемент',
+              subtitle: 'Выбрать услугу и оформить клиенту',
+              onTap: _openSubscriptionSale,
+              accent: const Color(0xFF7258E8),
+            ),
+            unifiedDivider(),
+            unifiedActionRow(
+              icon: CupertinoIcons.person_badge_plus_fill,
+              title: 'Пригласить клиента',
+              subtitle: 'Показать QR-код для подключения',
+              onTap: _openInviteClient,
+              accent: const Color(0xFFE99512),
+            ),
+          ],
+        ),
+      );
+    }
 
-              Row(
-                children: [
-                  Expanded(
-                    child: quickTile(
-                      icon: CupertinoIcons.ticket_fill,
-                      title: 'Абонемент',
-                      subtitle: 'Продажа клиенту',
-                      onTap: _openSubscriptionSale,
-                      colors: const [Color(0xFF7058F4), Color(0xFFB05CF0)],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: quickTile(
-                      icon: CupertinoIcons.person_badge_plus_fill,
-                      title: 'Пригласить',
-                      subtitle: 'QR для подключения',
-                      onTap: _openInviteClient,
-                      colors: const [Color(0xFFF2A31A), Color(0xFFFFC457)],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+    Widget workEventsWorkspace() {
+      return Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.96),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: Colors.white),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF063B50).withOpacity(0.09),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            unifiedActionRow(
+              icon: Icons.forum_rounded,
+              title: 'Чат команды',
+              subtitle: 'Сообщения сотрудников заведения',
+              onTap: _openMessenger,
+              accent: const Color(0xFF187FE9),
+              badge: _chatCount > 0 ? '$_chatCount' : null,
+            ),
+            unifiedDivider(),
+            unifiedActionRow(
+              icon: Icons.campaign_rounded,
+              title: 'Объявления',
+              subtitle: 'Важные новости для сотрудников',
+              onTap: _openAnnouncements,
+              accent: const Color(0xFFB44AE7),
+              badge: _announcementsHasNew ? 'NEW' : null,
+            ),
+          ],
         ),
       );
     }
@@ -3267,43 +3398,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                           const SizedBox(height: 26),
                           staggered(sectionTitle('Сегодня', 'Рабочие события')),
                           const SizedBox(height: 12),
-                          staggered(preorderWorkspace()),
-                          const SizedBox(height: 10),
-                          staggered(
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: quickTile(
-                                    icon: Icons.forum_rounded,
-                                    title: 'Чат',
-                                    subtitle: 'Сообщения команды',
-                                    onTap: _openMessenger,
-                                    badge: _chatCount > 0
-                                        ? '$_chatCount'
-                                        : null,
-                                    colors: const [
-                                      Color(0xFF1D84FF),
-                                      Color(0xFF20B8E8),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: quickTile(
-                                    icon: Icons.campaign_rounded,
-                                    title: 'Объявления',
-                                    subtitle: 'Новости заведения',
-                                    onTap: _openAnnouncements,
-                                    badge: _announcementsHasNew ? 'NEW' : null,
-                                    colors: const [
-                                      Color(0xFFC44BFF),
-                                      Color(0xFFFF4F91),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          staggered(workEventsWorkspace()),
 
                           if (_pinnedAnnouncements.isNotEmpty) ...[
                             const SizedBox(height: 26),
@@ -3331,24 +3426,38 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                           staggered(sectionTitle('Сервис', 'Дополнительно')),
                           const SizedBox(height: 12),
                           staggered(
-                            glassShell(
+                            Container(
                               padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.96),
+                                borderRadius: BorderRadius.circular(26),
+                                border: Border.all(color: Colors.white),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFF063B50,
+                                    ).withOpacity(0.09),
+                                    blurRadius: 24,
+                                    offset: const Offset(0, 12),
+                                  ),
+                                ],
+                              ),
                               child: Column(
                                 children: [
                                   if (_isOwner) ...[
-                                    secondaryRow(
+                                    unifiedActionRow(
                                       icon: Icons.fact_check_rounded,
                                       title: 'Запросы сотрудников',
                                       subtitle: 'Смены и обращения',
                                       onTap: _openOwnerRequests,
                                       accent: const Color(0xFFFF8A00),
-                                      trailing: _ownerPendingRequestsCount > 0
+                                      badge: _ownerPendingRequestsCount > 0
                                           ? '$_ownerPendingRequestsCount'
                                           : null,
                                     ),
-                                    const SizedBox(height: 8),
+                                    unifiedDivider(),
                                   ],
-                                  secondaryRow(
+                                  unifiedActionRow(
                                     icon: CupertinoIcons.clock_fill,
                                     title: 'История заведения',
                                     subtitle: 'События и действия',
@@ -3356,8 +3465,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                                     accent: const Color(0xFF14A7E8),
                                   ),
                                   if (!_isOwner) ...[
-                                    const SizedBox(height: 8),
-                                    secondaryRow(
+                                    unifiedDivider(),
+                                    unifiedActionRow(
                                       icon: CupertinoIcons.calendar,
                                       title: 'График работы',
                                       subtitle: 'Смены и рабочие дни',

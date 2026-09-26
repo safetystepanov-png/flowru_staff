@@ -119,7 +119,7 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
       duration: const Duration(milliseconds: 6000),
     )..repeat();
 
-    // Инициализация побуквенных анимаций — логика сохранена.
+    // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РїРѕР±СѓРєРІРµРЅРЅС‹С… Р°РЅРёРјР°С†РёР№ вЂ” Р»РѕРіРёРєР° СЃРѕС…СЂР°РЅРµРЅР°.
     final letters = 'FLOWRU BUSINESS';
     for (int i = 0; i < letters.length; i++) {
       final delay = i * 0.08;
@@ -174,7 +174,7 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
       );
     }
 
-    // Запуск анимаций с вибрацией — логика сохранена.
+    // Р—Р°РїСѓСЃРє Р°РЅРёРјР°С†РёР№ СЃ РІРёР±СЂР°С†РёРµР№ вЂ” Р»РѕРіРёРєР° СЃРѕС…СЂР°РЅРµРЅР°.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await HapticFeedback.lightImpact();
       await Future.delayed(const Duration(milliseconds: 50));
@@ -637,7 +637,7 @@ class _LaunchFlowruScreenState extends State<_LaunchFlowruScreen>
           child: Transform.translate(
             offset: Offset(0, subtitleSlide),
             child: Text(
-              'Система лояльности для команды заведения',
+              'РЎРёСЃС‚РµРјР° Р»РѕСЏР»СЊРЅРѕСЃС‚Рё РґР»СЏ РєРѕРјР°РЅРґС‹ Р·Р°РІРµРґРµРЅРёСЏ',
               textAlign: TextAlign.center,
               maxLines: 2,
               style: TextStyle(
@@ -963,7 +963,7 @@ class _BackgroundRingPainter extends CustomPainter {
 }
 
 // ==========================================
-// ОСТАЛЬНОЙ КОД БЕЗ ИЗМЕНЕНИЙ
+// РћРЎРўРђР›Р¬РќРћР™ РљРћР” Р‘Р•Р— РР—РњР•РќР•РќРР™
 // ==========================================
 
 class _AppBootstrapScreen extends StatefulWidget {
@@ -986,7 +986,7 @@ class _AppBootstrapScreenState extends State<_AppBootstrapScreen> {
   Future<_BootstrapState> _resolve() async {
     String? token = await AuthStorage.getAccessToken();
     StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(
-      appVersion: '1.0.16+60',
+      appVersion: '1.0.24+68',
     );
     final refreshToken = await AuthStorage.getRefreshToken();
     final biometricEnabled = await AuthStorage.isBiometricEnabled();
@@ -1047,7 +1047,7 @@ class _AppBootstrapScreenState extends State<_AppBootstrapScreen> {
       }
 
       return await _localAuth.authenticate(
-        localizedReason: 'Войдите в Flowru Business',
+        localizedReason: 'Р’РѕР№РґРёС‚Рµ РІ Flowru Business',
         biometricOnly: true,
         persistAcrossBackgrounding: true,
       );
@@ -1070,7 +1070,7 @@ class _AppBootstrapScreenState extends State<_AppBootstrapScreen> {
 
       await AuthStorage.saveAccessToken(result.accessToken);
       StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(
-        appVersion: '1.0.16+60',
+        appVersion: '1.0.24+68',
       );
       await AuthStorage.saveRefreshToken(result.refreshToken);
 
@@ -1302,7 +1302,7 @@ class _AccessRevokedScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 18),
                     const Text(
-                      'Доступ к приложению отключен',
+                      'Р”РѕСЃС‚СѓРї Рє РїСЂРёР»РѕР¶РµРЅРёСЋ РѕС‚РєР»СЋС‡РµРЅ',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 22,
@@ -1312,7 +1312,7 @@ class _AccessRevokedScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      'Похоже, доступ был отозван: сотрудник удален из заведения или подписка заведения неактивна.',
+                      'РџРѕС…РѕР¶Рµ, РґРѕСЃС‚СѓРї Р±С‹Р» РѕС‚РѕР·РІР°РЅ: СЃРѕС‚СЂСѓРґРЅРёРє СѓРґР°Р»РµРЅ РёР· Р·Р°РІРµРґРµРЅРёСЏ РёР»Рё РїРѕРґРїРёСЃРєР° Р·Р°РІРµРґРµРЅРёСЏ РЅРµР°РєС‚РёРІРЅР°.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14.5,
@@ -1334,7 +1334,7 @@ class _AccessRevokedScreen extends StatelessWidget {
                           ),
                         ),
                         child: const Text(
-                          'Проверить снова',
+                          'РџСЂРѕРІРµСЂРёС‚СЊ СЃРЅРѕРІР°',
                           style: TextStyle(
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
@@ -1363,7 +1363,7 @@ class _AccessRevokedScreen extends StatelessWidget {
                           ),
                         ),
                         child: const Text(
-                          'Выйти',
+                          'Р’С‹Р№С‚Рё',
                           style: TextStyle(fontWeight: FontWeight.w800),
                         ),
                       ),

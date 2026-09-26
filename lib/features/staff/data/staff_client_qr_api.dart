@@ -18,6 +18,8 @@ class StaffResolvedQrClient {
   final int visits;
   final bool created;
   final String message;
+  final bool rkeeperEnabled;
+  final String rkeeperAuthorizationToken;
 
   const StaffResolvedQrClient({
     required this.clientId,
@@ -30,6 +32,8 @@ class StaffResolvedQrClient {
     required this.visits,
     required this.created,
     required this.message,
+    required this.rkeeperEnabled,
+    required this.rkeeperAuthorizationToken,
   });
 
   factory StaffResolvedQrClient.fromJson(Map<String, dynamic> json) {
@@ -73,6 +77,9 @@ class StaffResolvedQrClient {
       visits: _toInt(client['visits'] ?? json['visits']),
       created: json['created'] == true,
       message: (json['message'] ?? '').toString(),
+      rkeeperEnabled: json['rkeeper_enabled'] == true,
+      rkeeperAuthorizationToken: (json['rkeeper_authorization_token'] ?? '')
+          .toString(),
     );
   }
 

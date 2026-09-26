@@ -15,7 +15,7 @@ import '../../data/auth_storage.dart';
 import '../../data/user_api.dart';
 import '../../../push/data/staff_push_device_api.dart';
 
-// === ЦВЕТОВАЯ ПАЛИТРА ===
+// === Р¦Р’Р•РўРћР’РђРЇ РџРђР›РРўР Рђ ===
 const Color kLoginMintTop = Color(0xFF0FCAC5);
 const Color kLoginMintMid = Color(0xFF0BAEBB);
 const Color kLoginMintBottom = Color(0xFF087D94);
@@ -99,7 +99,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
     super.dispose();
   }
 
-  // === ЛОГИКА: автозаполнение телефона + биометрия ===
+  // === Р›РћР“РРљРђ: Р°РІС‚РѕР·Р°РїРѕР»РЅРµРЅРёРµ С‚РµР»РµС„РѕРЅР° + Р±РёРѕРјРµС‚СЂРёСЏ ===
   Future<void> _initSavedLoginAndBiometric() async {
     final savedPhone = await AuthStorage.getSavedPhone();
     final savedPassword = await AuthStorage.getSavedPassword();
@@ -128,14 +128,14 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
 
         available = isSupported && (canCheck || availableBiometrics.isNotEmpty);
 
-        print('🔐 BIOMETRIC CHECK:');
+        print('рџ”ђ BIOMETRIC CHECK:');
         print('  canCheck: $canCheck');
         print('  isSupported: $isSupported');
         print('  biometricEnabled: $biometricEnabled');
         print('  hasRefreshSession: $hasRefreshSession');
         print('  available: $available');
       } catch (e) {
-        print('❌ BIOMETRIC ERROR: $e');
+        print('вќЊ BIOMETRIC ERROR: $e');
         available = false;
       }
     }
@@ -151,23 +151,23 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
 
   Future<void> _enableBiometricIfPossible() async {
     if (kIsWeb) {
-      print('⚠️ Web platform - biometric not available');
+      print('вљ пёЏ Web platform - biometric not available');
       return;
     }
 
     if (!_biometricAvailable) {
-      print('⚠️ Biometric not available on device');
+      print('вљ пёЏ Biometric not available on device');
       return;
     }
 
     try {
       await AuthStorage.setBiometricEnabled(true);
-      print('✅ Biometric enabled successfully');
+      print('вњ… Biometric enabled successfully');
 
       if (!mounted) return;
       setState(() => _biometricEnabled = true);
     } catch (e) {
-      print('❌ Error enabling biometric: $e');
+      print('вќЊ Error enabling biometric: $e');
     }
   }
 
@@ -177,11 +177,11 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
     bool saveCredentials = true,
   }) async {
     if (phone.isEmpty) {
-      setState(() => _error = 'Введите номер телефона');
+      setState(() => _error = 'Р’РІРµРґРёС‚Рµ РЅРѕРјРµСЂ С‚РµР»РµС„РѕРЅР°');
       return;
     }
     if (password.isEmpty) {
-      setState(() => _error = 'Введите PIN-код');
+      setState(() => _error = 'Р’РІРµРґРёС‚Рµ PIN-РєРѕРґ');
       return;
     }
 
@@ -202,7 +202,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Ошибка входа: $e';
+        _error = 'РћС€РёР±РєР° РІС…РѕРґР°: $e';
       });
       return;
     }
@@ -220,17 +220,17 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
       await AuthStorage.saveAccessToken(result.accessToken);
       await AuthStorage.saveRefreshToken(result.refreshToken);
       StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(
-        appVersion: '1.0.16+60',
+        appVersion: '1.0.24+68',
       );
       TextInput.finishAutofillContext(shouldSave: true);
 
       if (saveCredentials) {
         final phoneToSave = result.phone.isNotEmpty ? result.phone : phone;
         await AuthStorage.savePhoneOnly(phoneToSave);
-        print('✅ Phone saved: $phoneToSave');
+        print('вњ… Phone saved: $phoneToSave');
 
         await AuthStorage.savePassword(password);
-        print('✅ Password saved');
+        print('вњ… Password saved');
 
         await _enableBiometricIfPossible();
       }
@@ -238,7 +238,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Ошибка сохранения сессии: $e';
+        _error = 'РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ СЃРµСЃСЃРёРё: $e';
       });
       return;
     }
@@ -253,7 +253,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
       MaterialPageRoute(builder: (_) => const StaffEstablishmentsScreen()),
       (route) => false,
     );
-  } // ✅ ДОБАВЛЕНА ЗАКРЫВАЮЩАЯ СКОБКА
+  } // вњ… Р”РћР‘РђР’Р›Р•РќРђ Р—РђРљР Р«Р’РђР®Р©РђРЇ РЎРљРћР‘РљРђ
 
   Future<void> _submit() async => await _submitWithCredentials(
     phone: _phoneController.text.trim(),
@@ -263,23 +263,29 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
 
   Future<void> _loginWithBiometric() async {
     if (kIsWeb) {
-      setState(() => _error = 'Биометрия в web-версии не поддерживается');
+      setState(
+        () => _error =
+            'Р‘РёРѕРјРµС‚СЂРёСЏ РІ web-РІРµСЂСЃРёРё РЅРµ РїРѕРґРґРµСЂР¶РёРІР°РµС‚СЃСЏ',
+      );
       return;
     }
 
     if (_loading || _biometricLoading) {
-      print('⚠️ Already loading');
+      print('вљ пёЏ Already loading');
       return;
     }
 
     final refreshToken = await AuthStorage.getRefreshToken();
     if (refreshToken == null || refreshToken.trim().isEmpty) {
-      setState(() => _error = 'Нет сохранённой сессии для входа');
-      print('❌ No refresh token');
+      setState(
+        () => _error =
+            'РќРµС‚ СЃРѕС…СЂР°РЅС‘РЅРЅРѕР№ СЃРµСЃСЃРёРё РґР»СЏ РІС…РѕРґР°',
+      );
+      print('вќЊ No refresh token');
       return;
     }
 
-    print('🔐 Starting biometric authentication...');
+    print('рџ”ђ Starting biometric authentication...');
     setState(() {
       _biometricLoading = true;
       _error = null;
@@ -287,17 +293,17 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
 
     try {
       final authenticated = await _localAuth.authenticate(
-        localizedReason: 'Войдите в Flowru Business',
+        localizedReason: 'Р’РѕР№РґРёС‚Рµ РІ Flowru Business',
         biometricOnly: true,
         persistAcrossBackgrounding: true,
       );
 
-      print('🔐 Authentication result: $authenticated');
+      print('рџ”ђ Authentication result: $authenticated');
 
       if (!authenticated) {
         if (!mounted) return;
         setState(() => _biometricLoading = false);
-        print('❌ User cancelled biometric');
+        print('вќЊ User cancelled biometric');
         return;
       }
 
@@ -316,14 +322,14 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
           _hasRefreshSession = false;
           _error = result.message;
         });
-        print('❌ Refresh failed: ${result.message}');
+        print('вќЊ Refresh failed: ${result.message}');
         return;
       }
 
       await AuthStorage.saveAccessToken(result.accessToken);
       await AuthStorage.saveRefreshToken(result.refreshToken);
       StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(
-        appVersion: '1.0.16+60',
+        appVersion: '1.0.24+68',
       );
       await AuthStorage.setBiometricEnabled(true);
 
@@ -335,26 +341,30 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
         _hasRefreshSession = true;
       });
 
-      print('✅ Biometric login successful!');
+      print('вњ… Biometric login successful!');
 
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const StaffEstablishmentsScreen()),
         (route) => false,
       );
     } on PlatformException catch (e) {
-      print('❌ PlatformException: ${e.code} - ${e.message}');
+      print('вќЊ PlatformException: ${e.code} - ${e.message}');
 
-      String message = 'Не удалось выполнить вход по биометрии';
+      String message =
+          'РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РїРѕР»РЅРёС‚СЊ РІС…РѕРґ РїРѕ Р±РёРѕРјРµС‚СЂРёРё';
       final code = e.code.toLowerCase();
 
       if (code.contains('notavailable') || code.contains('not_available')) {
-        message = 'Биометрия недоступна на этом устройстве';
+        message =
+            'Р‘РёРѕРјРµС‚СЂРёСЏ РЅРµРґРѕСЃС‚СѓРїРЅР° РЅР° СЌС‚РѕРј СѓСЃС‚СЂРѕР№СЃС‚РІРµ';
       } else if (code.contains('notenrolled')) {
-        message = 'В устройстве не настроен Face ID / Touch ID';
+        message =
+            'Р’ СѓСЃС‚СЂРѕР№СЃС‚РІРµ РЅРµ РЅР°СЃС‚СЂРѕРµРЅ Face ID / Touch ID';
       } else if (code.contains('lockedout')) {
-        message = 'Биометрия временно заблокирована';
+        message =
+            'Р‘РёРѕРјРµС‚СЂРёСЏ РІСЂРµРјРµРЅРЅРѕ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅР°';
       } else if (code.contains('userfallback')) {
-        message = 'Пользователь выбрал ввод пароля';
+        message = 'РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РІС‹Р±СЂР°Р» РІРІРѕРґ РїР°СЂРѕР»СЏ';
       }
 
       if (!mounted) return;
@@ -363,11 +373,12 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
         _error = message;
       });
     } catch (e) {
-      print('❌ General error: $e');
+      print('вќЊ General error: $e');
       if (!mounted) return;
       setState(() {
         _biometricLoading = false;
-        _error = 'Не удалось выполнить вход по Face ID / Touch ID';
+        _error =
+            'РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РїРѕР»РЅРёС‚СЊ РІС…РѕРґ РїРѕ Face ID / Touch ID';
       });
     }
   }
@@ -385,13 +396,15 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
       _passwordController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Пароль обновлён. Войдите с новым паролем.'),
+          content: Text(
+            'РџР°СЂРѕР»СЊ РѕР±РЅРѕРІР»С‘РЅ. Р’РѕР№РґРёС‚Рµ СЃ РЅРѕРІС‹Рј РїР°СЂРѕР»РµРј.',
+          ),
         ),
       );
     }
   }
 
-  // === ВИЗУАЛЬНЫЕ КОМПОНЕНТЫ ===
+  // === Р’РР—РЈРђР›Р¬РќР«Р• РљРћРњРџРћРќР•РќРўР« ===
   Widget _softBlob({
     required double width,
     required double height,
@@ -899,7 +912,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
               )
             : const Icon(Icons.fingerprint, color: kLoginBlue),
         label: const Text(
-          'Войти по Face ID / Touch ID',
+          'Р’РѕР№С‚Рё РїРѕ Face ID / Touch ID',
           style: TextStyle(
             color: kLoginBlue,
             fontSize: 15,
@@ -988,7 +1001,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
         ? 14.0
         : 22.0;
 
-    // Шрифты оставлены в прежнем диапазоне: визуал меняем, масштаб не раздуваем.
+    // РЁСЂРёС„С‚С‹ РѕСЃС‚Р°РІР»РµРЅС‹ РІ РїСЂРµР¶РЅРµРј РґРёР°РїР°Р·РѕРЅРµ: РІРёР·СѓР°Р» РјРµРЅСЏРµРј, РјР°СЃС€С‚Р°Р± РЅРµ СЂР°Р·РґСѓРІР°РµРј.
     final titleSize = isVerySmall
         ? 20.0
         : isSmallScreen
@@ -1128,7 +1141,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
                                   ),
                                   SizedBox(height: isVerySmall ? 4 : gapMedium),
                                   Text(
-                                    'Вход сотрудника',
+                                    'Р’С…РѕРґ СЃРѕС‚СЂСѓРґРЅРёРєР°',
                                     style: TextStyle(
                                       fontSize: titleSize,
                                       fontWeight: FontWeight.w900,
@@ -1140,7 +1153,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
                                   ),
                                   SizedBox(height: isVerySmall ? 2 : gapSmall),
                                   Text(
-                                    'Введите телефон и PIN-код,\nвыданный владельцем.',
+                                    'Р’РІРµРґРёС‚Рµ С‚РµР»РµС„РѕРЅ Рё PIN-РєРѕРґ,\nРІС‹РґР°РЅРЅС‹Р№ РІР»Р°РґРµР»СЊС†РµРј.',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontSize: subtitleSize,
@@ -1155,7 +1168,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
                                       children: [
                                         _buildGlassInput(
                                           controller: _phoneController,
-                                          label: 'Телефон',
+                                          label: 'РўРµР»РµС„РѕРЅ',
                                           icon: Icons.phone_android_outlined,
                                           keyboardType: TextInputType.phone,
                                           autofillHints: const [
@@ -1170,7 +1183,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
                                         ),
                                         _buildGlassInput(
                                           controller: _passwordController,
-                                          label: 'PIN-код',
+                                          label: 'PIN-РєРѕРґ',
                                           icon: Icons.lock_outline_rounded,
                                           obscureText: !_showPassword,
                                           keyboardType: TextInputType.number,
@@ -1217,7 +1230,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
                                   SizedBox(height: isVerySmall ? 10 : gapLarge),
                                   _glassButton(
                                     onPressed: _loading ? null : _submit,
-                                    text: 'Войти',
+                                    text: 'Р’РѕР№С‚Рё',
                                     isLoading: _loading,
                                   ),
                                   SizedBox(height: isVerySmall ? 6 : 10),
@@ -1226,7 +1239,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
 
                                   SizedBox(height: isVerySmall ? 6 : 10),
                                   Text(
-                                    'Нет доступа? Обратитесь к владельцу.',
+                                    'РќРµС‚ РґРѕСЃС‚СѓРїР°? РћР±СЂР°С‚РёС‚РµСЃСЊ Рє РІР»Р°РґРµР»СЊС†Сѓ.',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontSize: isVerySmall
@@ -1330,7 +1343,7 @@ class _LoginOrbitPainter extends CustomPainter {
       oldDelegate.progress != progress;
 }
 
-// ========== ВОССТАНОВЛЕНИЕ ПАРОЛЯ ==========
+// ========== Р’РћРЎРЎРўРђРќРћР’Р›Р•РќРР• РџРђР РћР›РЇ ==========
 class _PasswordRecoverySheet extends StatefulWidget {
   const _PasswordRecoverySheet();
   @override
@@ -1358,7 +1371,9 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && mounted)
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось открыть Telegram.')),
+        const SnackBar(
+          content: Text('РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ Telegram.'),
+        ),
       );
   }
 
@@ -1372,7 +1387,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
         if (message is String && message.trim().isNotEmpty) return message;
       }
     } catch (_) {}
-    return 'Ошибка запроса (${response.statusCode})';
+    return 'РћС€РёР±РєР° Р·Р°РїСЂРѕСЃР° (${response.statusCode})';
   }
 
   Future<void> _requestCode() async {
@@ -1380,7 +1395,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
     if (phone.isEmpty) {
       setState(() {
         _requestSuccess = false;
-        _requestMessage = 'Введите номер телефона';
+        _requestMessage = 'Р’РІРµРґРёС‚Рµ РЅРѕРјРµСЂ С‚РµР»РµС„РѕРЅР°';
       });
       return;
     }
@@ -1400,7 +1415,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
       );
       if (!mounted) return;
       if (response.statusCode == 200) {
-        String message = 'Код отправлен';
+        String message = 'РљРѕРґ РѕС‚РїСЂР°РІР»РµРЅ';
         try {
           final decoded = jsonDecode(response.body);
           if (decoded is Map<String, dynamic> && decoded['message'] is String)
@@ -1423,7 +1438,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
       setState(() {
         _requestingCode = false;
         _requestSuccess = false;
-        _requestMessage = 'Не удалось запросить код';
+        _requestMessage = 'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РїСЂРѕСЃРёС‚СЊ РєРѕРґ';
       });
     }
   }
@@ -1436,28 +1451,28 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
     if (phone.isEmpty) {
       setState(() {
         _confirmSuccess = false;
-        _confirmMessage = 'Введите номер телефона';
+        _confirmMessage = 'Р’РІРµРґРёС‚Рµ РЅРѕРјРµСЂ С‚РµР»РµС„РѕРЅР°';
       });
       return;
     }
     if (code.isEmpty) {
       setState(() {
         _confirmSuccess = false;
-        _confirmMessage = 'Введите код из Telegram';
+        _confirmMessage = 'Р’РІРµРґРёС‚Рµ РєРѕРґ РёР· Telegram';
       });
       return;
     }
     if (newPassword.isEmpty) {
       setState(() {
         _confirmSuccess = false;
-        _confirmMessage = 'Введите новый пароль';
+        _confirmMessage = 'Р’РІРµРґРёС‚Рµ РЅРѕРІС‹Р№ РїР°СЂРѕР»СЊ';
       });
       return;
     }
     if (confirmPassword.isEmpty) {
       setState(() {
         _confirmSuccess = false;
-        _confirmMessage = 'Подтвердите новый пароль';
+        _confirmMessage = 'РџРѕРґС‚РІРµСЂРґРёС‚Рµ РЅРѕРІС‹Р№ РїР°СЂРѕР»СЊ';
       });
       return;
     }
@@ -1485,7 +1500,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
         setState(() {
           _confirming = false;
           _confirmSuccess = true;
-          _confirmMessage = 'Пароль успешно изменён';
+          _confirmMessage = 'РџР°СЂРѕР»СЊ СѓСЃРїРµС€РЅРѕ РёР·РјРµРЅС‘РЅ';
         });
         await Future.delayed(const Duration(milliseconds: 500));
         if (!mounted) return;
@@ -1502,7 +1517,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
       setState(() {
         _confirming = false;
         _confirmSuccess = false;
-        _confirmMessage = 'Не удалось изменить пароль';
+        _confirmMessage = 'РќРµ СѓРґР°Р»РѕСЃСЊ РёР·РјРµРЅРёС‚СЊ РїР°СЂРѕР»СЊ';
       });
     }
   }
@@ -1649,7 +1664,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Восстановление пароля',
+                  'Р’РѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ РїР°СЂРѕР»СЏ',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 28,
@@ -1660,7 +1675,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                 ),
                 const SizedBox(height: 9),
                 const Text(
-                  'Сначала откройте сервисный бот восстановления,\nнажмите Start, а потом запросите код.',
+                  'РЎРЅР°С‡Р°Р»Р° РѕС‚РєСЂРѕР№С‚Рµ СЃРµСЂРІРёСЃРЅС‹Р№ Р±РѕС‚ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ,\nРЅР°Р¶РјРёС‚Рµ Start, Р° РїРѕС‚РѕРј Р·Р°РїСЂРѕСЃРёС‚Рµ РєРѕРґ.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14.5,
@@ -1686,7 +1701,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                           Icon(Icons.info_rounded, size: 19, color: kLoginBlue),
                           SizedBox(width: 9),
                           Text(
-                            'Что нужно сделать',
+                            'Р§С‚Рѕ РЅСѓР¶РЅРѕ СЃРґРµР»Р°С‚СЊ',
                             style: TextStyle(
                               fontSize: 14.5,
                               fontWeight: FontWeight.w900,
@@ -1697,7 +1712,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                       ),
                       const SizedBox(height: 13),
                       const Text(
-                        '1. Перейдите в бот восстановления',
+                        '1. РџРµСЂРµР№РґРёС‚Рµ РІ Р±РѕС‚ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -1742,7 +1757,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                       ),
                       const SizedBox(height: 11),
                       const Text(
-                        '2. Внутри бота обязательно нажмите Start',
+                        '2. Р’РЅСѓС‚СЂРё Р±РѕС‚Р° РѕР±СЏР·Р°С‚РµР»СЊРЅРѕ РЅР°Р¶РјРёС‚Рµ Start',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -1751,7 +1766,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                       ),
                       const SizedBox(height: 7),
                       const Text(
-                        '3. Вернитесь сюда и запросите код',
+                        '3. Р’РµСЂРЅРёС‚РµСЃСЊ СЃСЋРґР° Рё Р·Р°РїСЂРѕСЃРёС‚Рµ РєРѕРґ',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -1771,7 +1786,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                           ),
                           icon: const Icon(Icons.telegram, color: kLoginBlue),
                           label: const Text(
-                            'Открыть бот восстановления',
+                            'РћС‚РєСЂС‹С‚СЊ Р±РѕС‚ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ',
                             style: TextStyle(
                               color: kLoginBlue,
                               fontWeight: FontWeight.w900,
@@ -1787,7 +1802,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: _inputDecoration(
-                    'Телефон сотрудника',
+                    'РўРµР»РµС„РѕРЅ СЃРѕС‚СЂСѓРґРЅРёРєР°',
                     hint: '+7 978 547 30 14',
                   ),
                 ),
@@ -1826,7 +1841,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                             ),
                           )
                         : const Text(
-                            'Запросить код восстановления',
+                            'Р—Р°РїСЂРѕСЃРёС‚СЊ РєРѕРґ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 15.5,
@@ -1854,8 +1869,8 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                         controller: _codeController,
                         keyboardType: TextInputType.number,
                         decoration: _inputDecoration(
-                          'Код из Telegram',
-                          hint: 'Например: 123456',
+                          'РљРѕРґ РёР· Telegram',
+                          hint: 'РќР°РїСЂРёРјРµСЂ: 123456',
                         ),
                       ),
                       const SizedBox(height: 13),
@@ -1863,7 +1878,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                         controller: _newPasswordController,
                         obscureText: !_showNewPassword,
                         decoration: _inputDecoration(
-                          'Новый пароль',
+                          'РќРѕРІС‹Р№ РїР°СЂРѕР»СЊ',
                           suffixIcon: IconButton(
                             onPressed: () => setState(
                               () => _showNewPassword = !_showNewPassword,
@@ -1882,7 +1897,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                         controller: _confirmPasswordController,
                         obscureText: !_showConfirmPassword,
                         decoration: _inputDecoration(
-                          'Подтвердите пароль',
+                          'РџРѕРґС‚РІРµСЂРґРёС‚Рµ РїР°СЂРѕР»СЊ',
                           suffixIcon: IconButton(
                             onPressed: () => setState(
                               () =>
@@ -1919,7 +1934,7 @@ class _PasswordRecoverySheetState extends State<_PasswordRecoverySheet> {
                                   ),
                                 )
                               : const Text(
-                                  'Сменить пароль',
+                                  'РЎРјРµРЅРёС‚СЊ РїР°СЂРѕР»СЊ',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w900,

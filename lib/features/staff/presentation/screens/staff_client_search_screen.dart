@@ -14,6 +14,7 @@ import '../../../../core/config/app_config.dart';
 import 'staff_client_detail_screen.dart';
 import '../../data/staff_client_qr_api.dart';
 import 'staff_qr_scanner_screen.dart';
+import 'staff_rkeeper_order_screen.dart';
 
 const Color kSearchMintTop = Color(0xFF0CB7B3);
 const Color kSearchMintMid = Color(0xFF08A9AB);
@@ -248,15 +249,59 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
       if (!mounted) return;
       Navigator.of(context).pop();
 
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => StaffClientDetailScreen(
-            establishmentId: widget.establishmentId,
-            establishmentName: resolved.establishmentName,
-            clientId: resolved.clientId,
+      var action = 'client';
+      if (resolved.rkeeperEnabled &&
+          resolved.rkeeperAuthorizationToken.trim().isNotEmpty) {
+        action =
+            await showCupertinoModalPopup<String>(
+              context: context,
+              builder: (popupContext) => CupertinoActionSheet(
+                title: Text(resolved.clientName),
+                message: Text(
+                  'Карта № ${resolved.clientId} · ${resolved.points} баллов',
+                ),
+                actions: [
+                  CupertinoActionSheetAction(
+                    isDefaultAction: true,
+                    onPressed: () => Navigator.pop(popupContext, 'client'),
+                    child: const Text('Открыть карточку клиента'),
+                  ),
+                  CupertinoActionSheetAction(
+                    onPressed: () => Navigator.pop(popupContext, 'rkeeper'),
+                    child: const Text('Передать в r_keeper'),
+                  ),
+                ],
+                cancelButton: CupertinoActionSheetAction(
+                  onPressed: () => Navigator.pop(popupContext, 'cancel'),
+                  child: const Text('Отмена'),
+                ),
+              ),
+            ) ??
+            'cancel';
+      }
+
+      if (!mounted || action == 'cancel') return;
+
+      if (action == 'rkeeper') {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => StaffRkeeperOrderScreen(
+              establishmentId: widget.establishmentId,
+              client: resolved,
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => StaffClientDetailScreen(
+              establishmentId: widget.establishmentId,
+              establishmentName: resolved.establishmentName,
+              clientId: resolved.clientId,
+            ),
+          ),
+        );
+      }
 
       if (mounted) {
         _resetSearch();
