@@ -224,7 +224,7 @@ class StaffPushDeviceApi {
   static void listenTokenRefresh() {
     FirebaseMessaging.instance.onTokenRefresh.listen((token) async {
       debugPrint('Staff FCM token refreshed: $token');
-      await registerCurrentDeviceToken(appVersion: '1.0.25+69');
+      await registerCurrentDeviceToken(appVersion: '1.0.26+70');
     });
   }
 }

@@ -17,8 +17,7 @@ class StaffRkeeperOrderScreen extends StatefulWidget {
   });
 
   @override
-  State<StaffRkeeperOrderScreen> createState() =>
-      _StaffRkeeperOrderScreenState();
+  State<StaffRkeeperOrderScreen> createState() => _StaffRkeeperOrderScreenState();
 }
 
 class _StaffRkeeperOrderScreenState extends State<StaffRkeeperOrderScreen> {
@@ -92,22 +91,44 @@ class _StaffRkeeperOrderScreenState extends State<StaffRkeeperOrderScreen> {
           establishmentId: widget.establishmentId,
           commandId: commandId,
         );
-        if (status['status'] == 'applied' || status['status'] == 'failed')
-          break;
+        if (status['status'] == 'applied' || status['status'] == 'failed') break;
       }
       if (!mounted) return;
       if (status?['status'] != 'applied') {
-        throw Exception(
-          status?['error_text'] ?? 'r_keeper не подтвердил операцию',
-        );
+        if (status?['error_code'] == 'order_open_on_terminal') {
+          final retry = await showCupertinoDialog<bool>(
+            context: context,
+            builder: (_) => CupertinoAlertDialog(
+              title: const Text('Заказ открыт на кассе'),
+              content: Text(
+                '${status?['user_message'] ?? 'Сохраните заказ на терминале и выйдите к списку столов. Затем повторите назначение клиента.'}',
+              ),
+              actions: [
+                CupertinoDialogAction(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Отмена'),
+                ),
+                CupertinoDialogAction(
+                  isDefaultAction: true,
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Повторить'),
+                ),
+              ],
+            ),
+          );
+          if (retry == true && mounted) {
+            setState(() => _applyingGuid = null);
+            await _apply(order);
+          }
+          return;
+        }
+        throw Exception(status?['error_text'] ?? 'r_keeper не подтвердил операцию');
       }
       await showCupertinoDialog<void>(
         context: context,
         builder: (_) => CupertinoAlertDialog(
           title: const Text('Готово'),
-          content: Text(
-            'Карта ${widget.client.clientId} назначена заказу ${order.name}.',
-          ),
+          content: Text('Карта ${widget.client.clientId} назначена заказу ${order.name}.'),
           actions: [
             CupertinoDialogAction(
               onPressed: () => Navigator.pop(context),
@@ -152,9 +173,7 @@ class _StaffRkeeperOrderScreenState extends State<StaffRkeeperOrderScreen> {
               child: ListTile(
                 leading: const CircleAvatar(child: Icon(CupertinoIcons.person)),
                 title: Text(widget.client.clientName),
-                subtitle: Text(
-                  'Карта № ${widget.client.clientId} · ${widget.client.points} баллов',
-                ),
+                subtitle: Text('Карта № ${widget.client.clientId} · ${widget.client.points} баллов'),
               ),
             ),
             const SizedBox(height: 12),
@@ -168,19 +187,14 @@ class _StaffRkeeperOrderScreenState extends State<StaffRkeeperOrderScreen> {
             else if (_orders.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(36),
-                child: Text(
-                  'Открытых заказов сейчас нет',
-                  textAlign: TextAlign.center,
-                ),
+                child: Text('Открытых заказов сейчас нет', textAlign: TextAlign.center),
               )
             else
               ..._orders.map(
                 (order) => Card(
                   margin: const EdgeInsets.only(bottom: 10),
                   child: ListTile(
-                    leading: const CircleAvatar(
-                      child: Icon(CupertinoIcons.table),
-                    ),
+                    leading: const CircleAvatar(child: Icon(CupertinoIcons.table)),
                     title: Text(order.name),
                     subtitle: Text(
                       'Стол ${order.tableCode.isEmpty ? '—' : order.tableCode}\n'
