@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
 import '../../auth/data/auth_storage.dart';
+import '../../auth/data/user_api.dart';
 import '../../../core/config/app_config.dart';
 
 class StaffSubscriptionSaleException implements Exception {
@@ -221,7 +223,106 @@ class StaffOfflineSubscriptionSaleResult {
   }
 }
 
+class StaffGiftSubscriptionSaleResult {
+  final int saleId;
+  final String code;
+  final DateTime? redeemBy;
+  final bool deliveredToApp;
+
+  const StaffGiftSubscriptionSaleResult({
+    required this.saleId,
+    required this.code,
+    required this.redeemBy,
+    required this.deliveredToApp,
+  });
+
+  factory StaffGiftSubscriptionSaleResult.fromJson(Map<String, dynamic> json) {
+    return StaffGiftSubscriptionSaleResult(
+      saleId: _toInt(json['sale_id']),
+      code: (json['code'] ?? '').toString(),
+      redeemBy: _toDateTime(json['redeem_by']),
+      deliveredToApp: json['delivered_to_app'] == true,
+    );
+  }
+}
+
 class StaffSubscriptionSalesApi {
+  Future<StaffGiftSubscriptionSaleResult> sellGift({
+    required int establishmentId,
+    required int planId,
+    required String paymentMethod,
+    required String idempotencyKey,
+    required String code,
+    required int buyerClientId,
+    String? receiptNumber,
+  }) async {
+    if (buyerClientId <= 0) {
+      throw const StaffSubscriptionSaleException(
+        'Сначала отсканируйте QR клиента.',
+      );
+    }
+    // FLOWRU_CERTIFICATES_V43_REFRESH: one key and code for every retry.
+    final body = jsonEncode({
+      'establishment_id': establishmentId,
+      'plan_id': planId,
+      'payment_method': paymentMethod,
+      'receipt_number': _cleanNullable(receiptNumber),
+      'idempotency_key': idempotencyKey,
+      'code': code,
+      'buyer_client_id': buyerClientId,
+    });
+    var token = await _token();
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        final response = await http
+            .post(
+              Uri.parse('${AppConfig.baseUrl}/api/v1/staff/subscription-gifts'),
+              headers: _headers(token),
+              body: body,
+            )
+            .timeout(const Duration(seconds: 18));
+        if (response.statusCode == 401 && attempt < 2) {
+          token = await _refreshAccessToken();
+          continue;
+        }
+        if (response.statusCode >= 500 && attempt < 2) continue;
+        return StaffGiftSubscriptionSaleResult.fromJson(
+          _decodeResponse(response),
+        );
+      } on TimeoutException {
+        if (attempt == 2) break;
+      } on http.ClientException {
+        if (attempt == 2) break;
+      }
+    }
+    throw const StaffSubscriptionSaleException(
+      'Не удалось подтвердить продажу. Не принимайте оплату повторно: '
+      'нажмите «Продать сертификат клиенту» ещё раз.',
+    );
+  }
+
+  Future<String> _refreshAccessToken() async {
+    final refreshToken = await AuthStorage.getRefreshToken();
+    if (refreshToken == null || refreshToken.trim().isEmpty) {
+      throw const StaffSubscriptionSaleException(
+        'Сессия завершена. Войдите снова и повторите отправку той же продажи.',
+      );
+    }
+    final result = await UserApi().refresh(
+      refreshToken: refreshToken.trim(),
+      deviceId: 'staff-mobile',
+      platform: 'mobile',
+    );
+    if (!result.ok || result.accessToken.trim().isEmpty) {
+      throw StaffSubscriptionSaleException(
+        result.message.isEmpty ? 'Войдите в приложение снова' : result.message,
+      );
+    }
+    await AuthStorage.saveAccessToken(result.accessToken);
+    await AuthStorage.saveRefreshToken(result.refreshToken);
+    return result.accessToken.trim();
+  }
+
   Future<String> _token() async {
     final token = await AuthStorage.getAccessToken();
 

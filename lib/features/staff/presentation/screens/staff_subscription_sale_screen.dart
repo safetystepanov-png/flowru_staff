@@ -45,6 +45,10 @@ class _StaffSubscriptionSaleScreenState
   StaffSubscriptionSaleClient? _client;
   StaffSubscriptionSalePlan? _selectedPlan;
   StaffOfflineSubscriptionSaleResult? _result;
+  StaffGiftSubscriptionSaleResult? _giftResult;
+  bool _giftMode = false;
+  bool _giftSalePending = false;
+  String? _giftCode;
 
   List<StaffSubscriptionSalePlan> _plans = const [];
 
@@ -70,10 +74,6 @@ class _StaffSubscriptionSaleScreenState
       vsync: this,
       duration: const Duration(milliseconds: 1050),
     );
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scanClient();
-    });
   }
 
   @override
@@ -85,7 +85,7 @@ class _StaffSubscriptionSaleScreenState
   }
 
   Future<void> _scanClient() async {
-    if (_scanning || _activating) return;
+    if (_scanning || _activating || _giftSalePending) return;
 
     setState(() {
       _scanning = true;
@@ -117,6 +117,7 @@ class _StaffSubscriptionSaleScreenState
       }
 
       setState(() {
+        _giftMode = true;
         _loading = true;
         _scanning = false;
         _client = null;
@@ -173,6 +174,77 @@ class _StaffSubscriptionSaleScreenState
         print(error);
         print('=======================================');
         _error = error.toString().replaceFirst('Exception: ', '').trim();
+      });
+    }
+  }
+
+  String _newGiftCode() {
+    final random = math.Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    return 'FLOW-${bytes.map((value) => value.toRadixString(16).padLeft(2, '0')).join().toUpperCase()}';
+  }
+
+  Future<void> _sellGift() async {
+    final plan = _selectedPlan;
+    final buyer = _client;
+    if (buyer == null || plan == null || _activating) return;
+    if (!_paymentConfirmed) {
+      setState(() => _error = 'Подтвердите, что оплата уже принята на кассе.');
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Продать сертификат клиенту?'),
+        content: Text(
+          '${plan.name} · ${_money(plan.price)}\n\nПосле оплаты сертификат появится у ${buyer.name} в приложении. Срок абонемента начнётся после активации.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Оплата получена'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final code = _giftCode ?? _newGiftCode();
+    final key =
+        _idempotencyKey ??
+        'staff-gift-${widget.establishmentId}-${DateTime.now().microsecondsSinceEpoch}';
+    _giftCode = code;
+    _idempotencyKey = key;
+    setState(() {
+      _activating = true;
+      _giftSalePending = true;
+      _error = null;
+    });
+    try {
+      final result = await _salesApi.sellGift(
+        establishmentId: widget.establishmentId,
+        planId: plan.id,
+        paymentMethod: _paymentMethod,
+        receiptNumber: _receiptController.text,
+        idempotencyKey: key,
+        code: code,
+        buyerClientId: buyer.id,
+      );
+      if (!mounted) return;
+      setState(() {
+        _giftResult = result;
+        _giftSalePending = false;
+        _activating = false;
+      });
+      _successController.forward(from: 0);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _activating = false;
+        _error = _message(error);
       });
     }
   }
@@ -416,6 +488,9 @@ class _StaffSubscriptionSaleScreenState
 
   void _reset() {
     setState(() {
+      _giftMode = false;
+      _giftResult = null;
+      _giftCode = null;
       _client = null;
       _plans = const [];
       _selectedPlan = null;
@@ -428,11 +503,11 @@ class _StaffSubscriptionSaleScreenState
     });
 
     _successController.reset();
-    _scanClient();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_giftResult != null) return _buildGiftSuccess();
     if (_result != null) {
       return _buildSuccess();
     }
@@ -454,7 +529,7 @@ class _StaffSubscriptionSaleScreenState
                         ? _loader()
                         : _client == null
                         ? _emptyState()
-                        : _saleForm(),
+                        : _giftForm(),
                   ),
                 ),
               ],
@@ -524,10 +599,16 @@ class _StaffSubscriptionSaleScreenState
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
       child: Row(
         children: [
-          _roundButton(
-            CupertinoIcons.back,
-            () => Navigator.of(context).pop(_result != null),
-          ),
+          _roundButton(CupertinoIcons.back, () {
+            if (_giftSalePending) {
+              setState(
+                () => _error =
+                    'Продажа ещё проверяется. Повторите отправку той же продажи.',
+              );
+              return;
+            }
+            Navigator.of(context).pop(_result != null);
+          }),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -676,44 +757,106 @@ class _StaffSubscriptionSaleScreenState
     );
   }
 
-  Widget _saleForm() {
-    final client = _client!;
-
+  // FLOWRU_CERTIFICATES_V43_QR_FIRST
+  Widget _giftForm() {
+    final buyer = _client!;
     return Column(
       children: [
-        _clientCard(client),
+        _clientCard(buyer),
         const SizedBox(height: 14),
-        _planCard(),
+        IgnorePointer(ignoring: _giftSalePending, child: _planCard()),
         const SizedBox(height: 14),
-        _paymentCard(),
+        IgnorePointer(ignoring: _giftSalePending, child: _paymentCard()),
         if (_error != null) ...[const SizedBox(height: 14), _errorBox()],
         const SizedBox(height: 18),
         SizedBox(
           width: double.infinity,
-          child: FilledButton(
-            onPressed: _activating ? null : _activate,
+          child: FilledButton.icon(
+            onPressed: _selectedPlan == null || _activating ? null : _sellGift,
+            icon: const Icon(CupertinoIcons.gift_fill),
+            label: const Text('Продать сертификат клиенту'),
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(62),
               backgroundColor: _saleViolet,
-              disabledBackgroundColor: _saleViolet.withOpacity(0.44),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-            ),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(CupertinoIcons.checkmark_shield_fill, size: 23),
-                SizedBox(width: 10),
-                Text(
-                  'Активировать абонемент',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
-                ),
-              ],
             ),
           ),
         ),
+        TextButton(
+          onPressed: _giftSalePending ? null : _reset,
+          child: const Text('Сканировать другого клиента'),
+        ),
       ],
+    );
+  }
+
+  Widget _buildGiftSuccess() {
+    final gift = _giftResult!;
+    return Scaffold(
+      backgroundColor: _saleMintDeep,
+      body: Stack(
+        children: [
+          _background(),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(18),
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 460),
+                  padding: const EdgeInsets.all(26),
+                  decoration: _whiteDecoration(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        CupertinoIcons.gift_fill,
+                        size: 58,
+                        color: _saleViolet,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Сертификат у клиента',
+                        style: TextStyle(
+                          color: _saleInk,
+                          fontSize: 25,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        '${_selectedPlan?.name ?? 'Абонемент'} · ${_money(_selectedPlan?.price ?? 0)}',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Он появился у ${_client?.name ?? 'клиента'} в разделе «Профиль → Сертификаты». '
+                        'Клиент сможет активировать его себе или подарить.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: _saleSoft, height: 1.4),
+                      ),
+                      if (gift.redeemBy != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'На активацию — 5 суток. До ${_certificateDeadline(gift.redeemBy!.toLocal())}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: _saleSoft),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: const Text('Готово'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -827,8 +970,9 @@ class _StaffSubscriptionSaleScreenState
   Widget _planTile(StaffSubscriptionSalePlan plan) {
     final selected = _selectedPlan?.id == plan.id;
     final duplicate =
-        _client?.activeSubscriptions.any((item) => item.planId == plan.id) ??
-        false;
+        !_giftMode &&
+        (_client?.activeSubscriptions.any((item) => item.planId == plan.id) ??
+            false);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -1443,4 +1587,10 @@ String _date(DateTime value) {
   ];
 
   return '${value.day} ${months[value.month - 1]} ${value.year}';
+}
+
+// FLOWRU_CERTIFICATES_V44_20260930
+String _certificateDeadline(DateTime value) {
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${two(value.day)}.${two(value.month)}.${value.year} в ${two(value.hour)}:${two(value.minute)}';
 }
