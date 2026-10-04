@@ -614,6 +614,8 @@ class _StaffWorkScheduleScreenState extends State<StaffWorkScheduleScreen>
                             label: _sendingDraft ? 'Отправка...' : 'Отправить',
                             isPrimary: true,
                             onTap: () async {
+                              // FLOWRU_SCHEDULE_DOUBLE_TAP_GUARD_20261004
+                              if (_sendingDraft) return;
                               final selectedDays = selected.toList()..sort();
 
                               if (selectedDays.isEmpty) {

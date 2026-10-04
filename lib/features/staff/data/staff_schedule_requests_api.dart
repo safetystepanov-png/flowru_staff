@@ -210,6 +210,31 @@ class StaffScheduleRequestsApi {
     return null;
   }
 
+  // FLOWRU_SCHEDULE_NETWORK_RECONCILE_20261004
+  Future<MyScheduleRequestItem?> _recoverPendingSchedule(
+    int est,
+    int year,
+    int month,
+    List<int> days,
+    String? comment,
+  ) async {
+    try {
+      final saved = await getLatestMyRequest(
+        establishmentId: est,
+        year: year,
+        month: month,
+      ).timeout(const Duration(seconds: 10));
+      if (saved == null || saved.status != 'pending') return null;
+      final wanted = List<int>.from(days)..sort();
+      final actual = List<int>.from(saved.selectedDays)..sort();
+      if (wanted.join(',') != actual.join(',')) return null;
+      if ((saved.comment ?? '').trim() != (comment ?? '').trim()) return null;
+      return saved;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<MyScheduleRequestItem> submitScheduleRequest({
     required int establishmentId,
     required int year,
@@ -221,22 +246,47 @@ class StaffScheduleRequestsApi {
 
     final uri = Uri.parse('${AppConfig.baseUrl}/api/v1/staff/schedule/request');
 
-    final response = await http.post(
-      uri,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'establishment_id': establishmentId,
-        'year': year,
-        'month': month,
-        'selected_days': selectedDays,
-        if (comment != null && comment.trim().isNotEmpty)
-          'comment': comment.trim(),
-      }),
-    );
+    late final http.Response response;
+    try {
+      response = await http
+          .post(
+            uri,
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'establishment_id': establishmentId,
+              'year': year,
+              'month': month,
+              'selected_days': selectedDays,
+              if (comment != null && comment.trim().isNotEmpty)
+                'comment': comment.trim(),
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+    } catch (_) {
+      final saved = await _recoverPendingSchedule(
+        establishmentId,
+        year,
+        month,
+        selectedDays,
+        comment,
+      );
+      if (saved != null) return saved;
+      rethrow;
+    }
+    if (response.statusCode >= 500 || response.statusCode == 408) {
+      final saved = await _recoverPendingSchedule(
+        establishmentId,
+        year,
+        month,
+        selectedDays,
+        comment,
+      );
+      if (saved != null) return saved;
+    }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
