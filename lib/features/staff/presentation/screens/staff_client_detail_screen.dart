@@ -1,3 +1,4 @@
+import 'staff_loyalty_surface.dart';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -1666,49 +1667,56 @@ class _StaffClientDetailScreenState extends State<StaffClientDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kClientMintTop,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          widget.establishmentName,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        systemOverlayStyle: SystemUiOverlayStyle.light,
-      ),
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
-        child: Stack(
-          children: [
-            _background(),
-            SafeArea(
-              top: false,
-              child: _loading
-                  ? const Center(
-                      child: SizedBox(
-                        width: 42,
-                        height: 42,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3,
-                          valueColor: AlwaysStoppedAnimation(kClientViolet),
-                        ),
-                      ),
-                    )
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                      children: [_content()],
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+ final client=_client;
+ return LoyaltyPage(title:client?.displayName ?? 'Карточка клиента',subtitle:widget.establishmentName,children:[
+  if(_loading)const Padding(padding:EdgeInsets.all(40),child:Center(child:CircularProgressIndicator(color:loyaltyMint)))
+  else if(_error!=null || client==null)...[
+   loyaltyNotice(_error ?? 'Клиент не найден'),loyaltyButton('Обновить',_load)
+  ] else ...[
+   Row(children:[CircleAvatar(radius:30,backgroundColor:const Color(0xFFD4EBE8),foregroundColor:loyaltyMint,
+    child:Text(client.initials,style:const TextStyle(fontSize:22,fontWeight:FontWeight.w800))),
+    const SizedBox(width:16),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+     Text(client.phone ?? 'Телефон не указан',style:const TextStyle(color:loyaltyInk,fontSize:17,fontWeight:FontWeight.w700)),
+     const SizedBox(height:4),const Text('Программа лояльности',style:TextStyle(color:Color(0xFF607680)))])),
+    IconButton(tooltip:'Обновить данные',onPressed:_load,icon:const Icon(Icons.refresh_rounded,color:loyaltyMint))]),
+   const SizedBox(height:28),
+   Container(padding:const EdgeInsets.symmetric(vertical:24,horizontal:22),
+    decoration:BoxDecoration(borderRadius:BorderRadius.circular(26),gradient:const LinearGradient(
+     colors:[Color(0xFFCCEDE8),Color(0xFFE3E3FA)])),
+    child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+     const Text('БАЛАНС БАЛЛОВ',style:TextStyle(color:loyaltyMint,letterSpacing:1.6,fontSize:11,fontWeight:FontWeight.w800)),
+     const SizedBox(height:8),Text(client.balance.toStringAsFixed(client.balance==client.balance.roundToDouble()?0:2),
+      style:const TextStyle(color:loyaltyInk,fontSize:46,fontWeight:FontWeight.w800,letterSpacing:-1)),
+     const SizedBox(height:10),Wrap(spacing:22,runSpacing:8,children:[Text('${client.visits} визитов',style:const TextStyle(color:loyaltyInk)),
+      Text('Покупки · ${client.totalSpent.toStringAsFixed(0)} ₽',style:const TextStyle(color:loyaltyInk))])])),
+   const SizedBox(height:24),
+   LayoutBuilder(builder:(context,size){
+    final actions=[_loyaltyAction('Начислить','За новую покупку',Icons.add_rounded,loyaltyMint,()async{
+     await Navigator.of(context).push(MaterialPageRoute(builder:(_)=>StaffClientAccrualScreen(
+      establishmentId:widget.establishmentId,establishmentName:widget.establishmentName,clientId:widget.clientId,clientName:client.displayName)));
+     if(mounted)_load();
+    }),_loyaltyAction('Списать','Оплатить баллами',Icons.remove_rounded,const Color(0xFF7458B0),()async{
+     await Navigator.of(context).push(MaterialPageRoute(builder:(_)=>StaffClientSpendScreen(
+      establishmentId:widget.establishmentId,establishmentName:widget.establishmentName,clientId:widget.clientId,clientName:client.displayName)));
+     if(mounted)_load();
+    })];
+    return size.maxWidth<320 ? Column(children:[actions[0],const SizedBox(height:12),actions[1]]) : Row(children:[Expanded(child:actions[0]),const SizedBox(width:12),Expanded(child:actions[1])]);
+   }),
+   const SizedBox(height:14),
+   ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:4,vertical:10),leading:const Icon(Icons.history_rounded,color:loyaltyMint),
+    title:const Text('История операций',style:TextStyle(color:loyaltyInk,fontWeight:FontWeight.w700)),
+    subtitle:const Text('Начисления и списания'),trailing:const Icon(Icons.arrow_forward_rounded,color:loyaltyMint),
+    onTap:()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>StaffClientHistoryScreen(
+     establishmentId:widget.establishmentId,establishmentName:widget.establishmentName,clientId:widget.clientId,clientName:client.displayName)))),
+   const SizedBox(height:18),_buildSubscriptionsSection(),
+  ]
+ ]);
+ }
+
+ Widget _loyaltyAction(String title,String subtitle,IconData icon,Color color,VoidCallback onTap) => Material(color:color.withOpacity(0.08),borderRadius:BorderRadius.circular(22),
+ child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(22),child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+  Icon(icon,color:color,size:30),const SizedBox(height:14),Text(title,style:TextStyle(color:color,fontSize:19,fontWeight:FontWeight.w800)),
+  const SizedBox(height:5),Text(subtitle,style:const TextStyle(color:Color(0xFF607680),fontSize:12))]))));
 }
 
 class _GlassCard extends StatelessWidget {
