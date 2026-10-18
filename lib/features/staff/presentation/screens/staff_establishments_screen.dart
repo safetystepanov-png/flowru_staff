@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
@@ -8,6 +9,7 @@ import 'package:flutter/services.dart';
 import '../../data/staff_establishments_api.dart';
 import '../widgets/staff_glass_ui.dart';
 import 'staff_home_screen.dart';
+import 'delivery_work_screen.dart';
 import '../../../auth/data/auth_storage.dart' as auth_storage;
 
 const Color kEstMintTop = Color(0xFF0CB7B3);
@@ -83,6 +85,24 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
     });
 
     try {
+      final token = await auth_storage.AuthStorage.getAccessToken();
+      if (token != null) {
+        final parts = token.split('.');
+        if (parts.length == 3) {
+          final claims = jsonDecode(
+            utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+          );
+          if (claims is Map && claims['scope'] == 'courier') {
+            if (!mounted) return;
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => const DeliveryWorkScreen(courierLogin: true),
+              ),
+            );
+            return;
+          }
+        }
+      }
       final items = await _api.getEstablishments();
 
       if (!mounted) return;
@@ -787,6 +807,21 @@ class _StaffEstablishmentsScreenState extends State<StaffEstablishmentsScreen>
                   children: [
                     _stagger(index: 0, child: _header()),
                     const SizedBox(height: 18),
+                    TextButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const DeliveryWorkScreen(),
+                        ),
+                      ),
+                      icon: const Icon(
+                        Icons.delivery_dining_rounded,
+                        color: Colors.white,
+                      ),
+                      label: const Text(
+                        'Работаю курьером',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
                     _stagger(index: 1, child: _promoBanner()),
                     const SizedBox(height: 16),
                     _content(),

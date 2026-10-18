@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -1072,7 +1073,9 @@ class _AppBootstrapScreenState extends State<_AppBootstrapScreen> {
       StaffPushDeviceApi.registerCurrentDeviceTokenInBackground(
         appVersion: '1.0.26+70',
       );
-      await AuthStorage.saveRefreshToken(result.refreshToken);
+      if (result.refreshToken.isNotEmpty) {
+        await AuthStorage.saveRefreshToken(result.refreshToken);
+      }
 
       return result.accessToken;
     } catch (_) {
@@ -1082,6 +1085,17 @@ class _AppBootstrapScreenState extends State<_AppBootstrapScreen> {
 
   Future<_BootstrapState> _resolveProfileByToken(String token) async {
     final profile = await UserApi.getAccessProfile(token);
+
+    final parts = token.split('.');
+    if (parts.length == 3) {
+      final claims = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      );
+      if (claims is Map && claims['scope'] == 'courier' && profile.hasAccess) {
+        await AuthStorage.clearSelectedEstablishment();
+        return _BootstrapState.authorized(profile: profile);
+      }
+    }
 
     if (!profile.hasAccess || profile.establishments.isEmpty) {
       await AuthStorage.clearAll();

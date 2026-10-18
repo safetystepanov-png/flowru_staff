@@ -18,6 +18,7 @@ import 'staff_chat_screen.dart';
 import 'staff_client_search_screen.dart';
 import 'staff_invite_client_screen.dart';
 import 'staff_preorders_screen.dart';
+import 'delivery_work_screen.dart';
 import 'staff_subscription_sale_screen.dart';
 import 'staff_appointments_screen.dart';
 import 'staff_establishment_history_screen.dart';
@@ -1645,7 +1646,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        hasActive ? 'Новые предзаказы' : 'Предзаказы',
+                        hasActive ? 'Новые заказы' : 'Заказы',
                         style: TextStyle(
                           color: titleColor,
                           fontSize: 20.5,
@@ -2905,7 +2906,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
           if (active <= 0) {
             return unifiedActionRow(
               icon: CupertinoIcons.bag_fill,
-              title: 'Предзаказы',
+              title: 'Заказы',
               subtitle: 'Новые заказы появятся здесь',
               onTap: _openPreorders,
               accent: const Color(0xFFE99013),
@@ -3048,6 +3049,27 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
             ),
             const SizedBox(height: 5),
             preorderActionRow(),
+            FutureBuilder<Map<String, dynamic>>(
+              future: _loadClientActionSettings(),
+              builder: (context, snapshot) {
+                final data = snapshot.data ?? const <String, dynamic>{};
+                final visible = data['appointments_enabled'] == true;
+                if (!visible) return const SizedBox.shrink();
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    unifiedDivider(),
+                    unifiedActionRow(
+                      icon: Icons.event_available_rounded,
+                      title: 'Запись',
+                      subtitle: 'Услуги, специалисты и заявки гостей',
+                      onTap: _openAppointments,
+                      accent: const Color(0xFF7258E8),
+                    ),
+                  ],
+                );
+              },
+            ),
             unifiedDivider(),
             unifiedActionRow(
               icon: CupertinoIcons.ticket_fill,
@@ -3179,9 +3201,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen>
                               children: [
                                 Expanded(
                                   child: Text(
-                                    hasActive
-                                        ? 'Предзаказы ждут'
-                                        : 'Предзаказы',
+                                    hasActive ? 'Заказы ждут' : 'Заказы',
                                     style: const TextStyle(
                                       color: kHomeInk,
                                       fontSize: 18,

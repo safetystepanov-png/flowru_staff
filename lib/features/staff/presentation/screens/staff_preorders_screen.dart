@@ -1,3 +1,4 @@
+import '../../../../flowru_future_ui.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
@@ -15,8 +16,8 @@ import 'staff_client_spend_screen.dart';
 const Color _mint = Color(0xFF0BAEBB);
 const Color _mintLight = Color(0xFF42E8DF);
 const Color _deep = Color(0xFF064B64);
-const Color _ink = Color(0xFF0A2B47);
-const Color _soft = Color(0xFF557186);
+const Color _ink = futureInk;
+const Color _soft = futureSoft;
 const Color _bg = Color(0xFFEFF8F9);
 const Color _stroke = Color(0xFFD8E9EE);
 const Color _orange = Color(0xFFFFA51E);
@@ -44,7 +45,9 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
   // FLOWRU_PREORDERS_FLAT_V2_20260914
   // FLOWRU_STAFF_PREORDERS_V2_20260818
   bool _loading = true;
+  bool _fetching = false;
   bool _updating = false;
+  bool _choosingPrepareTime = false;
   String? _error;
   List<_PreorderItem> _items = [];
 
@@ -76,6 +79,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     _urgencyTicker = Timer.periodic(const Duration(seconds: 20), (_) {
       if (mounted) {
         setState(() {});
+        if (!_updating) _load(silent: true);
       }
     });
 
@@ -204,7 +208,6 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       final rawItems = (decoded['items'] as List?) ?? const [];
-
       final parsed = rawItems
           .whereType<Map>()
           .map((raw) => _StaffCatalogItem.fromJson(raw.cast<String, dynamic>()))
@@ -315,9 +318,11 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     }
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool silent = false}) async {
+    if (_fetching || !mounted) return;
+    _fetching = true;
     setState(() {
-      _loading = true;
+      if (!silent) _loading = true;
       _error = null;
     });
 
@@ -342,7 +347,73 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
       }
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      final rawItems = (decoded['items'] as List?) ?? const [];
+      final rawItems = List<dynamic>.from(
+        (decoded['items'] as List?) ?? const [],
+      );
+      // Load cancellation history through the existing filtered route. Keep the
+      // working unfiltered server query and all of its active orders unchanged.
+      final cancelledUri = Uri.parse(
+        '${AppConfig.baseUrl}/api/v1/staff/preorders?establishment_id=${widget.establishmentId}&status=cancelled&limit=50',
+      );
+      try {
+        var cancelledResponse = await http.get(
+          cancelledUri,
+          headers: await _headers(),
+        );
+        if (cancelledResponse.statusCode == 401 ||
+            cancelledResponse.statusCode == 403) {
+          cancelledResponse = await http.get(
+            cancelledUri,
+            headers: await _headers(forceRefresh: true),
+          );
+        }
+        if (cancelledResponse.statusCode == 200) {
+          final cancelledBody =
+              jsonDecode(cancelledResponse.body) as Map<String, dynamic>;
+          final known = rawItems
+              .whereType<Map>()
+              .map((row) => row['id'].toString())
+              .toSet();
+          for (final row
+              in (cancelledBody['items'] as List? ?? const [])
+                  .whereType<Map>()) {
+            if (row['status'] == 'cancelled' &&
+                known.add(row['id'].toString())) {
+              rawItems.add(row);
+            }
+          }
+        } else {
+          debugPrint(
+            'Cancellation history HTTP ${cancelledResponse.statusCode}',
+          );
+        }
+      } catch (_) {
+        // History failure must never discard a successfully loaded main list.
+        debugPrint(
+          'Cancellation history unavailable; main order list retained',
+        );
+      }
+
+      final previouslyActive = _items
+          .where((e) => ['new', 'in_work', 'ready'].contains(e.status))
+          .map((e) => e.id)
+          .toSet();
+      final canceledNow = rawItems
+          .whereType<Map>()
+          .where(
+            (e) =>
+                e['status'] == 'cancelled' &&
+                previouslyActive.contains(e['id']),
+          )
+          .toList();
+      if (mounted && canceledNow.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Заказ №${canceledNow.first['id']} отменён'),
+            backgroundColor: _red,
+          ),
+        );
+      }
 
       if (!mounted) return;
       setState(() {
@@ -358,8 +429,13 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
       setState(() {
         final message = e.toString().replaceFirst('Exception: ', '').trim();
         _loading = false;
-        _error = message.isEmpty ? 'Не удалось загрузить предзаказы' : message;
+        if (!silent)
+          _error = message.isEmpty
+              ? 'Не удалось загрузить предзаказы'
+              : message;
       });
+    } finally {
+      _fetching = false;
     }
   }
 
@@ -570,10 +646,106 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
   Future<void> _completePreorder(_PreorderItem item) async {
     if (_updating) return;
 
+    if (item.details['payment_id'] != null) {
+      final result = await Navigator.of(context).push<Map<String, dynamic>>(
+        MaterialPageRoute(
+          builder: (_) => _FutureHandoffScreen(
+            item: item,
+            request: (body) async {
+              final uri = Uri.parse(
+                '${AppConfig.baseUrl}/api/v1/staff/preorders/${item.id}/handoff-preview',
+              );
+              var response = await http.post(
+                uri,
+                headers: await _headers(json: true),
+                body: jsonEncode(body),
+              );
+              if (response.statusCode == 401 || response.statusCode == 403)
+                response = await http.post(
+                  uri,
+                  headers: await _headers(json: true, forceRefresh: true),
+                  body: jsonEncode(body),
+                );
+              if (response.statusCode != 200)
+                throw Exception(
+                  _statusErrorMessage(response.statusCode, response.body),
+                );
+              return Map<String, dynamic>.from(
+                jsonDecode(response.body) as Map,
+              );
+            },
+          ),
+        ),
+      );
+      if (result != null && mounted)
+        await _setStatus(
+          item,
+          'completed',
+          amountTotal: item.amountTotal ?? 0,
+          handoff: result,
+        );
+      return;
+    }
+
     final amount = await _askCompletedAmount(item);
     if (amount == null) return;
 
     await _setStatus(item, 'completed', amountTotal: amount);
+  }
+
+  Future<void> _acceptWithPrepareTime(_PreorderItem item) async {
+    if (_updating || _choosingPrepareTime) return;
+    _choosingPrepareTime = true;
+    int? chosen;
+    int? courier;
+    try {
+      final uri = Uri.parse(
+        '${AppConfig.baseUrl}/api/v1/staff/preorders/prepare-settings?establishment_id=${widget.establishmentId}',
+      );
+      var response = await http.get(uri, headers: await _headers());
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        response = await http.get(
+          uri,
+          headers: await _headers(forceRefresh: true),
+        );
+      }
+      if (response.statusCode != 200)
+        throw Exception(
+          _statusErrorMessage(response.statusCode, response.body),
+        );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final minimum = int.tryParse('${data['minimum_minutes']}');
+      if (minimum == null || minimum < 1 || minimum > 180)
+        throw Exception('Не удалось получить время приготовления');
+      if (!mounted) return;
+      if (item.isDelivery) {
+        courier = await _chooseCourier(item);
+        if (courier == null || !mounted) return;
+      }
+      chosen = await showDialog<int>(
+        context: context,
+        builder: (context) => _PreparationTimeDialog(
+          minimum: minimum,
+          requested: item.pickupType == 'at_time'
+              ? DateTime.tryParse(item.pickupAt ?? '')?.toLocal()
+              : null,
+        ),
+      );
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+    } finally {
+      _choosingPrepareTime = false;
+    }
+    if (chosen != null && mounted)
+      await _setStatus(
+        item,
+        'in_work',
+        prepareMinutes: chosen,
+        courierId: courier,
+      );
   }
 
   Future<void> _setStatus(
@@ -581,6 +753,9 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     String status, {
     double? amountTotal,
     String? staffComment,
+    int? prepareMinutes,
+    int? courierId,
+    Map<String, dynamic>? handoff,
   }) async {
     if (_updating) return;
 
@@ -590,7 +765,9 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     });
 
     try {
-      final payload = <String, dynamic>{'status': status};
+      final payload = <String, dynamic>{'status': status, ...?handoff};
+      if (prepareMinutes != null) payload['prepare_minutes'] = prepareMinutes;
+      if (courierId != null) payload['courier_id'] = courierId;
 
       if (staffComment != null && staffComment.trim().isNotEmpty) {
         payload['staff_comment'] = staffComment.trim();
@@ -1043,9 +1220,9 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.white.withOpacity(0.87),
-                Colors.white.withOpacity(0.66),
-                const Color(0xFFEFFBFC).withOpacity(0.70),
+                Colors.white.withOpacity(0.72),
+                Colors.white.withOpacity(0.35),
+                const Color(0xFFF0EEFF).withOpacity(0.48),
               ],
             ),
             borderRadius: BorderRadius.circular(radius),
@@ -1219,176 +1396,50 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
   }
 
   Widget _heroCard() {
-    final activeCount = _activeItems.length;
-
-    Widget metric({
-      required String label,
-      required int value,
-      required IconData icon,
-      required Color color,
-    }) {
-      return Expanded(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-          child: Row(
-            children: [
-              Container(
-                width: 31,
-                height: 31,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.10),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 15),
-              ),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$value',
-                      style: TextStyle(
-                        color: value > 0 ? color : _ink,
-                        fontSize: 20,
-                        height: 1,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: _soft,
-                        fontSize: 9.7,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return _glassSurface(
-      flat: true,
-      radius: 22,
-      glow: _mint,
-      glowStrength: 0.035,
-      padding: const EdgeInsets.fromLTRB(3, 10, 3, 8),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 43,
-                height: 43,
-                decoration: BoxDecoration(
-                  color: _mint.withOpacity(0.11),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: const Icon(
-                  CupertinoIcons.bag_fill,
-                  color: _mint,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '\u041f\u0440\u0435\u0434\u0437\u0430\u043a\u0430\u0437\u044b',
-                      style: TextStyle(
-                        color: _ink,
-                        fontSize: 21,
-                        height: 1,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.45,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      activeCount == 0
-                          ? '\u041d\u043e\u0432\u044b\u0445 \u0437\u0430\u043a\u0430\u0437\u043e\u0432 \u0441\u0435\u0439\u0447\u0430\u0441 \u043d\u0435\u0442'
-                          : '$activeCount \u0430\u043a\u0442\u0438\u0432\u043d\u044b\u0445 \u2022 \u0442\u0440\u0435\u0431\u0443\u044e\u0442 \u0432\u043d\u0438\u043c\u0430\u043d\u0438\u044f',
-                      style: const TextStyle(
-                        color: _soft,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _green.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(CupertinoIcons.circle_fill, size: 7, color: _green),
-                    SizedBox(width: 5),
-                    Text(
-                      '\u043e\u043d\u043b\u0430\u0439\u043d',
-                      style: TextStyle(
-                        color: _green,
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 11),
-          Container(
-            height: 1.5,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  _mint.withOpacity(0.36),
-                  _blue.withOpacity(0.08),
-                  Colors.transparent,
-                ],
+    Widget metric(String title, int count, Color color) => Expanded(
+      child: FutureGlass(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        tint: color.withOpacity(.15),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$count',
+              style: TextStyle(
+                color: color,
+                fontSize: 25,
+                fontWeight: FontWeight.w900,
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              metric(
-                label: '\u041d\u043e\u0432\u044b\u0435',
-                value: _newCount,
-                icon: CupertinoIcons.bell_fill,
-                color: const Color(0xFFFF5364),
-              ),
-              metric(
-                label: '\u0413\u043e\u0442\u043e\u0432\u044f\u0442\u0441\u044f',
-                value: _inWorkCount,
-                icon: CupertinoIcons.flame_fill,
-                color: _orange,
-              ),
-              metric(
-                label: '\u0413\u043e\u0442\u043e\u0432\u044b',
-                value: _readyCount,
-                icon: CupertinoIcons.checkmark_seal_fill,
-                color: _green,
-              ),
-            ],
-          ),
-        ],
+            const SizedBox(height: 3),
+            Text(
+              title,
+              style: const TextStyle(color: futureSoft, fontSize: 11),
+            ),
+          ],
+        ),
       ),
+    );
+    return Column(
+      children: [
+        FutureHero(
+          title: 'Заказы',
+          height: 136,
+          subtitle: _activeItems.isEmpty
+              ? 'Всё готово к новым заказам'
+              : '${_activeItems.length} активных · всё под контролем',
+        ),
+        Row(
+          children: [
+            metric('Новые', _newCount, _red),
+            const SizedBox(width: 8),
+            metric('Готовятся', _inWorkCount, _orange),
+            const SizedBox(width: 8),
+            metric('Готовы', _readyCount, _green),
+          ],
+        ),
+        const SizedBox(height: 12),
+      ],
     );
   }
 
@@ -1908,381 +1959,442 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
   }
 
   // FLOWRU_ORDER_BORDER_RUNTIME_FIX_20260914
-  Widget _orderCard(_PreorderItem item, int index) {
-    final statusColor = _statusColor(item.status);
-    final left = _minutesLeft(item);
-    final attention = _attentionText(item);
-    final attentionColor = _attentionColor(item);
+  List<String> _composition(_PreorderItem item) {
+    final raw = item.details['items'];
+    if (raw is List && raw.isNotEmpty) {
+      return raw.whereType<Map>().map((i) {
+        final variant = '${i['variant_name'] ?? ''}';
+        final mods =
+            (i['modifiers'] is List ? i['modifiers'] as List : const [])
+                .whereType<Map>()
+                .map((m) => '${m['name'] ?? m['option_name'] ?? ''}')
+                .where((n) => n.isNotEmpty)
+                .join(', ');
+        return '${i['quantity'] ?? 1} × ${i['name'] ?? ''}${variant.isEmpty ? '' : ' · $variant'}${mods.isEmpty ? '' : '\n$mods'}';
+      }).toList();
+    }
+    return _flowOrderLines(item)
+        .map(_staffReadableOrderLine)
+        .where(
+          (line) =>
+              line.trim().isNotEmpty &&
+              !RegExp(
+                r'^(ДОСТАВКА|САМОВЫВОЗ|\[TEST|Квартира:|Подъезд:|Этаж:|Доставка:|Курьеру:)',
+                caseSensitive: false,
+              ).hasMatch(line.trim()),
+        )
+        .toList();
+  }
 
-    final lines = _flowOrderLines(
-      item,
-    ).map(_staffReadableOrderLine).where((e) => e.trim().isNotEmpty).toList();
+  Future<int?> _chooseCourier(_PreorderItem item) async {
+    final uri = Uri.parse(
+      '${AppConfig.baseUrl}/api/v1/staff/delivery-couriers?establishment_id=${widget.establishmentId}',
+    );
+    var response = await http.get(uri, headers: await _headers());
+    if (response.statusCode == 401 || response.statusCode == 403)
+      response = await http.get(
+        uri,
+        headers: await _headers(forceRefresh: true),
+      );
+    if (response.statusCode != 200)
+      throw Exception(_statusErrorMessage(response.statusCode, response.body));
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final couriers = (data['items'] as List? ?? []).whereType<Map>().toList();
+    if (!mounted) return null;
+    return showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Кто доставит заказ?'),
+        content: SizedBox(
+          width: 360,
+          child: couriers.isEmpty
+              ? const Text(
+                  'Нет подключённых курьеров. Добавьте курьера в настройках доставки и выполните вход в его приложение.',
+                )
+              : ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 360),
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: couriers
+                        .map(
+                          (c) => ListTile(
+                            leading: const Icon(Icons.delivery_dining_rounded),
+                            title: Text('${c['name']}'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () =>
+                                Navigator.pop(ctx, int.tryParse('${c['id']}')),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Назад'),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Future<void> _changeCourier(_PreorderItem item) async {
+    if (_updating) return;
+    try {
+      final courier = await _chooseCourier(item);
+      if (courier == null || !mounted) return;
+      setState(() => _updating = true);
+      final uri = Uri.parse(
+        '${AppConfig.baseUrl}/api/v1/staff/deliveries/${item.details['payment_id']}/assign',
+      );
+      var response = await http.post(
+        uri,
+        headers: await _headers(json: true),
+        body: jsonEncode({'courier_id': courier}),
+      );
+      if (response.statusCode == 401 || response.statusCode == 403)
+        response = await http.post(
+          uri,
+          headers: await _headers(json: true, forceRefresh: true),
+          body: jsonEncode({'courier_id': courier}),
+        );
+      if (response.statusCode != 200)
+        throw Exception(
+          _statusErrorMessage(response.statusCode, response.body),
+        );
+      await _load(silent: true);
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+    } finally {
+      if (mounted) setState(() => _updating = false);
+    }
+  }
+
+  Future<void> _showOrderDetails(_PreorderItem item) async {
+    final lines = _composition(item);
     final comment = _flowOrderComment(item);
-
-    String actionText;
-    IconData actionIcon;
-    VoidCallback actionTap;
-
-    if (item.status == 'new') {
-      actionText = '\u041f\u0440\u0438\u043d\u044f\u0442\u044c';
-      actionIcon = CupertinoIcons.checkmark_alt_circle_fill;
-      actionTap = () => _setStatus(item, 'in_work');
-    } else if (item.status == 'in_work') {
-      actionText = '\u0413\u043e\u0442\u043e\u0432';
-      actionIcon = CupertinoIcons.checkmark_seal_fill;
-      actionTap = () => _setStatus(item, 'ready');
-    } else {
-      actionText = '\u0412\u044b\u0434\u0430\u0442\u044c';
-      actionIcon = CupertinoIcons.archivebox_fill;
-      actionTap = () => _completePreorder(item);
-    }
-
-    var timeValue = item.pickupLabel;
-
-    if (item.status == 'in_work' && left != null) {
-      timeValue = left < 0
-          ? '\u041f\u0440\u043e\u0441\u0440\u043e\u0447\u0435\u043d\u043e ${left.abs()} \u043c\u0438\u043d'
-          : '$left \u043c\u0438\u043d';
-    } else if (item.status == 'ready') {
-      timeValue =
-          '\u0416\u0434\u0451\u0442 \u043a\u043b\u0438\u0435\u043d\u0442\u0430';
-    }
-
-    return _fadeIn(
-      delay: index.clamp(0, 6) * 35,
-      child: AnimatedBuilder(
-        animation: _motion,
-        builder: (context, _) {
-          final pulse = item.status == 'new' ? _motion.value : 0.0;
-
-          return Container(
-            margin: const EdgeInsets.only(bottom: 11),
-            padding: const EdgeInsets.fromLTRB(13, 12, 11, 13),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  statusColor.withOpacity(0.115 + pulse * 0.025),
-                  statusColor.withOpacity(0.035),
-                  Colors.transparent,
-                ],
-                stops: const [0, 0.38, 1],
-              ),
-              border: Border.all(
-                color: statusColor.withOpacity(0.10),
-                width: 1,
-              ),
-            ),
+    final d = item.details;
+    final delivery = item.isDelivery;
+    final paid =
+        d['payment_state'] == 'succeeded' &&
+        d['payment_cancel_requested'] != true;
+    final address = d['delivery_address'];
+    final addressText = address is Map
+        ? '${address['address'] ?? ''}'
+        : '${address ?? ''}';
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: const Color(0xFFF4FBFC),
+        insetPadding: const EdgeInsets.all(20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
+          child: Padding(
+            padding: const EdgeInsets.all(22),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Text(
-                      '#${item.id}',
-                      style: const TextStyle(
-                        color: _ink,
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(width: 7),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.10),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
+                    Expanded(
                       child: Text(
-                        _statusText(item.status),
-                        style: TextStyle(
-                          color: statusColor,
-                          fontSize: 9.5,
+                        'Заказ №${item.id}',
+                        style: const TextStyle(
+                          fontSize: 23,
                           fontWeight: FontWeight.w900,
+                          color: _ink,
                         ),
                       ),
                     ),
-                    const Spacer(),
-                    Icon(CupertinoIcons.clock, size: 13, color: statusColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      timeValue,
-                      style: TextStyle(
-                        color: statusColor,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 8),
-
-                Text(
-                  item.clientName.trim().isEmpty
-                      ? '\u041a\u043b\u0438\u0435\u043d\u0442'
-                      : item.clientName.trim(),
-                  style: const TextStyle(
-                    color: _ink,
-                    fontSize: 15.8,
-                    height: 1,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-
-                const SizedBox(height: 9),
-
-                if (lines.isEmpty)
-                  const Text(
-                    '\u0421\u043e\u0441\u0442\u0430\u0432 \u0437\u0430\u043a\u0430\u0437\u0430 \u043d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d',
-                    style: TextStyle(
-                      color: _soft,
-                      fontSize: 12.4,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  )
-                else
-                  ...lines.map(
-                    (line) => Padding(
-                      padding: const EdgeInsets.only(bottom: 5),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Container(
-                              width: 5,
-                              height: 5,
-                              decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.78),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 8),
+                        const Text(
+                          'ПРИГОТОВИТЬ',
+                          style: TextStyle(
+                            color: _soft,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.5,
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
+                        ),
+                        const SizedBox(height: 14),
+                        ...lines.map(
+                          (line) => Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
                             child: Text(
                               line,
                               style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                height: 1.35,
                                 color: _ink,
-                                fontSize: 12.8,
-                                height: 1.30,
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (comment != null && comment.trim().isNotEmpty)
+                          Text(
+                            'Пожелания: $comment',
+                            style: const TextStyle(fontSize: 15, color: _ink),
+                          ),
+                        const Divider(height: 32),
+                        Row(
+                          children: [
+                            Icon(
+                              delivery
+                                  ? Icons.delivery_dining_rounded
+                                  : Icons.storefront_outlined,
+                              color: _mint,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              delivery ? 'Доставка' : 'Самовывоз',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                color: _ink,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          paid
+                              ? (d['payment_mode'] == 'cash'
+                                    ? 'Оплачен баллами'
+                                    : 'Оплачен онлайн')
+                              : d['payment_state'] == 'refund_pending'
+                              ? 'Возврат выполняется'
+                              : d['payment_state'] == 'refunded'
+                              ? 'Оплата возвращена'
+                              : 'Не оплачен · оплата при получении',
+                          style: TextStyle(
+                            color: paid ? _green : _red,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        if (delivery) ...[
+                          const SizedBox(height: 14),
+                          Text(
+                            addressText,
+                            style: const TextStyle(fontSize: 16, color: _ink),
+                          ),
+                          Text(
+                            [
+                              if ('${d['apartment'] ?? ''}'.isNotEmpty)
+                                'Квартира ${d['apartment']}',
+                              if ('${d['entrance'] ?? ''}'.isNotEmpty)
+                                'Подъезд ${d['entrance']}',
+                              if ('${d['floor'] ?? ''}'.isNotEmpty)
+                                'Этаж ${d['floor']}',
+                            ].join(' · '),
+                            style: const TextStyle(color: _soft, height: 1.6),
+                          ),
+                          if ('${d['delivery_note'] ?? ''}'.isNotEmpty)
+                            Text(
+                              '${d['delivery_note']}',
+                              style: const TextStyle(color: _ink),
+                            ),
+                          const SizedBox(height: 10),
+                          Text(
+                            d['courier_name'] == null
+                                ? 'Курьер не назначен'
+                                : 'Курьер: ${d['courier_name']}',
+                            style: const TextStyle(color: _soft),
                           ),
                         ],
-                      ),
-                    ),
-                  ),
-
-                if (comment != null && comment.trim().isNotEmpty) ...[
-                  const SizedBox(height: 7),
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(10, 7, 4, 7),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          _orange.withOpacity(0.09),
-                          _orange.withOpacity(0.025),
-                          Colors.transparent,
-                        ],
-                      ),
-                      border: Border(
-                        left: BorderSide(
-                          color: _orange.withOpacity(0.72),
-                          width: 3,
+                        const SizedBox(height: 14),
+                        Text(
+                          '${item.clientName} · ${item.clientPhone}',
+                          style: const TextStyle(color: _soft),
                         ),
-                      ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          CupertinoIcons.text_bubble_fill,
-                          color: _orange,
-                          size: 15,
-                        ),
-                        const SizedBox(width: 7),
-                        Expanded(
-                          child: Text(
-                            '\u041a\u043e\u043c\u043c\u0435\u043d\u0442\u0430\u0440\u0438\u0439: ${comment.trim()}',
-                            style: const TextStyle(
-                              color: _ink,
-                              fontSize: 12.3,
-                              height: 1.32,
-                              fontWeight: FontWeight.w800,
+                        if ((d['redeem_points'] as num? ?? 0) > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Text(
+                              'Баллы: ${d['redeem_points']} · скидка ${_staffMoney((d['discount_kopeks'] as num).toDouble() / 100)}',
+                              style: const TextStyle(color: _green),
                             ),
                           ),
+                        const SizedBox(height: 14),
+                        Text(
+                          'Итого: ${_staffMoney(item.amountTotal)}',
+                          style: const TextStyle(
+                            color: _ink,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
+                        if (item.clientPoints != null && item.clientPoints! > 0)
+                          TextButton(
+                            onPressed: !_updating && item.clientId != null
+                                ? () {
+                                    Navigator.pop(ctx);
+                                    _openClientSpend(item);
+                                  }
+                                : null,
+                            child: Text('${item.clientPoints} баллов'),
+                          ),
                       ],
                     ),
                   ),
-                ],
-
-                const SizedBox(height: 10),
-
-                Row(
-                  children: [
-                    const Text(
-                      '\u0418\u0442\u043e\u0433\u043e:',
-                      style: TextStyle(
-                        color: _soft,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      _staffMoney(item.amountTotal),
-                      style: const TextStyle(
-                        color: _ink,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.25,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (item.clientPoints != null && item.clientPoints! > 0)
-                      InkWell(
-                        onTap: !_updating && item.clientId != null
-                            ? () => _openClientSpend(item)
-                            : null,
-                        borderRadius: BorderRadius.circular(10),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 4,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                CupertinoIcons.star_circle_fill,
-                                color: _mint,
-                                size: 15,
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                '${item.clientPoints} \u0431\u0430\u043b\u043b\u043e\u0432',
-                                style: const TextStyle(
-                                  color: _deep,
-                                  fontSize: 11.3,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-
-                if (attention != null) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        CupertinoIcons.exclamationmark_triangle_fill,
-                        color: attentionColor,
-                        size: 14,
-                      ),
-                      const SizedBox(width: 7),
-                      Expanded(
-                        child: Text(
-                          attention,
-                          style: TextStyle(
-                            color: attentionColor,
-                            fontSize: 11.3,
-                            height: 1.25,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-
-                const SizedBox(height: 12),
-
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: SizedBox(
-                        height: 54,
-                        child: ElevatedButton.icon(
-                          onPressed: _updating ? null : actionTap,
-                          icon: Icon(actionIcon, size: 17),
-                          label: Text(actionText),
-                          style: ElevatedButton.styleFrom(
-                            elevation: 0,
-                            backgroundColor: statusColor,
-                            foregroundColor: Colors.white,
-                            disabledBackgroundColor: statusColor.withOpacity(
-                              0.35,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            textStyle: const TextStyle(
-                              fontSize: 13.8,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 11),
-                    Expanded(
-                      flex: 2,
-                      child: SizedBox(
-                        height: 54,
-                        child: OutlinedButton.icon(
-                          onPressed: _updating
-                              ? null
-                              : () => _cancelPreorderWithReason(item),
-                          icon: const Icon(
-                            CupertinoIcons.xmark_circle,
-                            size: 17,
-                          ),
-                          label: Text(
-                            item.status == 'new'
-                                ? '\u041e\u0442\u043a\u0430\u0437\u0430\u0442\u044c'
-                                : '\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c',
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: _red,
-                            side: BorderSide(
-                              color: _red.withOpacity(0.38),
-                              width: 1.2,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            textStyle: const TextStyle(
-                              fontSize: 12.4,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
-          );
-        },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _orderCard(_PreorderItem item, int index) {
+    final d = item.details;
+    final delivery = item.isDelivery;
+    final onWay = d['delivery_phase'] == 'on_way';
+    final deadline = onWay
+        ? _parseLocalDate(d['estimated_delivery_to']?.toString())
+        : _deadlineOf(item);
+    final overdue = deadline != null && !DateTime.now().isBefore(deadline);
+    final color = overdue ? _red : _green;
+    final time = overdue ? 'Время выдачи истекло' : item.pickupLabel;
+    final action = d['time_offer'] is Map
+        ? 'Изменить время'
+        : item.status == 'new'
+        ? 'Принять'
+        : item.status == 'in_work'
+        ? 'Готов'
+        : delivery
+        ? (d['courier_id'] == null ? 'Назначить курьера' : 'Сменить курьера')
+        : 'Выдать';
+    final state = d['time_offer'] is Map
+        ? 'Ждём подтверждения клиента'
+        : onWay
+        ? 'У курьера · в пути'
+        : delivery && item.status == 'ready'
+        ? 'Готов · ожидает курьера'
+        : _statusText(item.status);
+    return _fadeIn(
+      delay: index.clamp(0, 6) * 35,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withOpacity(.8),
+              color.withOpacity(overdue ? .18 : .07),
+              const Color(0xFFC5B5FF).withOpacity(.12),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: color.withOpacity(overdue ? .65 : .25)),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(.07),
+              blurRadius: 20,
+              offset: const Offset(0, 7),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Заказ №${item.id}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: _ink,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => _showOrderDetails(item),
+                  child: const Text('Подробнее'),
+                ),
+              ],
+            ),
+            Text(
+              '${delivery ? 'Доставка' : 'Самовывоз'} · $state · $time',
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+            ),
+            if (delivery && d['courier_name'] != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 5),
+                child: Text(
+                  'Курьер: ${d['courier_name']}',
+                  style: const TextStyle(color: _soft, fontSize: 12),
+                ),
+              ),
+            if (!onWay) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _updating
+                          ? null
+                          : () {
+                              if (item.status == 'new') {
+                                _acceptWithPrepareTime(item);
+                              } else if (item.status == 'in_work') {
+                                _setStatus(item, 'ready');
+                              } else if (delivery) {
+                                _changeCourier(item);
+                              } else {
+                                _completePreorder(item);
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: color,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        minimumSize: const Size(0, 44),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(action),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  TextButton(
+                    onPressed: _updating
+                        ? null
+                        : () => _cancelPreorderWithReason(item),
+                    style: TextButton.styleFrom(foregroundColor: _red),
+                    child: Text(item.status == 'new' ? 'Отказать' : 'Отменить'),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -2331,7 +2443,9 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  lines.isEmpty ? item.doneCompactTitle : lines.first,
+                  item.status == 'cancelled'
+                      ? 'Заказ отменён · ${lines.isEmpty ? item.doneCompactTitle : lines.first}'
+                      : (lines.isEmpty ? item.doneCompactTitle : lines.first),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -2406,10 +2520,9 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
   }
 
   bool _isOverdueOrder(_PreorderItem item) {
-    if (item.status != 'in_work') return false;
-    final left = _minutesLeft(item);
-    if (left == null) return false;
-    return left < 0;
+    if (!const ['new', 'in_work', 'ready'].contains(item.status)) return false;
+    final deadline = _deadlineOf(item);
+    return deadline != null && !DateTime.now().isBefore(deadline);
   }
 
   bool _needsPulse(_PreorderItem item) {
@@ -2664,13 +2777,13 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                           colors: alert
                               ? const [
                                   Color(0xFFFFFCFE),
-                                  Color(0xFFFFF1F8),
+                                  Color(0xFFE0FFFF),
                                   Color(0xFFFFFFFF),
                                 ]
                               : const [
                                   Color(0xFFFFFFFF),
                                   Color(0xFFF7FCFD),
-                                  Color(0xFFEFF9FA),
+                                  Color(0xFFECE6FF),
                                 ],
                         )
                       : null,
@@ -3559,22 +3672,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
       backgroundColor: const Color(0xFFF3FBFC),
       body: Stack(
         children: [
-          const Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFFF8FDFD),
-                    Color(0xFFEFF9FB),
-                    Color(0xFFF4FCFB),
-                  ],
-                  stops: [0, 0.52, 1],
-                ),
-              ),
-            ),
-          ),
+          const Positioned.fill(child: FutureScene(child: SizedBox.expand())),
           Positioned(
             top: -150,
             right: -110,
@@ -3607,7 +3705,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                           const SizedBox(width: 13),
                           const Expanded(
                             child: Text(
-                              'Предзаказы',
+                              'Заказы',
                               style: TextStyle(
                                 color: _ink,
                                 fontWeight: FontWeight.w900,
@@ -3702,9 +3800,9 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                                                   items: workItems,
                                                 ),
                                                 _flowSection(
-                                                  title: 'Готовы к выдаче',
+                                                  title: 'Готовые заказы',
                                                   subtitle:
-                                                      'Можно встречать клиента',
+                                                      'Самовывоз и доставка',
                                                   color: _green,
                                                   icon: CupertinoIcons
                                                       .checkmark_seal_fill,
@@ -3884,6 +3982,8 @@ class _StaffCatalogItem {
 class _PreorderItem {
   final int id;
   final int establishmentId;
+  final Map<String, dynamic> details;
+  bool get isDelivery => details['fulfillment'] == 'delivery';
   final int? clientId;
 
   // FLOWRU_PREORDER_STAFF_SPEND_V2
@@ -3902,6 +4002,7 @@ class _PreorderItem {
   final double? bonusAccrued;
 
   _PreorderItem({
+    this.details = const {},
     required this.id,
     required this.establishmentId,
     required this.clientId,
@@ -3933,6 +4034,7 @@ class _PreorderItem {
     }
 
     return _PreorderItem(
+      details: json,
       id: parseInt(json['id']) ?? 0,
       establishmentId: parseInt(json['establishment_id']) ?? 0,
       clientId: parseInt(json['client_id']),
@@ -3945,7 +4047,7 @@ class _PreorderItem {
       status: json['status']?.toString() ?? 'new',
       paymentMethod: json['payment_method']?.toString() ?? 'unknown',
       createdAt: json['created_at']?.toString() ?? '',
-      pickupAt: json['pickup_at']?.toString(),
+      pickupAt: (json['estimated_ready_at'] ?? json['pickup_at'])?.toString(),
       amountTotal: parseDouble(json['amount_total']),
       bonusAccrued: parseDouble(json['bonus_accrued']),
     );
@@ -4014,5 +4116,482 @@ class _PreorderItem {
     final minutes = pickupMinutes ?? 0;
     if (minutes <= 0) return 'как можно скорее';
     return 'через $minutes мин.';
+  }
+}
+
+class _PreparationTimeDialog extends StatefulWidget {
+  final int minimum;
+  final DateTime? requested;
+  const _PreparationTimeDialog({required this.minimum, this.requested});
+  @override
+  State<_PreparationTimeDialog> createState() => _PreparationTimeDialogState();
+}
+
+class _PreparationTimeDialogState extends State<_PreparationTimeDialog> {
+  late final TextEditingController _minutes;
+  @override
+  void initState() {
+    super.initState();
+    _minutes = TextEditingController(text: '${widget.minimum}');
+  }
+
+  @override
+  void dispose() {
+    _minutes.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final chosen = int.tryParse(_minutes.text.trim());
+    final valid = chosen != null && chosen >= widget.minimum && chosen <= 180;
+    final base = DateTime.now().add(
+      Duration(minutes: chosen ?? widget.minimum),
+    );
+    final expected = widget.requested != null && widget.requested!.isAfter(base)
+        ? widget.requested!
+        : base;
+    final time =
+        '${expected.hour.toString().padLeft(2, '0')}:${expected.minute.toString().padLeft(2, '0')}';
+    final options = <int>{
+      widget.minimum,
+      widget.minimum + 10,
+      30,
+      45,
+      60,
+    }.where((m) => m >= widget.minimum && m <= 180).toList()..sort();
+    return AlertDialog(
+      backgroundColor: _bg,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+      title: const Text(
+        'Когда будет готов?',
+        style: TextStyle(
+          color: _ink,
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      content: SizedBox(
+        width: 340,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Минимум ${widget.minimum} мин. после принятия. Увеличьте срок, если сейчас много заказов.',
+                style: const TextStyle(color: _soft, fontSize: 14, height: 1.5),
+              ),
+              const SizedBox(height: 18),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final minutes in options)
+                    ChoiceChip(
+                      label: Text('$minutes мин.'),
+                      selected: chosen == minutes,
+                      selectedColor: _mintLight.withOpacity(0.24),
+                      onSelected: (_) =>
+                          setState(() => _minutes.text = '$minutes'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _minutes,
+                keyboardType: TextInputType.number,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(color: _ink),
+                decoration: InputDecoration(
+                  labelText: 'Своё время, минуты',
+                  errorText: valid ? null : 'От ${widget.minimum} до 180 минут',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Ожидаемая готовность',
+                style: const TextStyle(color: _soft, fontSize: 12),
+              ),
+              Text(
+                time,
+                style: const TextStyle(
+                  color: _ink,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Клиент увидит подтверждённое время в приложении.',
+                style: TextStyle(color: _soft, fontSize: 12, height: 1.4),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Назад'),
+        ),
+        FilledButton(
+          onPressed: valid ? () => Navigator.pop(context, chosen) : null,
+          style: FilledButton.styleFrom(
+            backgroundColor: _mint,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Принять заказ'),
+        ),
+      ],
+    );
+  }
+}
+
+class _FutureHandoffScreen extends StatefulWidget {
+  final _PreorderItem item;
+  final Future<Map<String, dynamic>> Function(Map<String, dynamic>) request;
+  const _FutureHandoffScreen({required this.item, required this.request});
+  @override
+  State<_FutureHandoffScreen> createState() => _FutureHandoffState();
+}
+
+class _FutureHandoffState extends State<_FutureHandoffScreen> {
+  late final TextEditingController _total;
+  Timer? _debounce;
+  Map<String, dynamic>? _quote;
+  String? _error;
+  bool _busy = false;
+  int _points = 0;
+  int get _base {
+    final lines = widget.item.details['items'] as List? ?? [];
+    return lines.isNotEmpty
+        ? lines.whereType<Map>().fold<int>(
+            0,
+            (sum, r) =>
+                sum + (num.tryParse('${r['total_kopeks']}') ?? 0).round(),
+          )
+        : ((widget.item.amountTotal ?? 0) * 100).round();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _total = TextEditingController(text: (_base / 100).toStringAsFixed(2));
+    _preview();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _total.dispose();
+    super.dispose();
+  }
+
+  int? get _gross {
+    final text = _total.text.trim().replaceAll(',', '.');
+    if (!RegExp(r'^\d+(?:\.\d{1,2})?$').hasMatch(text)) return null;
+    final parts = text.split('.');
+    return int.parse(parts[0]) * 100 +
+        (parts.length == 1 ? 0 : int.parse(parts[1].padRight(2, '0')));
+  }
+
+  String _rub(Object? n) => n == null
+      ? '—'
+      : ((num.tryParse('$n') ?? 0) / 100)
+            .toStringAsFixed(2)
+            .replaceAll('.00', '');
+  Future<void> _preview() async {
+    if (_busy) return;
+    final total = _gross;
+    if (total == null) {
+      setState(() {
+        _quote = null;
+        _error = 'Введите сумму в рублях';
+      });
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+      _quote = null;
+    });
+    try {
+      final q = await widget.request({
+        'total_kopeks': total,
+        'redeem_points': _points,
+      });
+      if (mounted) setState(() => _quote = q);
+    } catch (e) {
+      if (mounted)
+        setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Widget _line(String label, Object? value, {bool accent = false}) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 10),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: accent ? futureInk : futureSoft,
+              fontWeight: accent ? FontWeight.w800 : FontWeight.w500,
+              fontSize: 14,
+            ),
+          ),
+        ),
+        Text(
+          '${_rub(value)} ₽',
+          style: TextStyle(
+            color: accent ? const Color(0xFF765CE9) : futureInk,
+            fontSize: accent ? 24 : 18,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    ),
+  );
+  @override
+  Widget build(BuildContext context) {
+    final q = _quote;
+    final max = (q?['max_points'] as num? ?? 0).toInt();
+    return Scaffold(
+      backgroundColor: const Color(0xFFF2FAFF),
+      body: FutureScene(
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 540),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_rounded),
+                      ),
+                      const Expanded(
+                        child: Text(
+                          'FLOWRU',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: futureInk,
+                            letterSpacing: 3,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 48),
+                    ],
+                  ),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 10,
+                      ),
+                      children: [
+                        FutureHero(
+                          title: 'Выдача заказа',
+                          subtitle: '№${widget.item.id} · Самовывоз',
+                        ),
+                        const SizedBox(height: 16),
+                        FutureOrbit(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextField(
+                                controller: _total,
+                                enabled: !_busy,
+                                textAlign: TextAlign.center,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                style: const TextStyle(
+                                  color: futureInk,
+                                  fontSize: 48,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                                decoration: const InputDecoration(
+                                  border: InputBorder.none,
+                                  suffixText: '₽',
+                                ),
+                                onChanged: (_) {
+                                  setState(() {
+                                    _quote = null;
+                                    _points = 0;
+                                  });
+                                  _debounce?.cancel();
+                                  _debounce = Timer(
+                                    const Duration(milliseconds: 500),
+                                    _preview,
+                                  );
+                                },
+                                onSubmitted: (_) => _preview(),
+                              ),
+                              const Text(
+                                'Итог покупки · можно изменить',
+                                style: TextStyle(
+                                  color: futureSoft,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        FutureGlass(
+                          child: Column(
+                            children: [
+                              _line('Оплачено онлайн', q?['paid_kopeks']),
+                              if ((q?['original_discount_kopeks'] as num? ??
+                                      0) >
+                                  0)
+                                _line(
+                                  'Баллы при оформлении',
+                                  -(q!['original_discount_kopeks'] as num),
+                                ),
+                              _line('Добавили в заведении', q?['extra_kopeks']),
+                              if ((q?['extra_discount_kopeks'] as num? ?? 0) >
+                                  0)
+                                _line(
+                                  'Баллы на дополнительные покупки',
+                                  -(q!['extra_discount_kopeks'] as num),
+                                ),
+                              const Divider(),
+                              _line(
+                                'К оплате на кассе',
+                                q?['cash_due_kopeks'],
+                                accent: true,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        FutureGlass(
+                          padding: EdgeInsets.zero,
+                          child: ExpansionTile(
+                            leading: const Icon(
+                              Icons.auto_awesome_outlined,
+                              color: futureAqua,
+                            ),
+                            title: const Text(
+                              'Баллы для доплаты',
+                              style: TextStyle(
+                                color: futureInk,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Text(
+                              _points > 0
+                                  ? 'Списать $_points баллов'
+                                  : 'Доступно ${q?['available'] ?? '—'}',
+                              style: const TextStyle(
+                                color: futureSoft,
+                                fontSize: 12,
+                              ),
+                            ),
+                            children: [
+                              Wrap(
+                                spacing: 8,
+                                children: [
+                                  TextButton(
+                                    onPressed: _busy || q == null
+                                        ? null
+                                        : () {
+                                            _points = 0;
+                                            _preview();
+                                          },
+                                    child: const Text('Копить'),
+                                  ),
+                                  TextButton(
+                                    onPressed: _busy || q == null || max == 0
+                                        ? null
+                                        : () {
+                                            _points = max;
+                                            _preview();
+                                          },
+                                    child: const Text('Списать максимум'),
+                                  ),
+                                ],
+                              ),
+                              if (_points > 0)
+                                Slider(
+                                  value: _points
+                                      .toDouble()
+                                      .clamp(0.0, max.toDouble())
+                                      .toDouble(),
+                                  max: max > 0 ? max.toDouble() : 1,
+                                  divisions: max > 0 ? max : null,
+                                  label: '$_points',
+                                  onChanged: _busy
+                                      ? null
+                                      : (v) =>
+                                            setState(() => _points = v.round()),
+                                  onChangeEnd: _busy ? null : (_) => _preview(),
+                                ),
+                            ],
+                          ),
+                        ),
+                        if (_busy)
+                          const Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: futureAqua,
+                              ),
+                            ),
+                          ),
+                        if (_error != null)
+                          Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Text(
+                              _error!,
+                              style: const TextStyle(color: Colors.redAccent),
+                            ),
+                          ),
+                        TextButton(
+                          onPressed: _busy ? null : _preview,
+                          child: const Text('Обновить расчёт'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: FutureAction(
+                      label: (q?['cash_due_kopeks'] as num? ?? 0) > 0
+                          ? 'Оплата получена · выдать'
+                          : 'Выдать заказ',
+                      onTap:
+                          _busy ||
+                              q == null ||
+                              (q['redeem_points'] as num? ?? 0).toInt() !=
+                                  _points
+                          ? null
+                          : () => Navigator.pop(context, {
+                              'handoff_total_kopeks': _gross,
+                              'handoff_redeem_points': _points,
+                              'handoff_cash_received': true,
+                              'handoff_confirmed_due_kopeks':
+                                  q['cash_due_kopeks'],
+                            }),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

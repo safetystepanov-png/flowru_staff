@@ -42,6 +42,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final UserApi _userApi = UserApi();
+  bool _courierLogin = false;
   final LocalAuthentication _localAuth = LocalAuthentication();
 
   bool _loading = false;
@@ -185,6 +186,10 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
       return;
     }
 
+    if (_courierLogin && !RegExp(r'^[0-9]{6}$').hasMatch(password)) {
+      setState(() => _error = 'Введите код курьера из 6 цифр');
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -193,6 +198,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
     late final AuthResult result;
     try {
       result = await _userApi.login(
+        courier: _courierLogin,
         phone: phone,
         password: password,
         deviceId: kIsWeb ? 'staff-web' : 'staff-mobile',
@@ -928,6 +934,65 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
     return _biometricEnabled || _hasRefreshSession;
   }
 
+  Widget _roleButton(bool courier, String label, IconData icon) {
+    final selected = _courierLogin == courier;
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          color: selected ? kLoginViolet : Colors.transparent,
+          border: Border.all(
+            color: selected ? kLoginViolet : Colors.white,
+            width: 2,
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: _loading
+                ? null
+                : () {
+                    if (_courierLogin == courier) return;
+                    setState(() {
+                      _courierLogin = courier;
+                      _error = null;
+                      _passwordController.clear();
+                    });
+                  },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    selected ? Icons.check_circle_rounded : icon,
+                    color: Colors.white,
+                    size: 21,
+                  ),
+                  const SizedBox(width: 7),
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _errorBox(String message) {
     return Container(
       width: double.infinity,
@@ -1049,39 +1114,6 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
                           cardPadding,
                           cardPadding + 4,
                         ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(
-                            isVerySmall
-                                ? 26
-                                : isSmallScreen
-                                ? 32
-                                : 44,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.13),
-                              blurRadius: isVerySmall
-                                  ? 18
-                                  : isSmallScreen
-                                  ? 24
-                                  : 38,
-                              offset: Offset(
-                                0,
-                                isVerySmall
-                                    ? 7
-                                    : isSmallScreen
-                                    ? 12
-                                    : 18,
-                              ),
-                            ),
-                            BoxShadow(
-                              color: Colors.white.withOpacity(0.26),
-                              blurRadius: 18,
-                              spreadRadius: 1,
-                              offset: const Offset(0, -2),
-                            ),
-                          ],
-                        ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(
                             isVerySmall
@@ -1091,35 +1123,33 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
                                 : 44,
                           ),
                           child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                            filter: ImageFilter.blur(sigmaX: 0, sigmaY: 0),
                             child: Container(
                               padding: EdgeInsets.all(innerPadding),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(
-                                  isVerySmall
-                                      ? 26
-                                      : isSmallScreen
-                                      ? 32
-                                      : 44,
-                                ),
-                                gradient: LinearGradient(
-                                  colors: [
-                                    kLoginCardStrong,
-                                    kLoginCard,
-                                    Colors.white.withOpacity(0.78),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                border: Border.all(
-                                  color: kLoginStroke,
-                                  width: 1.2,
-                                ),
-                              ),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   _topBadge(),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _roleButton(
+                                          false,
+                                          'Сотрудник',
+                                          Icons.badge_outlined,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: _roleButton(
+                                          true,
+                                          'Курьер',
+                                          Icons.delivery_dining_rounded,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                   SizedBox(height: isVerySmall ? 6 : gapMedium),
                                   _orbitalLogo(
                                     logoSize,
@@ -1128,11 +1158,13 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
                                   ),
                                   SizedBox(height: isVerySmall ? 4 : gapMedium),
                                   Text(
-                                    'Вход сотрудника',
+                                    _courierLogin
+                                        ? 'Вход курьера'
+                                        : 'Вход сотрудника',
                                     style: TextStyle(
                                       fontSize: titleSize,
                                       fontWeight: FontWeight.w900,
-                                      color: kLoginInk,
+                                      color: Colors.white,
                                       letterSpacing: -0.8,
                                       height: 1.1,
                                     ),
@@ -1140,12 +1172,14 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
                                   ),
                                   SizedBox(height: isVerySmall ? 2 : gapSmall),
                                   Text(
-                                    'Введите телефон и PIN-код,\nвыданный владельцем.',
+                                    _courierLogin
+                                        ? 'Введите телефон и код из 6 цифр,\nназначенный владельцем.'
+                                        : 'Введите телефон и PIN-код,\nвыданный владельцем.',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontSize: subtitleSize,
                                       fontWeight: FontWeight.w700,
-                                      color: kLoginInkSoft,
+                                      color: Colors.white,
                                       height: 1.3,
                                     ),
                                   ),
@@ -1235,7 +1269,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen>
                                           ? 12.5
                                           : 14,
                                       fontWeight: FontWeight.w800,
-                                      color: kLoginInkSoft,
+                                      color: Colors.white,
                                     ),
                                   ),
                                 ],

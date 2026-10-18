@@ -242,12 +242,15 @@ class UserApi {
   }
 
   Future<AuthResult> login({
+    bool courier = false,
     required String phone,
     required String password,
     required String deviceId,
     required String platform,
   }) async {
-    final uri = Uri.parse('${AppConfig.baseUrl}/api/v1/auth/login');
+    final uri = Uri.parse(
+      '${AppConfig.baseUrl}/api/v1/auth/${courier ? 'courier-login' : 'login'}',
+    );
 
     Object? lastError;
 
