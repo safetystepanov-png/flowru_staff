@@ -1,3 +1,4 @@
+import 'staff_order_countdown.dart';
 import '../../../../flowru_future_ui.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -77,10 +78,10 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
       duration: const Duration(milliseconds: 1100),
     )..repeat(reverse: true);
 
-    _urgencyTicker = Timer.periodic(const Duration(seconds: 20), (_) {
+    _urgencyTicker = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() {});
-        if (!_updating) _load(silent: true);
+        if (timer.tick % 20 == 0 && !_updating) _load(silent: true);
       }
     });
 
@@ -2271,9 +2272,14 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     final deadline = onWay
         ? _parseLocalDate(d['estimated_delivery_to']?.toString())
         : _deadlineOf(item);
-    final overdue = deadline != null && !DateTime.now().isBefore(deadline);
-    final color = overdue ? _red : _green;
-    final time = overdue ? 'Время выдачи истекло' : item.pickupLabel;
+    final active = const ['new', 'in_work', 'ready'].contains(item.status);
+    final now = DateTime.now();
+    final overdue = active && deadline != null && !now.isBefore(deadline);
+    final urgent = active && deadline != null && deadline.difference(now).inSeconds <= 300;
+    final color = overdue ? _red : urgent ? const Color(0xFFD87A1F) : _green;
+    final time = item.pickupLabel;
+    final countdown = staffDeadlineLabel(deadline, now,
+      before: onWay ? 'До доставки' : delivery && item.status == 'in_work' ? 'До готовности' : 'До выдачи');
     final action = d['time_offer'] is Map
         ? 'Изменить время'
         : item.status == 'new'
@@ -2336,6 +2342,14 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                 ),
               ],
             ),
+            if (active) Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 12),
+              child: Semantics(label: countdown, child: Row(children: [
+                Icon(overdue ? Icons.timer_off_outlined : Icons.timer_outlined, color: color, size: 25),
+                const SizedBox(width: 10),
+                Expanded(child: Text(countdown, style: TextStyle(color: color, fontSize: 22,
+                  fontWeight: FontWeight.w800, letterSpacing: -0.4))),
+              ]))),
             Text(
               '${delivery ? 'Доставка' : 'Самовывоз'} · $state · $time',
               style: TextStyle(
