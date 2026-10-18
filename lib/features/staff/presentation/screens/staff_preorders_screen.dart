@@ -1,3 +1,7 @@
+import '../../../push/data/staff_cancellation_alerts.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'staff_order_countdown.dart';
 import '../../../../flowru_future_ui.dart';
 import 'dart:async';
@@ -69,6 +73,9 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
 
   late final AnimationController _motion;
   Timer? _urgencyTicker;
+  StreamSubscription<RemoteMessage>? _cancelSubscription;
+  Set<String> _rememberedActive = {};
+  final _cancelledByThisScreen = <String>{};
 
   @override
   void initState() {
@@ -85,11 +92,19 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
       }
     });
 
+    if (Firebase.apps.isNotEmpty) {
+      _cancelSubscription = FirebaseMessaging.onMessage.listen((message) {
+        if (message.data['type'] == 'preorder_cancelled' && '${message.data['establishment_id']}' == '${widget.establishmentId}') {
+          _load(silent: true);
+        }
+      });
+    }
     _load();
   }
 
   @override
   void dispose() {
+    _cancelSubscription?.cancel();
     _urgencyTicker?.cancel();
     _motion.dispose();
     super.dispose();
@@ -396,26 +411,27 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
         );
       }
 
-      final previouslyActive = _items
+      final preferences = await SharedPreferences.getInstance();
+      _rememberedActive.addAll(preferences.getStringList('flowru_active_preorders_v1:${widget.establishmentId}') ?? []);
+      final previouslyActive = {..._rememberedActive, ..._items
           .where((e) => ['new', 'in_work', 'ready'].contains(e.status))
-          .map((e) => e.id)
-          .toSet();
+          .map((e) => e.id.toString())};
       final canceledNow = rawItems
           .whereType<Map>()
           .where(
             (e) =>
                 e['status'] == 'cancelled' &&
-                previouslyActive.contains(e['id']),
+                previouslyActive.contains(e['id'].toString()) && !_cancelledByThisScreen.contains(e['id'].toString()),
           )
           .toList();
-      if (mounted && canceledNow.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Заказ №${canceledNow.first['id']} отменён'),
-            backgroundColor: _red,
-          ),
-        );
+      for (final row in canceledNow) {
+        unawaited(StaffCancellationAlerts.receive({'type':'preorder_cancelled',
+          'establishment_id':widget.establishmentId,'preorder_id':row['id']}));
       }
+      _rememberedActive = rawItems.whereType<Map>()
+          .where((row) => ['new','in_work','ready'].contains(row['status']))
+          .map((row) => row['id'].toString()).toSet();
+      await preferences.setStringList('flowru_active_preorders_v1:${widget.establishmentId}',_rememberedActive.toList());
 
       if (!mounted) return;
       setState(() {
@@ -798,11 +814,18 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
       }
 
       if (response.statusCode != 200) {
+        final detail = _statusErrorMessage(response.statusCode,response.body);
+        await _load(silent:true);
+        if (detail.toLowerCase().contains('отмен')) {
+          unawaited(StaffCancellationAlerts.receive({'type':'preorder_cancelled',
+            'establishment_id':widget.establishmentId,'preorder_id':item.id},force:true));
+        }
         throw Exception(
           _statusErrorMessage(response.statusCode, response.body),
         );
       }
 
+      if (status == 'cancelled') _cancelledByThisScreen.add(item.id.toString());
       await _load();
     } catch (e) {
       if (!mounted) return;

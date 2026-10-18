@@ -1,3 +1,4 @@
+import '../features/push/data/staff_cancellation_alerts.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -30,6 +31,7 @@ class _FlowruStaffAppState extends State<FlowruStaffApp> {
   @override
   void initState() {
     super.initState();
+    StaffCancellationAlerts.attach(_navigatorKey);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       BusinessUpdateChecker.checkAndShow(_navigatorKey);

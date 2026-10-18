@@ -1,3 +1,4 @@
+import 'features/push/data/staff_cancellation_alerts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -36,6 +37,7 @@ Future<void> _printFcmToken() async {
 
 void _setupForegroundMessageHandler() {
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    StaffCancellationAlerts.receive(message.data);
     debugPrint('FCM onMessage: ${message.messageId}');
     debugPrint('FCM title: ${message.notification?.title}');
     debugPrint('FCM body: ${message.notification?.body}');
@@ -43,6 +45,7 @@ void _setupForegroundMessageHandler() {
   });
 
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    StaffCancellationAlerts.receive(message.data);
     debugPrint('FCM onMessageOpenedApp: ${message.messageId}');
     debugPrint('FCM opened data: ${message.data}');
   });
@@ -86,6 +89,7 @@ Future<void> main() async {
       final initialMessage = await FirebaseMessaging.instance
           .getInitialMessage();
       if (initialMessage != null) {
+        await StaffCancellationAlerts.receive(initialMessage.data);
         debugPrint('FCM initialMessage: ${initialMessage.messageId}');
         debugPrint('FCM initial data: ${initialMessage.data}');
       }
