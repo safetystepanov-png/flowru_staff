@@ -61,6 +61,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
 
   // FLOWRU_PREORDERS_PREMIUM_V4_20260909
   String _catalogCategory = '__all__';
+  bool _catalogStopOnly = false;
   String _catalogQuery = '';
 
   // FLOWRU_AVAILABILITY_PREMIUM_V2_20260909
@@ -2954,7 +2955,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
       final categoryOk =
           _catalogCategory == '__all__' || category == _catalogCategory;
       final queryOk = query.isEmpty || item.name.toLowerCase().contains(query);
-      return categoryOk && queryOk;
+      return categoryOk && queryOk && (!_catalogStopOnly || !item.isAvailable);
     }).toList();
 
     return [
@@ -2970,7 +2971,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
           children: [
             Expanded(
               child: Text(
-                _catalogCategory == '__all__'
+                _catalogStopOnly ? 'В стопе' : _catalogCategory == '__all__'
                     ? 'Все позиции'
                     : _catalogCategory,
                 style: const TextStyle(
@@ -3144,6 +3145,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
             ],
           ),
           child: TextField(
+            key: ValueKey(_catalogStopOnly),
             onChanged: (value) => setState(() => _catalogQuery = value),
             decoration: const InputDecoration(
               hintText: 'Поиск по позициям',
@@ -3368,7 +3370,14 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     required String label,
     required Color color,
   }) {
-    return Container(
+    final stopped = label == 'В стопе';
+    return InkWell(borderRadius: BorderRadius.circular(20),
+      onTap: !stopped ? null : () => setState(() {
+        _catalogStopOnly = stopped ? !_catalogStopOnly : false;
+        _catalogCategory = '__all__';
+        _catalogQuery = '';
+      }),
+      child: Container(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -3413,7 +3422,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
           const SizedBox(width: 7),
           Expanded(
             child: Text(
-              label,
+              stopped && _catalogStopOnly ? 'В стопе ✓' : label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -3425,7 +3434,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _availabilityItemCard(_StaffCatalogItem item) {

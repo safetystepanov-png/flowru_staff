@@ -1,3 +1,4 @@
+import 'staff_loyalty_surface.dart';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -963,62 +964,25 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kSearchMintTop,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'Поиск клиента',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        systemOverlayStyle: SystemUiOverlayStyle.light,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: _topIconButton(
-              icon: _hasResult ? CupertinoIcons.refresh : CupertinoIcons.search,
-              onTap: _hasResult ? _resetSearch : _search,
-            ),
-          ),
-        ],
-      ),
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
-        child: Stack(
-          children: [
-            _background(),
-            SafeArea(
-              top: false,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                children: [
-                  if (_hasResult)
-                    _stagger(index: 0, child: _resultsBlock())
-                  else ...[
-                    _stagger(index: 0, child: _heroSearchCard()),
-                    if (_error != null) ...[
-                      const SizedBox(height: 14),
-                      _stagger(
-                        index: 1,
-                        child: _stateCard(
-                          icon: CupertinoIcons.exclamationmark_circle_fill,
-                          title: 'Ошибка',
-                          subtitle: _error!,
-                        ),
-                      ),
-                    ],
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => LoyaltyPage(title:'Найти клиента', subtitle:widget.establishmentName,children:[
+   TextField(controller:_controller, textInputAction:TextInputAction.search,onSubmitted:(_)=>_search(),
+    decoration:InputDecoration(hintText:'Имя или телефон',prefixIcon:const Icon(Icons.search_rounded),
+    suffixIcon:IconButton(onPressed:_resetSearch,icon:const Icon(Icons.close_rounded)),
+    border:OutlineInputBorder(borderRadius:BorderRadius.circular(20)),filled:true,fillColor:const Color(0x66FFFFFF))),
+   loyaltyButton('Найти клиента',_loading?null:_search,busy:_loading),
+   Padding(padding:const EdgeInsets.only(top:12),child:OutlinedButton.icon(onPressed:_loading?null:_openQrSearch,
+    icon:const Icon(Icons.qr_code_scanner_rounded),label:const Text('Сканировать QR клиента'),
+    style:OutlinedButton.styleFrom(foregroundColor:loyaltyMint,padding:const EdgeInsets.all(18),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20))))),
+   if(_error!=null) loyaltyNotice(_error!),
+   const SizedBox(height:20),
+   if(_items.isEmpty && !_loading && _error==null) const Padding(padding:EdgeInsets.symmetric(vertical:30),child:Column(children:[
+    Icon(Icons.person_search_rounded,size:58,color:Color(0xFF8DB6B8)),SizedBox(height:12),Text('Клиент рядом — найдите его за пару секунд',textAlign:TextAlign.center,style:TextStyle(color:Color(0xFF607680),height:1.5))])),
+   ..._items.map((item)=>Padding(padding:const EdgeInsets.only(bottom:10),child:ListTile(
+    contentPadding:const EdgeInsets.symmetric(horizontal:4,vertical:10),
+    leading:CircleAvatar(backgroundColor:const Color(0xFFD6ECE9),foregroundColor:loyaltyMint,child:Text(item.initials)),
+    title:Text(item.displayName,style:const TextStyle(color:loyaltyInk,fontWeight:FontWeight.w700)),subtitle:Text(item.phone),
+    trailing:const Icon(Icons.arrow_forward_rounded,color:loyaltyMint),onTap:()=>_openClient(item))))
+  ]);
 }
 
 class _GlassCard extends StatelessWidget {

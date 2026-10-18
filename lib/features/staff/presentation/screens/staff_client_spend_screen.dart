@@ -1,3 +1,4 @@
+import 'staff_loyalty_surface.dart';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -53,6 +54,10 @@ class StaffClientSpendScreen extends StatefulWidget {
 class _StaffClientSpendScreenState extends State<StaffClientSpendScreen>
     with TickerProviderStateMixin {
   final TextEditingController _amountController = TextEditingController();
+  final _pointsController = TextEditingController();
+  bool _useMaximum = true;
+  String? _pointsError;
+  int _maximumPoints = 0;
 
   bool _loading = true;
   bool _saving = false;
@@ -78,6 +83,7 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen>
     );
 
     _amountController.addListener(_recalculate);
+    _pointsController.addListener(_recalculate);
     _loadConfig();
   }
 
@@ -85,6 +91,7 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen>
   void dispose() {
     _amountController.removeListener(_recalculate);
     _amountController.dispose();
+    _pointsController.dispose();
     _bgController.dispose();
     _introController.dispose();
     super.dispose();
@@ -150,51 +157,17 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen>
   }
 
   void _recalculate() {
-    final config = _config;
-    if (config == null) return;
-
-    final amount = _parseAmount();
-
-    if (amount <= 0) {
-      if (mounted) {
-        setState(() {
-          _preview = null;
-        });
-      }
-      return;
-    }
-
-    double redeemed = 0;
-    double payable = amount;
-
-    if (config.mode == 'points') {
-      final byBalance = config.clientBalance;
-      final byPercent = amount * config.maxRedeemPercent / 100.0;
-      redeemed = byBalance < byPercent ? byBalance : byPercent;
-      redeemed = redeemed.floorToDouble();
-      payable = amount - redeemed;
-    } else if (config.mode == 'cashback') {
-      final byBalance = config.clientBalance;
-      final byPercent = amount * config.maxRedeemPercent / 100.0;
-      redeemed = byBalance < byPercent ? byBalance : byPercent;
-      redeemed = double.parse(redeemed.toStringAsFixed(2));
-      payable = amount - redeemed;
-    } else {
-      redeemed = 0;
-      payable = amount;
-    }
-
-    if (payable < 0) payable = 0;
-
-    if (mounted) {
-      setState(() {
-        _preview = _SpendPreview(
-          checkAmount: amount,
-          redeemed: redeemed,
-          payable: double.parse(payable.toStringAsFixed(2)),
-        );
-      });
-    }
+    final config=_config;if(config==null || !mounted)return;
+    final amount=_parseAmount();
+    final valid=amount.isFinite && amount>0;
+    final rate=config.redeemRate;
+    final maximum=valid && config.canRedeem ? math.max(0,math.min(config.clientBalance.floor(),(amount*config.maxRedeemPercent.clamp(0,100)/100/rate+0.00000001).floor())) : 0;
+    final chosen=_useMaximum ? maximum : int.tryParse(_pointsController.text);
+    setState((){
+     _maximumPoints=maximum;
+     _pointsError=!_useMaximum && (chosen==null || chosen<1 || chosen>maximum) ? 'Введите от 1 до $maximum баллов' : null;
+     _preview=!valid || _pointsError!=null ? null : _SpendPreview(checkAmount:amount,redeemed:(chosen??0).toDouble(),payable:double.parse(math.max(0,amount-(chosen??0)*rate).toStringAsFixed(2)));
+    });
   }
 
   Future<void> _submit() async {
@@ -220,6 +193,7 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen>
           'establishment_id': widget.establishmentId,
           'client_id': widget.clientId,
           'amount': preview.checkAmount,
+          'redeem_points': preview.redeemed.toInt(),
         }),
       );
 
@@ -244,7 +218,7 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen>
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = 'Не удалось выполнить списание';
+        _error = 'Не удалось выполнить списание. Баланс или лимит могли измениться. Вернитесь и откройте списание заново.';
       });
     } finally {
       if (mounted) {
@@ -798,57 +772,28 @@ class _StaffClientSpendScreenState extends State<StaffClientSpendScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kSpendMintTop,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'Списание',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        systemOverlayStyle: SystemUiOverlayStyle.light,
-      ),
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
-        child: Stack(
-          children: [
-            _background(),
-            SafeArea(
-              top: false,
-              child: _loading
-                  ? const Center(
-                      child: SizedBox(
-                        width: 42,
-                        height: 42,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3,
-                          valueColor: AlwaysStoppedAnimation(kSpendViolet),
-                        ),
-                      ),
-                    )
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                      children: [
-                        _stagger(index: 0, child: _heroCard()),
-                        const SizedBox(height: 14),
-                        _stagger(index: 1, child: _previewCard()),
-                        if (_error != null) ...[
-                          const SizedBox(height: 10),
-                          _stagger(index: 2, child: _errorCard()),
-                        ],
-                        const SizedBox(height: 18),
-                        _stagger(index: 3, child: _submitButton()),
-                      ],
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => LoyaltyPage(title:'Списать баллы',subtitle:'${widget.clientName} · ${widget.establishmentName}',children:[
+   if(_loading) const Center(child:CircularProgressIndicator(color:loyaltyMint)) else ...[
+   loyaltyField(controller:_amountController,label:'Сумма покупки, ₽',hint:'0,00',enabled:!_saving),
+   const SizedBox(height:16),
+   loyaltyMetric('Баланс клиента','${_config?.balanceLabel ?? '—'} баллов'),
+   const SizedBox(height:10),
+   Wrap(spacing:8,runSpacing:8,children:[
+    ChoiceChip(label:const Text('Максимум'),selected:_useMaximum,onSelected:_saving?null:(_){setState(()=>_useMaximum=true);_recalculate();}),
+    ChoiceChip(label:const Text('Выбрать количество'),selected:!_useMaximum,onSelected:_saving?null:(_){setState(()=>_useMaximum=false);_recalculate();})]),
+   const SizedBox(height:16),
+   if(!_useMaximum) loyaltyField(controller:_pointsController,label:'Сколько баллов списать',integer:true,enabled:!_saving),
+   Padding(padding:const EdgeInsets.only(top:12),child:Text('Можно списать до $_maximumPoints баллов · по условиям программы',style:const TextStyle(color:Color(0xFF607680),height:1.4))),
+   if(_pointsError!=null) loyaltyNotice(_pointsError!),
+   const SizedBox(height:18),
+   loyaltyMetric('Списываем','${_preview?.redeemedLabel ?? '—'} баллов'),
+   const Divider(color:Color(0xFFD3E3E3)),
+   loyaltyMetric('К оплате',_preview==null?'—':'${_preview!.payable.toStringAsFixed(2)} ₽',prominent:true),
+   if(_error!=null) loyaltyNotice(_error!),
+   if(_config==null) loyaltyButton('Повторить загрузку',_loadConfig) else
+   loyaltyButton('Списать баллы',_preview==null || _saving || _maximumPoints < 1?null:_submit,busy:_saving),
+   ]
+  ]);
 }
 
 class _GlassCard extends StatelessWidget {
@@ -960,11 +905,15 @@ class _SpendConfig {
   final String mode;
   final double clientBalance;
   final double maxRedeemPercent;
+  final double redeemRate;
+  final bool canRedeem;
 
   _SpendConfig({
     required this.mode,
     required this.clientBalance,
     required this.maxRedeemPercent,
+    required this.redeemRate,
+    required this.canRedeem,
   });
 
   factory _SpendConfig.fromJson(Map<String, dynamic> json) {
@@ -976,10 +925,12 @@ class _SpendConfig {
 
     return _SpendConfig(
       mode: json['mode']?.toString() ?? 'points',
+      canRedeem: json['mode'] != 'discount' || json['points_enabled_in_discount_mode'] == true,
       clientBalance: parseNum(
         json['client_balance'] ?? json['balance'] ?? json['points_balance'],
       ),
-      maxRedeemPercent: parseNum(json['max_redeem_percent']),
+      maxRedeemPercent: parseNum(json['max_redeem_percent'] ?? 30),
+      redeemRate: json['mode'] == 'cashback' ? 1 : (parseNum(json['redeem_rate']) > 0 ? parseNum(json['redeem_rate']) : 1),
     );
   }
 

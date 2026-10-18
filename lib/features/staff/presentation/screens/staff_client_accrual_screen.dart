@@ -1,3 +1,4 @@
+import 'staff_loyalty_surface.dart';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -156,7 +157,7 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
 
     final amount = _parseAmount();
 
-    if (amount <= 0) {
+    if (!amount.isFinite || amount <= 0) {
       if (mounted) {
         setState(() {
           _preview = null;
@@ -805,57 +806,18 @@ class _StaffClientAccrualScreenState extends State<StaffClientAccrualScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kAccrualMintTop,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'Начисление',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        systemOverlayStyle: SystemUiOverlayStyle.light,
-      ),
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
-        child: Stack(
-          children: [
-            _background(),
-            SafeArea(
-              top: false,
-              child: _loading
-                  ? const Center(
-                      child: SizedBox(
-                        width: 42,
-                        height: 42,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3,
-                          valueColor: AlwaysStoppedAnimation(kAccrualViolet),
-                        ),
-                      ),
-                    )
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                      children: [
-                        _stagger(index: 0, child: _heroCard()),
-                        const SizedBox(height: 14),
-                        _stagger(index: 1, child: _previewCard()),
-                        if (_error != null) ...[
-                          const SizedBox(height: 10),
-                          _stagger(index: 2, child: _errorCard()),
-                        ],
-                        const SizedBox(height: 18),
-                        _stagger(index: 3, child: _submitButton()),
-                      ],
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => LoyaltyPage(title:'Начислить баллы',subtitle:'${widget.clientName} · ${widget.establishmentName}',children:[
+   if(_loading) const Center(child:CircularProgressIndicator(color:loyaltyMint)) else ...[
+   loyaltyField(controller:_amountController,label:'Сумма покупки, ₽',hint:'0,00',enabled:!_saving),
+   const SizedBox(height:16),
+   const SizedBox(height:24),
+   loyaltyMetric('Будет начислено',_preview?.addedLabel ?? '—',prominent:true),
+   const Padding(padding:EdgeInsets.only(top:8),child:Text('Расчёт по действующим условиям программы лояльности',style:TextStyle(color:Color(0xFF607680),height:1.4))),
+   if(_error!=null) loyaltyNotice(_error!),
+   if(_config==null) loyaltyButton('Повторить загрузку',_loadConfig) else
+   loyaltyButton('Начислить баллы',_preview==null || _saving?null:_submit,busy:_saving),
+   ]
+  ]);
 }
 
 class _GlassCard extends StatelessWidget {
