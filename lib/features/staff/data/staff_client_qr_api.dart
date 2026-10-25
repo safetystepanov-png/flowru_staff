@@ -93,6 +93,15 @@ class StaffResolvedQrClient {
 }
 
 class StaffClientQrApi {
+  Future<Map<String,dynamic>> rafflePrize({required int establishmentId,required String qr,bool redeem=false}) async {
+    Future<http.Response> request(String token)=>http.post(Uri.parse('${AppConfig.baseUrl}/api/v1/staff/raffle-prizes/${redeem?'redeem':'inspect'}'),headers:{'Content-Type':'application/json','Authorization':'Bearer $token'},body:jsonEncode({'establishment_id':establishmentId,'qr':qr})).timeout(const Duration(seconds:20));
+    var response=await request(await _token());
+    if(response.statusCode==401)response=await request(await _refreshAccessToken());
+    final data=jsonDecode(utf8.decode(response.bodyBytes));
+    if(response.statusCode<200 || response.statusCode>=300)throw Exception(data is Map?data['detail'] ?? 'Не удалось проверить приз':'Не удалось проверить приз');
+    return Map<String,dynamic>.from(data as Map);
+  }
+
   final UserApi _userApi = UserApi();
 
   Future<String> _token() async {

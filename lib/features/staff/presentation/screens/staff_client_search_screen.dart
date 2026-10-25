@@ -1,3 +1,4 @@
+import 'staff_raffle_prize_screen.dart';
 import 'staff_loyalty_surface.dart';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -233,6 +234,13 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
     );
 
     if (!mounted || qrToken == null || qrToken.trim().isEmpty) return;
+    final scanned=qrToken.trim();
+    final scannedPath=Uri.tryParse(scanned)?.path ?? '';
+    if(scanned.startsWith('flowru-prize:') || scannedPath.startsWith('/raffle/redeem/')) {
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>StaffRafflePrizeScreen(establishmentId:widget.establishmentId,qr:scanned)));
+      return;
+    }
+
 
     showDialog<void>(
       context: context,
@@ -971,7 +979,7 @@ class _StaffClientSearchScreenState extends State<StaffClientSearchScreen>
     border:OutlineInputBorder(borderRadius:BorderRadius.circular(20)),filled:true,fillColor:const Color(0x66FFFFFF))),
    loyaltyButton('Найти клиента',_loading?null:_search,busy:_loading),
    Padding(padding:const EdgeInsets.only(top:12),child:OutlinedButton.icon(onPressed:_loading?null:_openQrSearch,
-    icon:const Icon(Icons.qr_code_scanner_rounded),label:const Text('Сканировать QR клиента'),
+    icon:const Icon(Icons.qr_code_scanner_rounded),label:const Text('Сканировать QR клиента или приза'),
     style:OutlinedButton.styleFrom(foregroundColor:loyaltyMint,padding:const EdgeInsets.all(18),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20))))),
    if(_error!=null) loyaltyNotice(_error!),
    const SizedBox(height:20),
