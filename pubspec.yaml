@@ -2,7 +2,7 @@ name: flowru_business
 description: "Flowru Business"
 publish_to: 'none'
 
-version: 1.4.0+78
+version: 1.4.1+79
 environment:
   sdk: ^3.11.4
 
@@ -49,5 +49,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/flowru_raffle/
     - assets/flowru_future/
     - assets/images/
