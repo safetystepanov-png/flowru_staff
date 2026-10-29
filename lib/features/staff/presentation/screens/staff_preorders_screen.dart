@@ -1,3 +1,4 @@
+import 'staff_preparation_dialog.dart';
 import '../../../push/data/staff_cancellation_alerts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -711,10 +712,20 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     await _setStatus(item, 'completed', amountTotal: amount);
   }
 
+  DateTime? _requestedTimeOf(_PreorderItem item) {
+    if (item.pickupType == 'at_time') {
+      return DateTime.tryParse(item.details['pickup_at']?.toString() ?? '')?.toLocal();
+    }
+    if (item.pickupType == 'in_minutes' && (item.pickupMinutes ?? 0) > 0) {
+      return DateTime.tryParse(item.createdAt)?.toLocal().add(Duration(minutes: item.pickupMinutes!));
+    }
+    return null;
+  }
+
   Future<void> _acceptWithPrepareTime(_PreorderItem item) async {
     if (_updating || _choosingPrepareTime) return;
     _choosingPrepareTime = true;
-    int? chosen;
+    StaffPreparationChoice? chosen;
     int? courier;
     try {
       final uri = Uri.parse(
@@ -740,13 +751,12 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
         courier = await _chooseCourier(item);
         if (courier == null || !mounted) return;
       }
-      chosen = await showDialog<int>(
+      chosen = await showDialog<StaffPreparationChoice>(
         context: context,
-        builder: (context) => _PreparationTimeDialog(
+        builder: (context) => StaffPreparationDialog(
           minimum: minimum,
-          requested: item.pickupType == 'at_time'
-              ? DateTime.tryParse(item.pickupAt ?? '')?.toLocal()
-              : null,
+          requested: _requestedTimeOf(item),
+          respectRequestedFloor: item.pickupType == 'at_time',
         ),
       );
     } catch (e) {
@@ -761,7 +771,8 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
       await _setStatus(
         item,
         'in_work',
-        prepareMinutes: chosen,
+        prepareMinutes: chosen.minutes,
+        acceptClientTime: chosen.acceptClientTime,
         courierId: courier,
       );
   }
@@ -772,6 +783,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     double? amountTotal,
     String? staffComment,
     int? prepareMinutes,
+    bool acceptClientTime = false,
     int? courierId,
     Map<String, dynamic>? handoff,
   }) async {
@@ -785,6 +797,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     try {
       final payload = <String, dynamic>{'status': status, ...?handoff};
       if (prepareMinutes != null) payload['prepare_minutes'] = prepareMinutes;
+      if (acceptClientTime) payload['accept_client_time'] = true;
       if (courierId != null) payload['courier_id'] = courierId;
 
       if (staffComment != null && staffComment.trim().isNotEmpty) {
@@ -1062,7 +1075,7 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
   String _statusText(String status) {
     switch (status) {
       case 'new':
-        return 'Новый';
+        return 'Ожидает принятия';
       case 'in_work':
         return 'В работе';
       case 'ready':
@@ -2299,7 +2312,12 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
     final now = DateTime.now();
     final overdue = active && deadline != null && !now.isBefore(deadline);
     final urgent = active && deadline != null && deadline.difference(now).inSeconds <= 300;
-    final color = overdue ? _red : urgent ? const Color(0xFFD87A1F) : _green;
+    final color = d['time_offer'] is Map ? const Color(0xFF7957C6)
+        : item.status == 'new' ? const Color(0xFF9D5700)
+        : item.status == 'in_work' ? const Color(0xFF235AD4)
+        : item.status == 'ready' ? const Color(0xFF13734A)
+        : _statusColor(item.status);
+    final deadlineColor = overdue ? const Color(0xFFB83128) : urgent ? const Color(0xFF9D4A20) : color;
     final time = item.pickupLabel;
     final countdown = staffDeadlineLabel(deadline, now,
       before: onWay ? 'До доставки' : delivery && item.status == 'in_work' ? 'До готовности' : 'До выдачи');
@@ -2365,12 +2383,24 @@ class _StaffPreordersScreenState extends State<StaffPreordersScreen>
                 ),
               ],
             ),
+            Container(
+              margin: const EdgeInsets.only(top: 4,bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12,vertical: 9),
+              decoration: BoxDecoration(color: color.withOpacity(.12),borderRadius: BorderRadius.circular(14)),
+              child: Row(children: [
+                Icon(_statusIcon(item.status),color: color,size: 21),
+                const SizedBox(width: 8),
+                Expanded(child: Text(state,style: TextStyle(color: color,fontSize: 16,fontWeight: FontWeight.w800))),
+              ]),
+            ),
+            if (overdue) const Padding(padding: EdgeInsets.only(bottom: 8),child: Text('Время выдачи прошло',
+              style: TextStyle(color: Color(0xFFB83128),fontSize: 14,fontWeight: FontWeight.w800))),
             if (active) Padding(
               padding: const EdgeInsets.only(top: 4, bottom: 12),
               child: Semantics(label: countdown, child: Row(children: [
-                Icon(overdue ? Icons.timer_off_outlined : Icons.timer_outlined, color: color, size: 25),
+                Icon(overdue ? Icons.timer_off_outlined : Icons.timer_outlined, color: deadlineColor, size: 25),
                 const SizedBox(width: 10),
-                Expanded(child: Text(countdown, style: TextStyle(color: color, fontSize: 22,
+                Expanded(child: Text(countdown, style: TextStyle(color: deadlineColor, fontSize: 22,
                   fontWeight: FontWeight.w800, letterSpacing: -0.4))),
               ]))),
             Text(
@@ -4162,138 +4192,6 @@ class _PreorderItem {
     final minutes = pickupMinutes ?? 0;
     if (minutes <= 0) return 'как можно скорее';
     return 'через $minutes мин.';
-  }
-}
-
-class _PreparationTimeDialog extends StatefulWidget {
-  final int minimum;
-  final DateTime? requested;
-  const _PreparationTimeDialog({required this.minimum, this.requested});
-  @override
-  State<_PreparationTimeDialog> createState() => _PreparationTimeDialogState();
-}
-
-class _PreparationTimeDialogState extends State<_PreparationTimeDialog> {
-  late final TextEditingController _minutes;
-  @override
-  void initState() {
-    super.initState();
-    _minutes = TextEditingController(text: '${widget.minimum}');
-  }
-
-  @override
-  void dispose() {
-    _minutes.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final chosen = int.tryParse(_minutes.text.trim());
-    final valid = chosen != null && chosen >= widget.minimum && chosen <= 180;
-    final base = DateTime.now().add(
-      Duration(minutes: chosen ?? widget.minimum),
-    );
-    final expected = widget.requested != null && widget.requested!.isAfter(base)
-        ? widget.requested!
-        : base;
-    final time =
-        '${expected.hour.toString().padLeft(2, '0')}:${expected.minute.toString().padLeft(2, '0')}';
-    final options = <int>{
-      widget.minimum,
-      widget.minimum + 10,
-      30,
-      45,
-      60,
-    }.where((m) => m >= widget.minimum && m <= 180).toList()..sort();
-    return AlertDialog(
-      backgroundColor: _bg,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
-      title: const Text(
-        'Когда будет готов?',
-        style: TextStyle(
-          color: _ink,
-          fontSize: 22,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      content: SizedBox(
-        width: 340,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Минимум ${widget.minimum} мин. после принятия. Увеличьте срок, если сейчас много заказов.',
-                style: const TextStyle(color: _soft, fontSize: 14, height: 1.5),
-              ),
-              const SizedBox(height: 18),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final minutes in options)
-                    ChoiceChip(
-                      label: Text('$minutes мин.'),
-                      selected: chosen == minutes,
-                      selectedColor: _mintLight.withOpacity(0.24),
-                      onSelected: (_) =>
-                          setState(() => _minutes.text = '$minutes'),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _minutes,
-                keyboardType: TextInputType.number,
-                onChanged: (_) => setState(() {}),
-                style: const TextStyle(color: _ink),
-                decoration: InputDecoration(
-                  labelText: 'Своё время, минуты',
-                  errorText: valid ? null : 'От ${widget.minimum} до 180 минут',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                'Ожидаемая готовность',
-                style: const TextStyle(color: _soft, fontSize: 12),
-              ),
-              Text(
-                time,
-                style: const TextStyle(
-                  color: _ink,
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Клиент увидит подтверждённое время в приложении.',
-                style: TextStyle(color: _soft, fontSize: 12, height: 1.4),
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Назад'),
-        ),
-        FilledButton(
-          onPressed: valid ? () => Navigator.pop(context, chosen) : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: _mint,
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('Принять заказ'),
-        ),
-      ],
-    );
   }
 }
 
